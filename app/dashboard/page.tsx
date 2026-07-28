@@ -1,6 +1,6 @@
 "use client";
 
-import PredictionApp from "../components/prediction-app-revised";
+import PredictionApp from "../components/prediction-app-final";
 import LiffGate from "../components/liff-gate";
 import {
   fixturesByGameweek,

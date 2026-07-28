@@ -183,9 +183,9 @@ git commit -m "test: add prediction domain helpers"
 - [ ] **Step 1: Write failing tests** for the two pure detail helpers and run `npm run test` to verify the expected missing-export failure.
 - [ ] **Step 2: Implement the minimal detail helpers** and rerun `npm run test` until all tests pass.
 - [ ] **Step 3: Add the `@line/liff` SDK and implement `LiffGate`** with automatic `liff.init`, `liff.login`, `liff.getProfile`, preview fallback, loading state, retry state, and no token logging.
-- [ ] **Step 4: Add named player/fixture detail modals** and make leaderboard rows and result cards keyboard/click accessible.
+- [ ] **Step 4: Add named player/fixture detail modals** with selected-team highlighting and make leaderboard rows and result cards keyboard/click accessible.
 - [ ] **Step 5: Move tabs to fixed bottom navigation** with safe-area padding and dark navy background throughout the app.
 - [ ] **Step 6: Switch club crest URLs** to `https://resources.premierleague.com/premierleague25/badges-alt/{id}.svg` and keep a text fallback if an image fails.
-- [ ] **Step 7: Add only necessary transitions** for loading, tab selection, modal entry/exit, and save success; honor `prefers-reduced-motion`.
+- [ ] **Step 7: Add the share confirmation popup after saving predictions, use Lucide icons where they improve clarity, and add only necessary transitions** for loading, tab selection, modal entry/exit, and save success; honor `prefers-reduced-motion`.
 - [ ] **Step 8: Run `npm run test`, `npm run lint`, and `npm run build`**.
 - [ ] **Step 9: Update `docs/project-status.md` and commit** with `git commit -m "feat: refine phase 1 UX and add LIFF gate"`.

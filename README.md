@@ -8,6 +8,8 @@
 - Dashboard ที่ `/dashboard` พร้อม 3 tabs: ตารางคะแนน, ทายผล, ผลการแข่งขัน
 - เปลี่ยน gameweek ได้ทันทีจาก dropdown
 - เลือกผลเหย้า/เสมอ/เยือน พร้อม confirmation modal
+- หลังยืนยันคำทาย มี popup ถามแชร์ผลลงกลุ่ม LINE
+- ใช้ Lucide icons และ SVG club crests แบบไม่มีกรอบขาว
 - ใช้ mock data และ preview profile เพื่อให้ตรวจ flow ได้โดยไม่ต้องมี credentials
 - รอบ UX revision จะเพิ่ม LIFF entry gate, bottom navigation, player/fixture detail modals และ SVG club crests
 

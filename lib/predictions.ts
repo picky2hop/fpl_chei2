@@ -81,3 +81,10 @@ export function getFixturePredictionDetails(
     { home: [], draw: [], away: [] },
   );
 }
+
+export function getPredictionTeamHighlights(choice: PredictionChoice) {
+  return {
+    home: choice === "home",
+    away: choice === "away",
+  };
+}

@@ -4,6 +4,7 @@ import {
   applyPrediction,
   getFixturePredictionDetails,
   getPredictionPercentages,
+  getPredictionTeamHighlights,
   getUserPredictionDetails,
   isPredictionComplete,
 } from "../lib/predictions.ts";
@@ -63,5 +64,11 @@ describe("prediction helpers", () => {
         away: [{ name: "แบงค์", avatarUrl: "bank.png", choice: "away" }],
       },
     );
+  });
+
+  it("highlights the team side selected by a player", () => {
+    assert.deepEqual(getPredictionTeamHighlights("home"), { home: true, away: false });
+    assert.deepEqual(getPredictionTeamHighlights("draw"), { home: false, away: false });
+    assert.deepEqual(getPredictionTeamHighlights("away"), { home: false, away: true });
   });
 });

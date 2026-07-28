@@ -22,8 +22,12 @@
 - ใช้พื้นหลัง navy เดียวกับ Landing ทั้งแอป
 - Bottom navigation แบบ fixed
 - Player prediction detail modal
+- ไฮไลท์ชื่อทีมฝั่งที่ผู้เล่นเลือกใน player detail
 - Fixture prediction detail modal
 - SVG club crests จาก Premier League resource
+- ตัดกรอบขาวรอบ club crest
+- Share confirmation popup หลังยืนยันคำทาย
+- Lucide icons สำหรับ navigation, share, close และ success state
 - LIFF auto-login gate ตั้งแต่ Landing พร้อม preview fallback
 - Animation เฉพาะ loading, transition, modal และ save success
 - Test helper สำหรับ player/fixture detail
