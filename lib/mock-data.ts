@@ -52,17 +52,17 @@ export type LeaderboardEntry = UserProfile & {
   form: number[];
 };
 
-const crest = (teamId: number) =>
-  `https://resources.premierleague.com/premierleague/badges/50/t${teamId}.png`;
+const crest = (teamCode: number) =>
+  `https://resources.premierleague.com/premierleague25/badges-alt/${teamCode}.svg`;
 
 export const teams: Record<string, Team> = {
-  arsenal: { id: "arsenal", name: "อาร์เซนอล", shortName: "ARS", accent: "#ef233c", crest: crest(1) },
-  chelsea: { id: "chelsea", name: "เชลซี", shortName: "CHE", accent: "#2563eb", crest: crest(4) },
+  arsenal: { id: "arsenal", name: "อาร์เซนอล", shortName: "ARS", accent: "#ef233c", crest: crest(3) },
+  chelsea: { id: "chelsea", name: "เชลซี", shortName: "CHE", accent: "#2563eb", crest: crest(8) },
   liverpool: { id: "liverpool", name: "ลิเวอร์พูล", shortName: "LIV", accent: "#dc2626", crest: crest(14) },
   manCity: { id: "man-city", name: "แมนฯ ซิตี้", shortName: "MCI", accent: "#38bdf8", crest: crest(43) },
-  newcastle: { id: "newcastle", name: "นิวคาสเซิล", shortName: "NEW", accent: "#334155", crest: crest(23) },
+  newcastle: { id: "newcastle", name: "นิวคาสเซิล", shortName: "NEW", accent: "#334155", crest: crest(4) },
   tottenham: { id: "tottenham", name: "สเปอร์ส", shortName: "TOT", accent: "#64748b", crest: crest(6) },
-  villa: { id: "villa", name: "แอสตัน วิลลา", shortName: "AVL", accent: "#7c3aed", crest: crest(2) },
+  villa: { id: "villa", name: "แอสตัน วิลลา", shortName: "AVL", accent: "#7c3aed", crest: crest(7) },
   brighton: { id: "brighton", name: "ไบรท์ตัน", shortName: "BHA", accent: "#0ea5e9", crest: crest(36) },
 };
 
@@ -73,7 +73,7 @@ export const currentUser: UserProfile = {
   avatarUrl: "https://i.pravatar.cc/120?img=12",
 };
 
-const users: UserProfile[] = [
+export const players: UserProfile[] = [
   currentUser,
   { id: "user-mook", displayName: "มุกสายวิเคราะห์", shortName: "มว", avatarUrl: "https://i.pravatar.cc/120?img=47" },
   { id: "user-bank", displayName: "Bank The Kop", shortName: "BK", avatarUrl: "https://i.pravatar.cc/120?img=33" },
@@ -133,7 +133,7 @@ export const fixturesByGameweek: Record<number, Fixture[]> = {
 };
 
 const makeLeaderboard = (gameweekPoints: number[], seasonPoints: number[]): LeaderboardEntry[] =>
-  users.map((user, index) => ({
+  players.map((user, index) => ({
     ...user,
     rank: index + 1,
     gameweekPoints: gameweekPoints[index],
@@ -147,3 +147,23 @@ export const leaderboardByGameweek: Record<number, LeaderboardEntry[]> = {
   28: makeLeaderboard([0, 0, 0, 0, 0], [180, 170, 162, 146, 141]),
   29: makeLeaderboard([0, 0, 0, 0, 0], [180, 170, 162, 146, 141]),
 };
+
+const predictionChoices: PredictionChoice[] = ["home", "draw", "away"];
+
+export const predictionBookByGameweek: Record<number, Record<string, PredictionMap>> = Object.fromEntries(
+  gameweeks.map((gameweek) => [
+    gameweek.id,
+    Object.fromEntries(
+      players.map((player, playerIndex) => [
+        player.id,
+        Object.fromEntries(
+          (fixturesByGameweek[gameweek.id] ?? []).map((fixture, fixtureIndex) => [
+            fixture.id,
+            predictionChoices[(playerIndex + fixtureIndex + gameweek.id) % predictionChoices.length],
+          ]),
+        ),
+      ]),
+    ),
+  ]),
+) as Record<number, Record<string, PredictionMap>>;
+import type { PredictionChoice, PredictionMap } from "./predictions";

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyPrediction,
+  getFixturePredictionDetails,
   getPredictionPercentages,
+  getUserPredictionDetails,
   isPredictionComplete,
 } from "../lib/predictions.ts";
 
@@ -26,5 +28,40 @@ describe("prediction helpers", () => {
       away: 25,
     });
     assert.deepEqual(getPredictionPercentages([]), { home: 0, draw: 0, away: 0 });
+  });
+
+  it("builds a player's prediction details for the selected gameweek", () => {
+    assert.deepEqual(
+      getUserPredictionDetails(
+        [
+          { id: "fixture_a", homeTeam: "อาร์เซนอล", awayTeam: "เชลซี" },
+          { id: "fixture_b", homeTeam: "ลิเวอร์พูล", awayTeam: "แมนฯ ซิตี้" },
+        ],
+        { fixture_a: "home" },
+      ),
+      [
+        {
+          fixtureId: "fixture_a",
+          homeTeam: "อาร์เซนอล",
+          awayTeam: "เชลซี",
+          choice: "home",
+        },
+      ],
+    );
+  });
+
+  it("groups fixture details by outcome without losing profile data", () => {
+    assert.deepEqual(
+      getFixturePredictionDetails([
+        { name: "มุก", avatarUrl: "mook.png", choice: "home" },
+        { name: "นัท", avatarUrl: "nut.png", choice: "draw" },
+        { name: "แบงค์", avatarUrl: "bank.png", choice: "away" },
+      ]),
+      {
+        home: [{ name: "มุก", avatarUrl: "mook.png", choice: "home" }],
+        draw: [{ name: "นัท", avatarUrl: "nut.png", choice: "draw" }],
+        away: [{ name: "แบงค์", avatarUrl: "bank.png", choice: "away" }],
+      },
+    );
   });
 });

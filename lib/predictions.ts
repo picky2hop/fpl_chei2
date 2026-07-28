@@ -2,6 +2,27 @@ export type PredictionChoice = "home" | "draw" | "away";
 
 export type PredictionMap = Record<string, PredictionChoice>;
 
+export type PredictionFixture = {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+};
+
+export type UserPredictionDetail = {
+  fixtureId: string;
+  homeTeam: string;
+  awayTeam: string;
+  choice: PredictionChoice;
+};
+
+export type FixturePredictor = {
+  name: string;
+  avatarUrl: string;
+  choice: PredictionChoice;
+};
+
+export type GroupedFixturePredictionDetails = Record<PredictionChoice, FixturePredictor[]>;
+
 export function applyPrediction(
   current: PredictionMap,
   fixtureId: string,
@@ -30,4 +51,33 @@ export function getPredictionPercentages(choices: PredictionChoice[]) {
     draw: total ? Math.round((counts.draw / total) * 100) : 0,
     away: total ? Math.round((counts.away / total) * 100) : 0,
   };
+}
+
+export function getUserPredictionDetails(
+  fixtures: PredictionFixture[],
+  predictions: PredictionMap,
+): UserPredictionDetail[] {
+  return fixtures.flatMap((fixture) => {
+    const choice = predictions[fixture.id];
+    return choice
+      ? [{
+          fixtureId: fixture.id,
+          homeTeam: fixture.homeTeam,
+          awayTeam: fixture.awayTeam,
+          choice,
+        }]
+      : [];
+  });
+}
+
+export function getFixturePredictionDetails(
+  predictors: FixturePredictor[],
+): GroupedFixturePredictionDetails {
+  return predictors.reduce<GroupedFixturePredictionDetails>(
+    (groups, predictor) => {
+      groups[predictor.choice].push(predictor);
+      return groups;
+    },
+    { home: [], draw: [], away: [] },
+  );
 }

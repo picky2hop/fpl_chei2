@@ -161,3 +161,31 @@ git commit -m "test: add prediction domain helpers"
 - [ ] **Step 4: Initialize Git if needed, set the provided origin, and fetch remote refs** without overwriting local files.
 - [ ] **Step 5: Create one final commit** with `git add -A` and `git commit -m "docs: document prediction MVP"`.
 - [ ] **Step 6: Push the current branch to `origin`** and verify the remote branch points to the new commit.
+
+### Task 5: Apply approved UX revision and LIFF entry gate
+
+**Files:**
+- Create: `app/components/liff-gate.tsx`
+- Create: `app/components/detail-modal.tsx`
+- Modify: `app/page.tsx`
+- Modify: `app/components/prediction-app.tsx`
+- Modify: `app/globals.css`
+- Modify: `lib/mock-data.ts`
+- Modify: `lib/predictions.ts`
+- Modify: `.env.example`
+- Modify: `package.json` and `package-lock.json` to add the LIFF SDK
+
+**Interfaces:**
+- `LiffGate` renders `children` after LIFF init/login or a clearly labeled preview fallback.
+- `getUserPredictionDetails` returns fixture-level choices for one user without mutating source data.
+- `getFixturePredictionDetails` returns named/avatar-ready choice rows grouped by home/draw/away.
+
+- [ ] **Step 1: Write failing tests** for the two pure detail helpers and run `npm run test` to verify the expected missing-export failure.
+- [ ] **Step 2: Implement the minimal detail helpers** and rerun `npm run test` until all tests pass.
+- [ ] **Step 3: Add the `@line/liff` SDK and implement `LiffGate`** with automatic `liff.init`, `liff.login`, `liff.getProfile`, preview fallback, loading state, retry state, and no token logging.
+- [ ] **Step 4: Add named player/fixture detail modals** and make leaderboard rows and result cards keyboard/click accessible.
+- [ ] **Step 5: Move tabs to fixed bottom navigation** with safe-area padding and dark navy background throughout the app.
+- [ ] **Step 6: Switch club crest URLs** to `https://resources.premierleague.com/premierleague25/badges-alt/{id}.svg` and keep a text fallback if an image fails.
+- [ ] **Step 7: Add only necessary transitions** for loading, tab selection, modal entry/exit, and save success; honor `prefers-reduced-motion`.
+- [ ] **Step 8: Run `npm run test`, `npm run lint`, and `npm run build`**.
+- [ ] **Step 9: Update `docs/project-status.md` and commit** with `git commit -m "feat: refine phase 1 UX and add LIFF gate"`.

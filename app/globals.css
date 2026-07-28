@@ -18,6 +18,24 @@ body {
   font-family: Arial, "Noto Sans Thai", Helvetica, sans-serif;
 }
 
+@keyframes loading-slide {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(220%); }
+}
+
+@keyframes modal-enter {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.loading-bar {
+  animation: loading-slide 1.15s ease-in-out infinite;
+}
+
+.modal-enter {
+  animation: modal-enter 180ms ease-out both;
+}
+
 button,
 select {
   font: inherit;

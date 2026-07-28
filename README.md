@@ -9,6 +9,7 @@
 - เปลี่ยน gameweek ได้ทันทีจาก dropdown
 - เลือกผลเหย้า/เสมอ/เยือน พร้อม confirmation modal
 - ใช้ mock data และ preview profile เพื่อให้ตรวจ flow ได้โดยไม่ต้องมี credentials
+- รอบ UX revision จะเพิ่ม LIFF entry gate, bottom navigation, player/fixture detail modals และ SVG club crests
 
 ## Run locally
 
@@ -30,7 +31,7 @@ NEXT_PUBLIC_LIFF_ID=
 NEXT_PUBLIC_DEMO_MODE=true
 ```
 
-Phase 1 ยังไม่เรียก LIFF SDK, Supabase, Fantasy Premier League API หรือ LINE Messaging API จริง จึงไม่มี secret จริงใน repository
+Phase 1 รองรับ LIFF entry gate ผ่าน `NEXT_PUBLIC_LIFF_ID` และมี preview fallback เมื่อยังไม่มีค่า แต่ยังไม่เชื่อม Supabase, Fantasy Premier League API หรือ LINE Messaging API จริง จึงไม่มี secret จริงใน repository
 
 ## Verification
 
