@@ -3,6 +3,7 @@ import "server-only";
 import type { VerifiedLineProfile } from "@/lib/auth/liff";
 import {
   getMissingParticipantGameweekIds,
+  getAppUserRole,
   toLiffAuthIdentity,
   type RepositorySeason,
   type RepositoryUser,
@@ -67,7 +68,7 @@ async function findOrCreateUser(profile: VerifiedLineProfile): Promise<UserRow> 
       line_user_id: profile.lineUserId,
       display_name: profile.displayName,
       avatar_url: profile.pictureUrl,
-      role: profile.lineUserId === getServerEnv().adminLineUserId ? "admin" : "user",
+      role: getAppUserRole(profile.lineUserId, getServerEnv().adminLineUserId),
       status: "active",
       last_seen_at: new Date().toISOString(),
     })

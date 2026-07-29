@@ -1,11 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  getAppUserRole,
   getMissingParticipantGameweekIds,
   toLiffAuthIdentity,
   type RepositorySeason,
   type RepositoryUser,
 } from "../../lib/auth/user-repository-core.ts";
+
+test("new non-admin LINE users use the database player role", () => {
+  assert.equal(getAppUserRole("U-player", "U-admin"), "player");
+});
 
 test("new users join every active-season gameweek that has no participant row", () => {
   assert.deepEqual(

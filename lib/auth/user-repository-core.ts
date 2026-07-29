@@ -11,6 +11,12 @@ export type RepositorySeason = {
   name: string;
 };
 
+export type AppUserRole = "player" | "admin";
+
+export function getAppUserRole(lineUserId: string, adminLineUserId: string): AppUserRole {
+  return lineUserId === adminLineUserId ? "admin" : "player";
+}
+
 export function getMissingParticipantGameweekIds(
   seasonGameweekIds: readonly string[],
   existingParticipantGameweekIds: readonly string[],
