@@ -50,3 +50,11 @@ npm run build
 3. เพิ่ม FPL API adapter สำหรับ fixtures, results, gameweeks และ club crests
 4. เพิ่ม LINE Messaging webhook และ Flex Message สำหรับแชร์ตาราง/ผลทาย
 5. ตั้งค่า environment variables บน Vercel แล้ว deploy production
+
+## Phase 2 approved design
+
+Phase 2 ใช้ Vercel Free เป็น frontend/backend และใช้ Google Apps Script เป็น scheduler ภายนอกแทน Vercel Cron โดย Apps Script เรียก protected Vercel endpoint ทุก 10 นาทีตามช่วงเวลาที่กำหนดใน [Phase 2 backend design](docs/superpowers/specs/2026-07-29-fpl-phase-2-backend-design.md)
+
+ระบบจริงจะใช้ LIFF identity, Supabase PostgreSQL, FPL sync, server-side prediction lock, scoring/recalculation และหน้า `/admin` สำหรับ admin คนเดียว. ผู้ใช้ใหม่เข้าฤดูกาลปัจจุบันอัตโนมัติ ส่วนการ exclude เป็นราย gameweek และไม่ลบประวัติ
+
+ยังไม่เริ่ม implementation ของ Phase 2 จนกว่าจะตรวจสอบเอกสาร Design และสร้าง implementation plan เสร็จ
