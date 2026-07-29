@@ -26,14 +26,24 @@ npm run dev
 
 ## Environment
 
-คัดลอก `.env.example` เป็น `.env.local` ได้เมื่อจะเริ่มเชื่อม LIFF:
+คัดลอก `.env.example` เป็น `.env.local` ได้เมื่อจะเริ่มเชื่อม LIFF และ backend:
 
 ```env
 NEXT_PUBLIC_LIFF_ID=
 NEXT_PUBLIC_DEMO_MODE=true
+
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+LINE_CHANNEL_ID=
+SESSION_SECRET=
+ADMIN_LINE_USER_ID=
+FPL_API_BASE_URL=https://fantasy.premierleague.com
+FPL_SYNC_TOKEN=
 ```
 
-Phase 1 รองรับ LIFF entry gate ผ่าน `NEXT_PUBLIC_LIFF_ID` และมี preview fallback เมื่อยังไม่มีค่า แต่ยังไม่เชื่อม Supabase, Fantasy Premier League API หรือ LINE Messaging API จริง จึงไม่มี secret จริงใน repository
+`NEXT_PUBLIC_*` เป็นค่าที่ถูก bundle ไปยัง browser จึงใช้ได้เฉพาะ LIFF ID และ demo flag เท่านั้น ห้ามใส่ Supabase service key, session secret, admin ID หรือ sync token ในตัวแปร public. ค่าที่เหลือเป็น server-only และต้องตั้งใน Vercel/`.env.local` โดยไม่ commit ค่า secret.
+
+เมื่อยังไม่มีค่าฝั่ง server ให้ใช้ `NEXT_PUBLIC_DEMO_MODE=true` เพื่อดู Phase 1 preview เท่านั้น; preview mode ไม่อ่านหรือเขียน Supabase.
 
 ## Verification
 

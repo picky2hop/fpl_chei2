@@ -51,12 +51,27 @@ export default function LiffGate({ children }: LiffGateProps) {
         return;
       }
 
-      const lineProfile = await liff.getProfile();
+      const idToken = liff.getIDToken();
+      if (!idToken) throw new Error("LIFF ID token is unavailable");
+
+      const authResponse = await fetch("/api/auth/liff", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      if (!authResponse.ok) throw new Error("Server authentication failed");
+
+      const authResult: {
+        user?: { id: string; displayName: string; avatarUrl: string | null };
+      } = await authResponse.json();
+      if (!authResult.user) throw new Error("Server authentication returned no user");
+
+      const lineProfile = authResult.user;
       setProfile({
-        id: lineProfile.userId,
+        id: lineProfile.id,
         displayName: lineProfile.displayName,
         shortName: initials(lineProfile.displayName),
-        avatarUrl: lineProfile.pictureUrl ?? "",
+        avatarUrl: lineProfile.avatarUrl ?? "",
       });
       setState("ready");
     } catch {

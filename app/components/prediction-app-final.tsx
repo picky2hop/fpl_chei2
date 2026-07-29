@@ -38,6 +38,9 @@ type PredictionAppProps = {
   gameweeks: Gameweek[];
   fixturesByGameweek: Record<number, Fixture[]>;
   leaderboardByGameweek: Record<number, LeaderboardEntry[]>;
+  initialPredictionsByGameweek?: Record<number, PredictionMap>;
+  initialGameweek?: number;
+  onConfirmPredictions?: (gameweek: number, predictions: PredictionMap) => Promise<void>;
 };
 
 const tabs: { id: Tab; label: string; icon: LucideIcon }[] = [
@@ -111,10 +114,10 @@ function SharePrompt({ gameweek, completionLabel, onClose, onShare }: { gameweek
   return <DetailModal eyebrow="Prediction saved" title="บันทึกคำทายแล้ว" onClose={onClose}><div className="space-y-4"><div className="flex items-center gap-3 rounded-2xl border border-[#47d7a0]/25 bg-[#47d7a0]/10 p-3"><span className="grid size-10 place-items-center rounded-full bg-[#47d7a0] text-[#06221a]"><Check size={20} /></span><p className="text-sm font-bold text-[#b7f5de]">บันทึกคำทาย {completionLabel} ใน GW {gameweek} แล้ว</p></div><p className="text-sm leading-6 text-white/65">อยากแชร์ผลทายลงกลุ่ม LINE ให้เพื่อนเห็นเลยไหม?</p><div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-black text-white/70 transition hover:bg-white/10">ไม่แชร์</button><button type="button" onClick={onShare} className="flex items-center justify-center gap-2 rounded-2xl bg-[#d9ff58] py-3.5 text-sm font-black text-[#071525] transition hover:bg-[#e7ff8c]"><Share2 size={16} />แชร์เข้า LINE</button></div></div></DetailModal>;
 }
 
-export default function PredictionApp({ currentUser, gameweeks, fixturesByGameweek, leaderboardByGameweek }: PredictionAppProps) {
+export default function PredictionApp({ currentUser, gameweeks, fixturesByGameweek, leaderboardByGameweek, initialPredictionsByGameweek, initialGameweek, onConfirmPredictions }: PredictionAppProps) {
   const [activeTab, setActiveTab] = useState<Tab>("leaderboard");
-  const [selectedGameweek, setSelectedGameweek] = useState(28);
-  const [predictionsByGameweek, setPredictionsByGameweek] = useState<Record<number, PredictionMap>>({});
+  const [selectedGameweek, setSelectedGameweek] = useState(initialGameweek ?? gameweeks[0]?.id ?? 0);
+  const [predictionsByGameweek, setPredictionsByGameweek] = useState<Record<number, PredictionMap>>(initialPredictionsByGameweek ?? {});
   const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
   const [isSharePromptOpen, setIsSharePromptOpen] = useState(false);
@@ -127,7 +130,16 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
   const completionLabel = useMemo(() => `${selectedCount}/${fixtures.length} คู่`, [fixtures.length, selectedCount]);
   const changeGameweek = (value: number) => { setSelectedGameweek(value); setSelectedPlayer(null); setSelectedFixture(null); setIsSharePromptOpen(false); };
   const choosePrediction = (fixtureId: string, choice: PredictionChoice) => { setShowSavedToast(false); setPredictionsByGameweek((current) => ({ ...current, [selectedGameweek]: applyPrediction(current[selectedGameweek] ?? {}, fixtureId, choice) })); };
-  const confirmPredictions = () => { if (complete) setIsSharePromptOpen(true); };
+  const confirmPredictions = () => {
+    if (!complete) return;
+    if (onConfirmPredictions) {
+      void onConfirmPredictions(selectedGameweek, predictions)
+        .then(() => setIsSharePromptOpen(true))
+        .catch(() => setShowSavedToast(false));
+      return;
+    }
+    setIsSharePromptOpen(true);
+  };
   const finishShareFlow = () => { setIsSharePromptOpen(false); setShowSavedToast(true); };
 
   return <main className="app-shell min-h-screen bg-[#071525] text-white"><div className="mx-auto min-h-screen w-full max-w-[520px] pb-28"><header className="bg-[#071525] px-5 pb-6 pt-7"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Avatar user={currentUser} size={42} /><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">สวัสดีตอนเย็น</p><p className="mt-0.5 text-base font-black">{currentUser.displayName} 👋</p></div></div><span className="rounded-full border border-[#d9ff58]/25 bg-[#d9ff58]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#d9ff58]">Preview / LIFF</span></div><div className="mt-6 flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8ca6bd]">This week&apos;s arena</p><h1 className="mt-1 text-3xl font-black tracking-[-0.04em]">เกมวีค {selectedGameweek}</h1></div><GameweekPicker gameweeks={gameweeks} value={selectedGameweek} onChange={changeGameweek} /></div></header><div className="px-4 pt-5">{activeTab === "leaderboard" && <Leaderboard entries={entries} gameweek={selectedGameweek} onSelect={setSelectedPlayer} />}{activeTab === "predictions" && <Predictions fixtures={fixtures} predictions={predictions} onChoose={choosePrediction} onConfirm={confirmPredictions} />}{activeTab === "results" && <Results fixtures={fixtures} gameweek={selectedGameweek} onSelectFixture={setSelectedFixture} />}</div><p className="px-4 pt-6 text-center text-[10px] font-bold text-white/35">ข้อมูลตัวอย่าง Phase 1 · เวลาแสดงประเทศไทย (ICT)</p></div><nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-[520px] -translate-x-1/2 border-t border-white/10 bg-[#0b1d31]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl"><div className="grid grid-cols-3 gap-1 rounded-2xl bg-white/5 p-1">{tabs.map((tab) => { const Icon = tab.icon; return <button key={tab.id} type="button" onClick={() => { setActiveTab(tab.id); setShowSavedToast(false); }} className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black transition ${activeTab === tab.id ? "bg-[#d9ff58] text-[#071525] shadow-[0_6px_20px_rgba(217,255,88,0.15)]" : "text-white/55 hover:text-white"}`}><Icon aria-hidden="true" size={15} strokeWidth={2.4} />{tab.label}</button>; })}</div></nav>{selectedPlayer && <DetailModal eyebrow="Player picks" title={`คำทายของ ${selectedPlayer.displayName}`} onClose={() => setSelectedPlayer(null)}><PlayerDetail player={selectedPlayer} fixtures={fixtures} gameweek={selectedGameweek} predictionMap={predictionBookByGameweek[selectedGameweek]?.[selectedPlayer.id] ?? {}} /></DetailModal>}{selectedFixture && <DetailModal eyebrow="Match details" title={`${selectedFixture.homeTeam.name} vs ${selectedFixture.awayTeam.name}`} onClose={() => setSelectedFixture(null)}><FixtureDetail fixture={selectedFixture} entries={entries} gameweek={selectedGameweek} /></DetailModal>}{isSharePromptOpen && <SharePrompt gameweek={selectedGameweek} completionLabel={completionLabel} onClose={finishShareFlow} onShare={finishShareFlow} />}{showSavedToast && <div className="fixed inset-x-4 bottom-24 z-30 mx-auto flex max-w-[488px] items-center gap-3 rounded-2xl border border-[#47d7a0]/30 bg-[#123d36] px-4 py-3 text-sm font-bold text-[#b7f5de] shadow-2xl"><span className="grid size-8 place-items-center rounded-full bg-[#47d7a0] text-[#06221a]"><CheckCircle2 size={17} /></span><span>บันทึกคำทาย {completionLabel} แล้ว</span><button type="button" onClick={() => setShowSavedToast(false)} aria-label="ปิดข้อความบันทึกสำเร็จ" className="ml-auto text-white/60"><X size={17} /></button></div>}</main>;
