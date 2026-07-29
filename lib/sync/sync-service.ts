@@ -3,7 +3,7 @@ import "server-only";
 import type { Json } from "@/lib/db/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { recalculateGameweeks } from "@/lib/scoring/recalculate";
-import { normalizeFplFixture } from "./fpl-core";
+import { buildFixtureUpsertRow, normalizeFplFixture } from "./fpl-core";
 import { fetchFplSnapshot } from "./fpl-client";
 import { reconcileFixtureMoves, type FixtureMove } from "./reconcile";
 
@@ -86,19 +86,15 @@ export async function syncFplData(mode: SyncMode): Promise<SyncResult> {
       if (fixture.status === "finished" && (previous?.status !== "finished" || previous.home_score !== fixture.homeScore || previous.away_score !== fixture.awayScore)) {
         affectedGameweekIds.add(gameweekId);
       }
-      return {
-        id: previous?.id,
-        external_fixture_id: fixture.externalFixtureId,
-        season_id: season.id,
-        gameweek_id: gameweekId,
-        home_team_id: homeTeamId,
-        away_team_id: awayTeamId,
-        kickoff_at: fixture.kickoffAt,
-        status: fixture.status,
-        home_score: fixture.homeScore,
-        away_score: fixture.awayScore,
-        last_synced_at: now,
-      };
+      return buildFixtureUpsertRow({
+        fixture,
+        seasonId: season.id,
+        gameweekId,
+        homeTeamId,
+        awayTeamId,
+        syncedAt: now,
+        existingFixtureId: previous?.id,
+      });
     });
     const { data: syncedFixtures, error: fixtureError } = await admin.from("fixtures").upsert(fixtureRows, { onConflict: "external_fixture_id" }).select("id,external_fixture_id");
     if (fixtureError || !syncedFixtures) throw new Error(`Unable to sync fixtures: ${fixtureError?.message ?? "unknown error"}`);

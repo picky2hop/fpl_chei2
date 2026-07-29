@@ -23,6 +23,31 @@ export type NormalizedFplFixture = {
   status: "scheduled" | "live" | "finished" | "postponed";
 };
 
+export function buildFixtureUpsertRow(input: {
+  fixture: NormalizedFplFixture;
+  seasonId: string;
+  gameweekId: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  syncedAt: string;
+  existingFixtureId?: string;
+}) {
+  const row = {
+    external_fixture_id: input.fixture.externalFixtureId,
+    season_id: input.seasonId,
+    gameweek_id: input.gameweekId,
+    home_team_id: input.homeTeamId,
+    away_team_id: input.awayTeamId,
+    kickoff_at: input.fixture.kickoffAt,
+    status: input.fixture.status,
+    home_score: input.fixture.homeScore,
+    away_score: input.fixture.awayScore,
+    last_synced_at: input.syncedAt,
+  };
+
+  return input.existingFixtureId ? { id: input.existingFixtureId, ...row } : row;
+}
+
 export function normalizeFplFixture(fixture: FplFixturePayload): NormalizedFplFixture {
   if (fixture.event === null) throw new Error(`Fixture ${fixture.id} has no gameweek`);
   if (!fixture.kickoff_time) throw new Error(`Fixture ${fixture.id} has no kickoff`);
