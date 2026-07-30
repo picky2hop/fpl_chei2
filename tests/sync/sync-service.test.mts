@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildFixtureUpsertRow, normalizeFplFixture } from "../../lib/sync/fpl-core.ts";
+import { buildFixtureUpsertRow, normalizeFplFixture, splitFixtureUpsertRows } from "../../lib/sync/fpl-core.ts";
 
 const fixture = normalizeFplFixture({
   id: 123,
@@ -37,4 +37,14 @@ test("preserves the existing internal id when updating a fixture", () => {
 
   assert.equal(row.id, "fixture-1");
   assert.equal(row.external_fixture_id, 123);
+});
+
+test("partitions existing and new fixture rows before bulk upsert", () => {
+  const existingRow = buildFixtureUpsertRow({ ...baseInput, existingFixtureId: "fixture-1" });
+  const newRow = buildFixtureUpsertRow(baseInput);
+
+  const partitions = splitFixtureUpsertRows([existingRow, newRow]);
+
+  assert.deepEqual(partitions.existingRows, [existingRow]);
+  assert.deepEqual(partitions.newRows, [newRow]);
 });

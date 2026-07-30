@@ -3,7 +3,7 @@ import "server-only";
 import type { Json } from "@/lib/db/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { recalculateGameweeks } from "@/lib/scoring/recalculate";
-import { buildFixtureUpsertRow, normalizeFplFixture } from "./fpl-core";
+import { buildFixtureUpsertRow, normalizeFplFixture, splitFixtureUpsertRows } from "./fpl-core";
 import { fetchFplSnapshot } from "./fpl-client";
 import { reconcileFixtureMoves, type FixtureMove } from "./reconcile";
 
@@ -96,8 +96,14 @@ export async function syncFplData(mode: SyncMode): Promise<SyncResult> {
         existingFixtureId: previous?.id,
       });
     });
-    const { data: syncedFixtures, error: fixtureError } = await admin.from("fixtures").upsert(fixtureRows, { onConflict: "external_fixture_id" }).select("id,external_fixture_id");
-    if (fixtureError || !syncedFixtures) throw new Error(`Unable to sync fixtures: ${fixtureError?.message ?? "unknown error"}`);
+    const { existingRows, newRows } = splitFixtureUpsertRows(fixtureRows);
+    const syncedFixtures: Array<{ id: string; external_fixture_id: number }> = [];
+    for (const rows of [existingRows, newRows]) {
+      if (rows.length === 0) continue;
+      const { data, error } = await admin.from("fixtures").upsert(rows, { onConflict: "external_fixture_id" }).select("id,external_fixture_id");
+      if (error || !data) throw new Error(`Unable to sync fixtures: ${error?.message ?? "unknown error"}`);
+      syncedFixtures.push(...data);
+    }
 
     const sourceRows = snapshot.fixtures.map((fixture) => ({
       fixture_id: syncedFixtures.find((row) => row.external_fixture_id === fixture.id)?.id ?? "",

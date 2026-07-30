@@ -23,6 +23,20 @@ export type NormalizedFplFixture = {
   status: "scheduled" | "live" | "finished" | "postponed";
 };
 
+export type FixtureUpsertRow = {
+  id?: string;
+  external_fixture_id: number;
+  season_id: string;
+  gameweek_id: string;
+  home_team_id: string;
+  away_team_id: string;
+  kickoff_at: string;
+  status: NormalizedFplFixture["status"];
+  home_score: number | null;
+  away_score: number | null;
+  last_synced_at: string;
+};
+
 export function buildFixtureUpsertRow(input: {
   fixture: NormalizedFplFixture;
   seasonId: string;
@@ -31,7 +45,7 @@ export function buildFixtureUpsertRow(input: {
   awayTeamId: string;
   syncedAt: string;
   existingFixtureId?: string;
-}) {
+}): FixtureUpsertRow {
   const row = {
     external_fixture_id: input.fixture.externalFixtureId,
     season_id: input.seasonId,
@@ -46,6 +60,13 @@ export function buildFixtureUpsertRow(input: {
   };
 
   return input.existingFixtureId ? { id: input.existingFixtureId, ...row } : row;
+}
+
+export function splitFixtureUpsertRows(rows: readonly FixtureUpsertRow[]) {
+  return {
+    existingRows: rows.filter((row) => "id" in row),
+    newRows: rows.filter((row) => !("id" in row)),
+  };
 }
 
 export function normalizeFplFixture(fixture: FplFixturePayload): NormalizedFplFixture {
