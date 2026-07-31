@@ -8,6 +8,11 @@ export type ServerEnv = {
   syncToken: string;
 };
 
+export type LineServerEnv = {
+  channelSecret: string;
+  channelAccessToken: string;
+};
+
 const serverEnvEntries = [
   ["SUPABASE_URL", "supabaseUrl"],
   ["SUPABASE_SERVICE_ROLE_KEY", "supabaseServiceRoleKey"],
@@ -30,4 +35,11 @@ export function getServerEnv(): ServerEnv {
   return Object.fromEntries(
     serverEnvEntries.map(([name, property]) => [property, requiredEnv(name)]),
   ) as ServerEnv;
+}
+
+export function getLineServerEnv(): LineServerEnv {
+  return {
+    channelSecret: requiredEnv("LINE_CHANNEL_SECRET"),
+    channelAccessToken: requiredEnv("LINE_CHANNEL_ACCESS_TOKEN"),
+  };
 }

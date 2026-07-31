@@ -1,0 +1,42 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { shareFlexMessage } from "../../lib/line/share.ts";
+
+const message = {
+  type: "flex" as const,
+  altText: "test flex",
+  contents: { type: "bubble" },
+};
+
+test("shares a Flex message when the target picker is available", async () => {
+  let received: unknown;
+  const result = await shareFlexMessage({
+    isApiAvailable: () => true,
+    shareTargetPicker: async (messages, options) => {
+      received = { messages, options };
+      return { status: "success" };
+    },
+  }, message);
+
+  assert.equal(result, "shared");
+  assert.deepEqual(received, { messages: [message], options: { isMultiple: true } });
+});
+
+test("reports cancellation without claiming that a message was shared", async () => {
+  const result = await shareFlexMessage({
+    isApiAvailable: () => true,
+    shareTargetPicker: async () => undefined,
+  }, message);
+
+  assert.equal(result, "cancelled");
+});
+
+test("rejects clearly when the target picker is unavailable", async () => {
+  await assert.rejects(
+    shareFlexMessage({
+      isApiAvailable: () => false,
+      shareTargetPicker: async () => ({ status: "success" }),
+    }, message),
+    (error: unknown) => error instanceof Error && error.message === "SHARE_TARGET_PICKER_UNAVAILABLE",
+  );
+});
