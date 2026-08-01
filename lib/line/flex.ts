@@ -99,18 +99,21 @@ function imageOrFallback(url: string | undefined, fallback: string, size = "40px
       };
 }
 
-function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false) {
-  const name = text(team.name, "xs", "bold", highlighted ? "#071525" : PRIMARY_TEXT);
+function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, centered = false) {
+  const name = {
+    ...text(team.name, "xs", "bold", highlighted ? "#d9ff58" : PRIMARY_TEXT),
+    ...(centered ? { align: "center" } : {}),
+  };
   const logo = imageOrFallback(team.logoUrl, team.name, "36px");
   return {
     type: "box",
     layout: "horizontal",
     flex: 1,
     spacing: "sm",
-    paddingAll: highlighted ? "8px" : "none",
+    paddingAll: centered ? "8px" : highlighted ? "8px" : "none",
     cornerRadius: "md",
-    backgroundColor: highlighted ? ACCENT : CARD_BACKGROUND,
-    justifyContent: side === "home" ? "flex-end" : "flex-start",
+    backgroundColor: highlighted ? "#d9ff5815" : centered ? MAIN_BACKGROUND : CARD_BACKGROUND,
+    justifyContent: centered ? "center" : side === "home" ? "flex-end" : "flex-start",
     alignItems: "center",
     contents: side === "home" ? [name, logo] : [logo, name],
   };
@@ -236,14 +239,13 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
     type: "box",
     layout: "horizontal",
     spacing: "xs",
-    paddingAll: "8px",
-    backgroundColor: CARD_BACKGROUND,
-    cornerRadius: "md",
+    paddingAll: "4px",
+    backgroundColor: MAIN_BACKGROUND,
     alignItems: "center",
     contents: [
-      teamSide(fixture.homeTeam, "home", fixture.choice === "home"),
-      text("VS", "xxs", "bold", MUTED_TEXT),
-      teamSide(fixture.awayTeam, "away", fixture.choice === "away"),
+      teamSide(fixture.homeTeam, "home", fixture.choice === "home", true),
+      { ...text("VS", "xxs", "bold", MUTED_TEXT), width: "24px", flex: 0, align: "center" },
+      teamSide(fixture.awayTeam, "away", fixture.choice === "away", true),
       predictionChoicePill(fixture.choice),
     ],
   };
@@ -268,23 +270,10 @@ export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessa
       },
     ],
   };
-  const predictionHeader = {
-    type: "box",
-    layout: "vertical",
-    paddingAll: "16px",
-    cornerRadius: "lg",
-    backgroundColor: CARD_BACKGROUND,
-    contents: [
-      text("PLAYER PICKS", "xs", "bold", ACCENT),
-      text(`คำทาย GW${input.gameweek} ของ ${input.displayName}`, "xl", "bold"),
-    ],
-  };
-
   return {
     type: "flex",
     altText: `FPL Chei Chei · คำทาย GW${input.gameweek} ของ ${input.displayName}`,
     contents: bubble([
-      predictionHeader,
       profile,
       ...(input.fixtures.length ? input.fixtures.map(predictionFixture) : [text("ยังไม่มีคำทาย", "sm", "regular", MUTED_TEXT)]),
     ]),

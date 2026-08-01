@@ -30,8 +30,6 @@ test("prediction Flex payload contains the selected gameweek and picks", () => {
   assert.match(message.altText, /Picky/);
 
   const serialized = JSON.stringify(message);
-  assert.match(serialized, /"justifyContent":"flex-end"/);
-  assert.match(serialized, /"justifyContent":"flex-start"/);
   assert.doesNotMatch(serialized, /"justifyContent":"(?:end|start)"/);
   assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
   assert.match(serialized, /https:\/\/example\.test\/arsenal\.png/);
@@ -44,7 +42,7 @@ test("prediction Flex payload contains the selected gameweek and picks", () => {
   assert.match(serialized, /"cornerRadius":"xxl"/);
   assert.doesNotMatch(serialized, /\{"type":"image"[^}]*"cornerRadius":"xxl"/);
   assert.doesNotMatch(serialized, /"0px"/);
-  assert.match(serialized, /"paddingAll":"none"/);
+  assert.doesNotMatch(serialized, /"paddingAll":"none"/);
   assert.doesNotMatch(serialized, /\.svg/);
   assert.doesNotMatch(serialized, /undefined/);
 
@@ -99,7 +97,7 @@ test("prediction Flex is a single app-style bubble with all picks and choice hig
 
   assert.equal(message.contents.type, "bubble");
   const serialized = JSON.stringify(message);
-  assert.match(serialized, /PLAYER PICKS/);
+  assert.doesNotMatch(serialized, /PLAYER PICKS/);
   assert.match(serialized, /คำทาย GW1 ของ Picky/);
   assert.match(serialized, /คำทายของ GW 1/);
   for (const index of [1, 2, 3, 4, 5, 6]) {
@@ -110,6 +108,39 @@ test("prediction Flex is a single app-style bubble with all picks and choice hig
   assert.match(serialized, /#47d7a0/);
   assert.match(serialized, /#6da9ff/);
   assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
+});
+
+test("prediction Flex matches the app detail row treatment", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    avatarUrl: "https://example.test/picky.png",
+    gameweek: 1,
+    fixtures: [{
+      homeTeam: { name: "Arsenal", logoUrl: "https://example.test/arsenal.png" },
+      awayTeam: { name: "Chelsea", logoUrl: "https://example.test/chelsea.png" },
+      choice: "home",
+    }],
+  });
+  const bubble = message.contents as Record<string, unknown>;
+  const body = bubble.body as Record<string, unknown>;
+  const bodyContents = body.contents as Array<Record<string, unknown>>;
+  const fixtureRow = bodyContents[1];
+  const rowContents = fixtureRow.contents as Array<Record<string, unknown>>;
+  const homeSide = rowContents[0];
+  const vs = rowContents[1];
+  const awaySide = rowContents[2];
+
+  assert.doesNotMatch(JSON.stringify(body), /PLAYER PICKS/);
+  assert.equal(fixtureRow.layout, "horizontal");
+  assert.equal(fixtureRow.backgroundColor, "#071525");
+  assert.equal(fixtureRow.cornerRadius, undefined);
+  assert.equal(homeSide.justifyContent, "center");
+  assert.equal(awaySide.justifyContent, "center");
+  assert.equal(homeSide.backgroundColor, "#d9ff5815");
+  assert.equal(homeSide.paddingAll, "8px");
+  assert.equal(vs.align, "center");
+  assert.equal(rowContents.at(-1)?.width, "48px");
+  assert.equal(rowContents.at(-1)?.flex, 0);
 });
 
 test("standings Flex uses a carousel for a long table without dropping rows", () => {
