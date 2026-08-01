@@ -39,6 +39,7 @@ test("prediction Flex payload contains the selected gameweek and picks", () => {
   assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
   assert.match(serialized, /"size":"giga"/);
   assert.match(serialized, /"cornerRadius":"xxl"/);
+  assert.doesNotMatch(serialized, /\{"type":"image"[^}]*"cornerRadius":"xxl"/);
   assert.doesNotMatch(serialized, /\.svg/);
   assert.doesNotMatch(serialized, /undefined/);
 });

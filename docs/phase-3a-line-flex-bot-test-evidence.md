@@ -37,6 +37,12 @@
 - `git diff --check` → passed
 - no Supabase write or fixture mutation was performed for this batch
 
+## 2026-08-01 production regression follow-up
+
+- Bot data commands now choose the flagged current gameweek and fall back to the lowest-numbered gameweek when the FPL source has no `is_current` flag.
+- LIFF share now treats only `{ status: "success" }` as a successful send; cancellation or any non-success result is shown as cancelled.
+- Follow-up verification: `npm.cmd run test` → 74 passed, `npm.cmd run lint` → passed, `npm.cmd run build` → passed, `git diff --check` → passed.
+
 ## Regression fixes in this review batch
 
 - Live player and fixture detail now use the active prediction book from the dashboard read model instead of the mock-only prediction book.

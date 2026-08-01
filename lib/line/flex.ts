@@ -73,7 +73,17 @@ function text(value: string, size = "sm", weight = "regular", color = PRIMARY_TE
 function imageOrFallback(url: string | undefined, fallback: string, size = "40px") {
   const imageUrl = lineImageUrl(url);
   return imageUrl
-    ? { type: "image", url: imageUrl, size, aspectMode: "fit", aspectRatio: "1:1", cornerRadius: "xxl", flex: 0 }
+    ? {
+        type: "box",
+        layout: "vertical",
+        width: size,
+        height: size,
+        cornerRadius: "xxl",
+        backgroundColor: "#29435D",
+        justifyContent: "center",
+        alignItems: "center",
+        contents: [{ type: "image", url: imageUrl, size: "full", aspectMode: "cover", aspectRatio: "1:1", flex: 0 }],
+      }
     : {
         type: "box",
         layout: "vertical",

@@ -18,5 +18,9 @@ export async function shareFlexMessage(
   }
 
   const result = await api.shareTargetPicker([message], { isMultiple: true });
-  return result ? "shared" : "cancelled";
+  return isSuccessfulShareResult(result) ? "shared" : "cancelled";
+}
+
+function isSuccessfulShareResult(value: unknown): boolean {
+  return typeof value === "object" && value !== null && "status" in value && value.status === "success";
 }

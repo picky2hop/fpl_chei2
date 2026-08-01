@@ -35,6 +35,16 @@ export type UserPredictionData = {
   }>;
 };
 
+export type ActiveGameweek = {
+  id: string;
+  number: number;
+  isCurrent: boolean;
+};
+
+export function selectActiveGameweek(gameweeks: ActiveGameweek[]): ActiveGameweek | null {
+  return gameweeks.find((gameweek) => gameweek.isCurrent) ?? [...gameweeks].sort((left, right) => left.number - right.number)[0] ?? null;
+}
+
 type StandingsRowInput = {
   userId: string;
   displayName: string;

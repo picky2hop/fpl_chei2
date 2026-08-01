@@ -31,6 +31,15 @@ test("reports cancellation without claiming that a message was shared", async ()
   assert.equal(result, "cancelled");
 });
 
+test("does not claim success for a non-success picker result", async () => {
+  const result = await shareFlexMessage({
+    isApiAvailable: () => true,
+    shareTargetPicker: async () => ({ status: "cancelled" }),
+  }, message);
+
+  assert.equal(result, "cancelled");
+});
+
 test("rejects clearly when the target picker is unavailable", async () => {
   await assert.rejects(
     shareFlexMessage({

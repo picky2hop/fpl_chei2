@@ -2,10 +2,28 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   getBangkokDayRange,
+  selectActiveGameweek,
   mapStandingsRows,
   mapTodayFixtureRows,
   mapUserPredictionRows,
 } from "../../lib/data/line-bot-core.ts";
+
+test("selects the current gameweek and falls back when FPL has no current flag", () => {
+  assert.deepEqual(
+    selectActiveGameweek([
+      { id: "gw-1", number: 1, isCurrent: false },
+      { id: "gw-2", number: 2, isCurrent: true },
+    ]),
+    { id: "gw-2", number: 2, isCurrent: true },
+  );
+  assert.deepEqual(
+    selectActiveGameweek([
+      { id: "gw-1", number: 1, isCurrent: false },
+      { id: "gw-2", number: 2, isCurrent: false },
+    ]),
+    { id: "gw-1", number: 1, isCurrent: false },
+  );
+});
 
 test("calculates a Bangkok calendar day as UTC boundaries", () => {
   const range = getBangkokDayRange(new Date("2026-08-01T00:00:00.000Z"));

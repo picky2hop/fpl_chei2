@@ -2,6 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
+import { selectActiveGameweek } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -154,13 +155,14 @@ async function activeContext() {
     .maybeSingle();
   if (seasonError || !season) throw new Error("Active season is unavailable");
 
-  const { data: gameweek, error: gameweekError } = await admin
+  const { data: gameweeks, error: gameweekError } = await admin
     .from("gameweeks")
-    .select("id,number")
+    .select("id,number,is_current")
     .eq("season_id", season.id)
-    .eq("is_current", true)
-    .maybeSingle();
-  if (gameweekError || !gameweek) throw new Error("Current gameweek is unavailable");
+    .order("number");
+  if (gameweekError) throw new Error("Gameweeks are unavailable");
+  const gameweek = selectActiveGameweek((gameweeks ?? []).map((row) => ({ id: row.id, number: row.number, isCurrent: row.is_current })));
+  if (!gameweek) throw new Error("Current gameweek is unavailable");
   return { admin, season, gameweek };
 }
 
