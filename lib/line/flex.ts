@@ -108,7 +108,7 @@ function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false) {
     paddingAll: highlighted ? "8px" : "none",
     cornerRadius: "md",
     backgroundColor: highlighted ? ACCENT : CARD_BACKGROUND,
-    justifyContent: side === "home" ? "end" : "start",
+    justifyContent: side === "home" ? "flex-end" : "flex-start",
     alignItems: "center",
     contents: side === "home" ? [name, logo] : [logo, name],
   };

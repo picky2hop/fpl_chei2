@@ -30,6 +30,9 @@ test("prediction Flex payload contains the selected gameweek and picks", () => {
   assert.match(message.altText, /Picky/);
 
   const serialized = JSON.stringify(message);
+  assert.match(serialized, /"justifyContent":"flex-end"/);
+  assert.match(serialized, /"justifyContent":"flex-start"/);
+  assert.doesNotMatch(serialized, /"justifyContent":"(?:end|start)"/);
   assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
   assert.match(serialized, /https:\/\/example\.test\/arsenal\.png/);
   assert.match(serialized, /https:\/\/example\.test\/chelsea\.png/);
