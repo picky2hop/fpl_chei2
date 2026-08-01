@@ -109,3 +109,89 @@ test("returns 200 and does not call LINE when the text is unsupported", async ()
   assert.equal(response.status, 200);
   assert.equal(fetchCalls, 0);
 });
+
+test("logs only safe LINE diagnostics and keeps the webhook failure response generic", async () => {
+  configureLineTestEnv();
+  const body = JSON.stringify({
+    destination: "channel",
+    events: [{
+      type: "message",
+      replyToken: "reply-token",
+      source: { type: "group", groupId: "group-id", userId: "line-user-id" },
+      message: { type: "text", id: "message-id", text: "ผลทาย" },
+    }],
+  });
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    message: "The request body has 1 error(s)",
+    details: [{
+      message: "May not be empty",
+      property: "messages[0].contents.body.contents[1].text",
+      ignored: "reply-token",
+    }],
+    accessToken: "access-token-for-test-only",
+    requestBody: "channel-secret",
+  }), {
+    status: 400,
+    headers: { "content-type": "application/json" },
+  });
+  const logs: unknown[][] = [];
+
+  const response = await createLineWebhookPost({
+    commandService: {
+      async replyForText() {
+        return [{ type: "flex", altText: "ผลทาย", contents: { type: "bubble" } }];
+      },
+    },
+    logger: (...values: unknown[]) => { logs.push(values); },
+  })(new Request("https://example.test/api/line/webhook", {
+    method: "POST",
+    headers: { "x-line-signature": computeLineSignature(body, "channel-secret") },
+    body,
+  }));
+
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), { error: "LINE reply failed" });
+  assert.deepEqual(logs, [["LINE_MESSAGING_API_REPLY_FAILED", {
+    status: 400,
+    message: "The request body has 1 error(s)",
+    details: [{
+      message: "May not be empty",
+      property: "messages[0].contents.body.contents[1].text",
+    }],
+  }]]);
+  assert.doesNotMatch(
+    JSON.stringify(logs),
+    /access-token-for-test-only|reply-token|channel-secret|group-id|line-user-id|ignored|requestBody/,
+  );
+});
+
+test("does not log internal error messages for non-LINE webhook failures", async () => {
+  configureLineTestEnv();
+  const body = JSON.stringify({
+    destination: "channel",
+    events: [{
+      type: "message",
+      replyToken: "reply-token",
+      source: { type: "group", groupId: "group-id", userId: "line-user-id" },
+      message: { type: "text", id: "message-id", text: "ผลทาย" },
+    }],
+  });
+  const logs: unknown[][] = [];
+
+  const response = await createLineWebhookPost({
+    commandService: {
+      async replyForText() {
+        throw new Error("database details and channel-secret must stay private");
+      },
+    },
+    logger: (...values: unknown[]) => { logs.push(values); },
+  })(new Request("https://example.test/api/line/webhook", {
+    method: "POST",
+    headers: { "x-line-signature": computeLineSignature(body, "channel-secret") },
+    body,
+  }));
+
+  assert.equal(response.status, 502);
+  assert.deepEqual(logs, [["LINE_WEBHOOK_REPLY_FAILED"]]);
+  assert.doesNotMatch(JSON.stringify(logs), /database details|channel-secret|reply-token|line-user-id/);
+});

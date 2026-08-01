@@ -123,3 +123,58 @@ test("sends a reply through the LINE Messaging API endpoint", async () => {
     messages: [{ type: "text", text: "hello" }],
   });
 });
+
+test("exposes only allow-listed LINE API diagnostics when a reply is rejected", async () => {
+  await assert.rejects(
+    replyToLine({
+      accessToken: "access-token-for-test-only",
+      replyToken: "reply-token",
+      messages: [{ type: "text", text: "hello" }],
+      fetchImpl: async () => new Response(JSON.stringify({
+        message: "The reply-token request has 1 error(s)",
+        details: [{
+          message: "Bearer access-token-for-test-only may not be empty",
+          property: "messages[0].contents.body.contents[1].text",
+          ignored: "reply-token",
+        }],
+        accessToken: "access-token-for-test-only",
+        requestBody: "channel-secret",
+      }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }),
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.name, "LineMessagingApiError");
+      const diagnostic = (error as Error & { diagnostic?: unknown }).diagnostic;
+      assert.deepEqual(diagnostic, {
+        status: 400,
+        message: "The [REDACTED] request has 1 error(s)",
+        details: [{
+          message: "Bearer [REDACTED] may not be empty",
+          property: "messages[0].contents.body.contents[1].text",
+        }],
+      });
+      assert.doesNotMatch(JSON.stringify(diagnostic), /access-token-for-test-only|reply-token|channel-secret|ignored|requestBody/);
+      return true;
+    },
+  );
+});
+
+test("falls back to a status-only diagnostic for a non-JSON LINE error response", async () => {
+  await assert.rejects(
+    replyToLine({
+      accessToken: "access-token-for-test-only",
+      replyToken: "reply-token",
+      messages: [{ type: "text", text: "hello" }],
+      fetchImpl: async () => new Response("upstream response is not JSON", { status: 502 }),
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.name, "LineMessagingApiError");
+      assert.deepEqual((error as Error & { diagnostic?: unknown }).diagnostic, { status: 502 });
+      return true;
+    },
+  );
+});

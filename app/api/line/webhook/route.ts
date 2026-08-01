@@ -1,5 +1,5 @@
 import { getLineServerEnv } from "../../../../lib/env.ts";
-import { replyToLine } from "../../../../lib/line/messaging.ts";
+import { LineMessagingApiError, replyToLine } from "../../../../lib/line/messaging.ts";
 import { verifyLineSignature } from "../../../../lib/line/signature.ts";
 import {
   handleLineWebhookPayload,
@@ -11,6 +11,7 @@ export const runtime = "nodejs";
 
 type LineWebhookPostDependencies = {
   commandService?: LineBotCommandService;
+  logger?: (...values: unknown[]) => void;
 };
 
 async function defaultCommandService(): Promise<LineBotCommandService> {
@@ -62,7 +63,13 @@ export function createLineWebhookPost(dependencies: LineWebhookPostDependencies 
         commandService,
       );
       return Response.json({ ok: true });
-    } catch {
+    } catch (error) {
+      const logger = dependencies.logger ?? console.error;
+      if (error instanceof LineMessagingApiError) {
+        logger("LINE_MESSAGING_API_REPLY_FAILED", error.diagnostic);
+      } else {
+        logger("LINE_WEBHOOK_REPLY_FAILED");
+      }
       return Response.json({ error: "LINE reply failed" }, { status: 502 });
     }
   };
