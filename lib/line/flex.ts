@@ -19,6 +19,7 @@ export type PredictionFlexInput = {
 export type StandingsFlexInput = {
   period: "gameweek" | "season";
   gameweek?: number;
+  updatedAtLabel?: string;
   rows: Array<{
     rank: number;
     displayName: string;
@@ -49,6 +50,7 @@ const ACCENT = "#D9FF58";
 const PRIMARY_TEXT = "#FFFFFF";
 const MUTED_TEXT = "#8CA6BD";
 const APP_URI = "https://liff.line.me/2010604800-Y9eFejTF";
+const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const PREMIER_LEAGUE_BADGE = /^https:\/\/resources\.premierleague\.com\/premierleague25\/badges-alt\/(\d+)\.svg$/i;
 
 const choiceLabels: Record<PredictionChoice, string> = {
@@ -199,39 +201,50 @@ function chunks<T>(items: T[], size: number): T[][] {
   return result;
 }
 
-function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
+function formatBangkokDateTime(value: Date): string {
+  return new Intl.DateTimeFormat("th-TH", {
+    timeZone: BANGKOK_TIME_ZONE,
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value);
+}
+
+const choiceColors: Record<PredictionChoice, { background: string; text: string }> = {
+  home: { background: "#ff647c", text: "#FFFFFF" },
+  draw: { background: "#47d7a0", text: "#071525" },
+  away: { background: "#6da9ff", text: "#071525" },
+};
+
+function predictionChoicePill(choice: PredictionChoice) {
+  const colors = choiceColors[choice];
   return {
     type: "box",
     layout: "vertical",
-    spacing: "sm",
+    width: "48px",
+    height: "32px",
+    flex: 0,
+    cornerRadius: "xxl",
+    backgroundColor: colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+    contents: [{ ...text(choiceLabels[choice], "xxs", "bold", colors.text), align: "center" }],
+  };
+}
+
+function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
+  return {
+    type: "box",
+    layout: "horizontal",
+    spacing: "xs",
     paddingAll: "8px",
-    backgroundColor: MAIN_BACKGROUND,
+    backgroundColor: CARD_BACKGROUND,
     cornerRadius: "md",
+    alignItems: "center",
     contents: [
-      {
-        type: "box",
-        layout: "horizontal",
-        spacing: "xs",
-        alignItems: "center",
-        contents: [
-          teamSide(fixture.homeTeam, "home", fixture.choice === "home"),
-          text("VS", "xxs", "bold", MUTED_TEXT),
-          teamSide(fixture.awayTeam, "away", fixture.choice === "away"),
-        ],
-      },
-      {
-        type: "box",
-        layout: "horizontal",
-        justifyContent: "center",
-        contents: [{
-          type: "box",
-          layout: "vertical",
-          paddingAll: "5px",
-          cornerRadius: "md",
-          backgroundColor: fixture.choice === "draw" ? ACCENT : CARD_BACKGROUND,
-          contents: [text(choiceLabels[fixture.choice], "xs", "bold", fixture.choice === "draw" ? "#071525" : PRIMARY_TEXT)],
-        }],
-      },
+      teamSide(fixture.homeTeam, "home", fixture.choice === "home"),
+      text("VS", "xxs", "bold", MUTED_TEXT),
+      teamSide(fixture.awayTeam, "away", fixture.choice === "away"),
+      predictionChoicePill(fixture.choice),
     ],
   };
 }
@@ -241,6 +254,9 @@ export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessa
     type: "box",
     layout: "horizontal",
     spacing: "md",
+    paddingAll: "12px",
+    cornerRadius: "lg",
+    backgroundColor: CARD_BACKGROUND,
     alignItems: "center",
     contents: [
       imageOrFallback(input.avatarUrl, input.displayName, "48px"),
@@ -248,21 +264,30 @@ export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessa
         type: "box",
         layout: "vertical",
         flex: 1,
-        contents: [text(input.displayName, "md", "bold"), text(`ผลทาย GW${input.gameweek}`, "xs", "regular", MUTED_TEXT)],
+        contents: [text(input.displayName, "md", "bold"), text(`คำทายของ GW ${input.gameweek}`, "xs", "regular", MUTED_TEXT)],
       },
     ],
   };
-  const fixtures = chunks(input.fixtures, 5);
-  const bubbles = fixtures.map((page, index) => bubble([
-    header(`ผลทาย GW${input.gameweek}`, index === 0 ? "เกมทายผลพรีเมียร์ลีก" : `ต่อหน้า ${index + 1}`),
-    profile,
-    ...(page.length ? page.map(predictionFixture) : [text("ยังไม่มีคำทาย", "sm", "regular", MUTED_TEXT)]),
-  ]));
+  const predictionHeader = {
+    type: "box",
+    layout: "vertical",
+    paddingAll: "16px",
+    cornerRadius: "lg",
+    backgroundColor: CARD_BACKGROUND,
+    contents: [
+      text("PLAYER PICKS", "xs", "bold", ACCENT),
+      text(`คำทาย GW${input.gameweek} ของ ${input.displayName}`, "xl", "bold"),
+    ],
+  };
 
   return {
     type: "flex",
-    altText: `FPL Chei Chei · ผลทาย GW${input.gameweek} ของ ${input.displayName}`,
-    contents: container(bubbles),
+    altText: `FPL Chei Chei · คำทาย GW${input.gameweek} ของ ${input.displayName}`,
+    contents: bubble([
+      predictionHeader,
+      profile,
+      ...(input.fixtures.length ? input.fixtures.map(predictionFixture) : [text("ยังไม่มีคำทาย", "sm", "regular", MUTED_TEXT)]),
+    ]),
   };
 }
 
@@ -286,10 +311,12 @@ function standingsRow(row: StandingsFlexInput["rows"][number]) {
 
 export function buildStandingsFlex(input: StandingsFlexInput): FlexMessage {
   const title = input.period === "gameweek" ? `ตารางคะแนน GW${input.gameweek ?? ""}` : "ตารางคะแนนทั้งฤดูกาล";
+  const updatedAtLabel = input.updatedAtLabel ?? formatBangkokDateTime(new Date());
   const pages = chunks(input.rows, 8);
   const bubbles = pages.map((page, index) => bubble([
     header(title, index === 0 ? "เกมทายผลพรีเมียร์ลีก" : `หน้า ${index + 1}`),
     ...(page.length ? page.map(standingsRow) : [text("ยังไม่มีคะแนน", "sm", "regular", MUTED_TEXT)]),
+    text(`อัปเดต ${updatedAtLabel}`, "xs", "regular", MUTED_TEXT),
   ]));
 
   return {

@@ -63,6 +63,7 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   const message = buildStandingsFlex({
     period: "gameweek",
     gameweek: 1,
+    updatedAtLabel: "1 Aug 2026 18:46",
     rows: [
       { rank: 1, displayName: "Picky", avatarUrl: "https://example.test/picky.png", points: 6 },
       { rank: 2, displayName: "Chei", avatarUrl: "", points: 3 },
@@ -80,6 +81,35 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   assert.match(serialized, /"text":"เปิดแอป FPL Chei Chei"/);
   assert.match(serialized, /"color":"#071525"/);
   assert.match(serialized, /"cornerRadius":"xxl"/);
+  assert.match(serialized, /อัปเดต 1 Aug 2026 18:46/);
+});
+
+test("prediction Flex is a single app-style bubble with all picks and choice highlights", () => {
+  const fixtures = Array.from({ length: 6 }, (_, index) => ({
+    homeTeam: { name: `Home ${index + 1}`, logoUrl: `https://example.test/home-${index + 1}.png` },
+    awayTeam: { name: `Away ${index + 1}`, logoUrl: `https://example.test/away-${index + 1}.png` },
+    choice: (["home", "draw", "away"] as const)[index % 3],
+  }));
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    avatarUrl: "https://example.test/picky.png",
+    gameweek: 1,
+    fixtures,
+  });
+
+  assert.equal(message.contents.type, "bubble");
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /PLAYER PICKS/);
+  assert.match(serialized, /คำทาย GW1 ของ Picky/);
+  assert.match(serialized, /คำทายของ GW 1/);
+  for (const index of [1, 2, 3, 4, 5, 6]) {
+    assert.match(serialized, new RegExp(`Home ${index}`));
+    assert.match(serialized, new RegExp(`Away ${index}`));
+  }
+  assert.match(serialized, /#ff647c/);
+  assert.match(serialized, /#47d7a0/);
+  assert.match(serialized, /#6da9ff/);
+  assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
 });
 
 test("standings Flex uses a carousel for a long table without dropping rows", () => {

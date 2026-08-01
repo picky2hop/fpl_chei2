@@ -26,17 +26,18 @@ test("maps menu aliases and ignores ordinary text", () => {
   assert.equal(parseLineCommand("   \n  "), null);
 });
 
-test("menu Flex exposes four red command actions without configuration values", () => {
+test("menu Flex exposes three red command actions without configuration values", () => {
   const message = buildLineMenuMessage();
   assert.equal(message.type, "flex");
   if (message.type !== "flex") return;
 
   const serialized = JSON.stringify(message);
-  const commands = ["ขอตาราง", "บอลวันนี้", "ผลทาย", "เมนู"];
+  const commands = ["ขอตาราง", "บอลวันนี้", "ผลทาย"];
   for (const command of commands) {
     assert.match(serialized, new RegExp(`"type":"message","label":"${command}","text":"${command}"`));
   }
   assert.equal((serialized.match(/"type":"message"/g) ?? []).length, commands.length);
+  assert.doesNotMatch(serialized, /"type":"message","label":"เมนู","text":"เมนู"/);
   assert.equal((serialized.match(/"backgroundColor":"#E53935"/g) ?? []).length, commands.length);
   assert.ok((serialized.match(/"color":"#FFFFFF"/g) ?? []).length >= commands.length);
   assert.doesNotMatch(serialized, /SECRET|TOKEN|SUPABASE|session/i);

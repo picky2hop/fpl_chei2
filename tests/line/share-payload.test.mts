@@ -59,3 +59,25 @@ test("builds the prediction share payload with profile and team assets", () => {
   assert.match(fixture.homeTeam.crest, /\.svg$/);
   assert.match(fixture.awayTeam.crest, /\.svg$/);
 });
+
+test("prediction share payload keeps every fixture in one Flex bubble", () => {
+  const fixtures = Array.from({ length: 6 }, (_, index) => ({
+    ...fixture,
+    id: `fixture-${index + 1}`,
+    homeTeam: { ...fixture.homeTeam, name: `Home ${index + 1}` },
+    awayTeam: { ...fixture.awayTeam, name: `Away ${index + 1}` },
+  }));
+  const message = buildPredictionShareFlex({
+    currentUser: entry,
+    fixtures,
+    gameweek: 1,
+    predictions: Object.fromEntries(fixtures.map((item) => [item.id, "home"])),
+  });
+
+  assert.equal(message.contents.type, "bubble");
+  const serialized = JSON.stringify(message);
+  for (const index of [1, 2, 3, 4, 5, 6]) {
+    assert.match(serialized, new RegExp(`Home ${index}`));
+    assert.match(serialized, new RegExp(`Away ${index}`));
+  }
+});

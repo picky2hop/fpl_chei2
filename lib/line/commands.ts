@@ -28,5 +28,5 @@ export function parseLineCommand(text: string): LineBotCommand | null {
 }
 
 export function buildLineMenuMessage(): LineMessage {
-  return buildCommandMenuFlex(["ขอตาราง", "บอลวันนี้", "ผลทาย", "เมนู"]);
+  return buildCommandMenuFlex(["ขอตาราง", "บอลวันนี้", "ผลทาย"]);
 }
