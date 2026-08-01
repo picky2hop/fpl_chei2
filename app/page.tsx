@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import LiffGate from "./components/liff-gate";
+import { hasAvatarImage } from "@/lib/avatar";
 import type { UserProfile } from "@/lib/mock-data";
 
 const features = ["ข้อมูลกระชับ เปิดไว", "ทายครบทุกคู่ในเกมวีค", "แชร์ผลเข้า LINE ได้ทันที"];
@@ -16,7 +17,7 @@ function LandingPage({ profile }: { profile: UserProfile }) {
             <div className="grid size-10 place-items-center rounded-2xl bg-[#d9ff58] text-[#071525] shadow-[0_8px_30px_rgba(217,255,88,0.18)]"><span className="text-lg font-black">90′</span></div>
             <div><p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9fb0c4]">FPL CHEI CHEI</p><p className="mt-0.5 text-sm font-bold">สนามทายผลของแก๊งเรา</p></div>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-2"><div className="relative size-7 overflow-hidden rounded-full bg-[#22384f]">{profile.avatarUrl && <Image src={profile.avatarUrl} alt={profile.displayName} fill sizes="28px" className="object-cover" unoptimized />}<span className="absolute inset-0 grid place-items-center text-[9px] font-black text-white/80">{profile.shortName}</span></div><span className="max-w-20 truncate text-[10px] font-bold text-[#d7e1eb]">{profile.displayName}</span></div>
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-2"><div className="relative size-7 overflow-hidden rounded-full bg-[#22384f]">{hasAvatarImage(profile.avatarUrl) ? <Image src={profile.avatarUrl} alt={profile.displayName} fill sizes="28px" className="object-cover" unoptimized /> : <span className="absolute inset-0 grid place-items-center text-[9px] font-black text-white/80">{profile.shortName}</span>}</div><span className="max-w-20 truncate text-[10px] font-bold text-[#d7e1eb]">{profile.displayName}</span></div>
         </header>
 
         <section className="relative flex flex-1 flex-col justify-center py-14"><div className="pointer-events-none absolute -right-28 top-20 size-72 rounded-full bg-[#123e63]/70 blur-3xl" /><div className="pointer-events-none absolute -left-36 bottom-20 size-72 rounded-full bg-[#213b20]/60 blur-3xl" /><div className="relative"><p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d9ff58]/20 bg-[#d9ff58]/10 px-3 py-1.5 text-xs font-semibold text-[#d9ff58]"><span className="size-1.5 rounded-full bg-[#d9ff58]" />Welcome to the group league</p><h1 className="max-w-[460px] text-5xl font-black leading-[1.03] tracking-[-0.07em] sm:text-6xl">เกมพรีเมียร์ลีก<br /><span className="text-[#d9ff58]">ที่เราเชยด้วยกัน</span></h1><p className="mt-6 max-w-sm text-base leading-7 text-[#afc0d0]">ทายผลแข่งกับเพื่อนในกลุ่ม ดูฟอร์มแบบสั้น ๆ แล้วลุ้นกันทุกสุดสัปดาห์</p><div className="mt-8 flex flex-wrap gap-x-4 gap-y-2 text-xs text-[#afc0d0]">{features.map((feature) => <span key={feature} className="flex items-center gap-1.5"><span className="text-[#d9ff58]">✦</span>{feature}</span>)}</div></div></section>

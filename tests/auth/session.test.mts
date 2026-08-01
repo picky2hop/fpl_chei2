@@ -13,7 +13,7 @@ describe("session codec", () => {
   it("round-trips the minimum session identity payload", async () => {
     const token = await encodeSession(payload, secret, 3600, new Date("2026-08-01T00:00:00.000Z"));
     assert.deepEqual(
-      await decodeSession(token, secret),
+      await decodeSession(token, secret, new Date("2026-08-01T00:30:00.000Z")),
       payload,
     );
   });

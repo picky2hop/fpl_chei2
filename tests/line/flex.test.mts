@@ -1,41 +1,98 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPredictionResultFlex, buildStandingsFlex } from "../../lib/line/flex.ts";
+import {
+  buildPredictionResultFlex,
+  buildStandingsFlex,
+  buildTodayFixturesFlex,
+} from "../../lib/line/flex.ts";
 
 test("prediction Flex payload contains the selected gameweek and picks", () => {
   const message = buildPredictionResultFlex({
     displayName: "Picky",
+    avatarUrl: "https://example.test/picky.png",
     gameweek: 1,
     fixtures: [
-      { homeTeam: "Arsenal", awayTeam: "Chelsea", choice: "home" },
-      { homeTeam: "Liverpool", awayTeam: "Spurs", choice: "draw" },
+      {
+        homeTeam: { name: "Arsenal", logoUrl: "https://example.test/arsenal.png" },
+        awayTeam: { name: "Chelsea", logoUrl: "https://example.test/chelsea.png" },
+        choice: "home",
+      },
+      {
+        homeTeam: { name: "Liverpool", logoUrl: "https://example.test/liverpool.png" },
+        awayTeam: { name: "Spurs", logoUrl: "https://example.test/spurs.png" },
+        choice: "draw",
+      },
     ],
   });
 
   assert.equal(message.type, "flex");
-  assert.equal(message.altText, "FPL Chei Chei · ผลทาย GW1 ของ Picky");
-  assert.equal(message.contents.type, "bubble");
+  assert.match(message.altText, /GW1/);
+  assert.match(message.altText, /Picky/);
 
   const serialized = JSON.stringify(message);
-  assert.match(serialized, /GW1/);
-  assert.match(serialized, /Arsenal/);
-  assert.match(serialized, /เสมอ/);
+  assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
+  assert.match(serialized, /https:\/\/example\.test\/arsenal\.png/);
+  assert.match(serialized, /https:\/\/example\.test\/chelsea\.png/);
+  assert.ok(serialized.indexOf("Arsenal") < serialized.indexOf("arsenal.png"));
+  assert.ok(serialized.indexOf("chelsea.png") < serialized.indexOf("Chelsea"));
+  assert.match(serialized, /#D9FF58/);
+  assert.match(serialized, /เปิดแอป FPL Chei Chei/);
   assert.doesNotMatch(serialized, /undefined/);
 });
 
-test("standings Flex payload contains rank, player, and points", () => {
+test("standings Flex payload contains rank, player, points, avatar, and app action", () => {
   const message = buildStandingsFlex({
+    period: "gameweek",
     gameweek: 1,
     rows: [
-      { rank: 1, displayName: "Picky", points: 6 },
-      { rank: 2, displayName: "Chei", points: 3 },
+      { rank: 1, displayName: "Picky", avatarUrl: "https://example.test/picky.png", points: 6 },
+      { rank: 2, displayName: "Chei", avatarUrl: "", points: 3 },
     ],
   });
 
   assert.equal(message.type, "flex");
-  assert.equal(message.altText, "FPL Chei Chei · ตารางคะแนน GW1");
   const serialized = JSON.stringify(message);
   assert.match(serialized, /Picky/);
   assert.match(serialized, /6/);
   assert.match(serialized, /Chei/);
+  assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
+  assert.match(serialized, /เปิดแอป FPL Chei Chei/);
+});
+
+test("standings Flex uses a carousel for a long table without dropping rows", () => {
+  const message = buildStandingsFlex({
+    period: "gameweek",
+    gameweek: 1,
+    rows: Array.from({ length: 18 }, (_, index) => ({
+      rank: index + 1,
+      displayName: `Player ${index + 1}`,
+      avatarUrl: "",
+      points: index,
+    })),
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.equal(message.contents.type, "carousel");
+  for (let index = 1; index <= 18; index += 1) {
+    assert.match(serialized, new RegExp(`Player ${index}`));
+  }
+  assert.ok((serialized.match(/เปิดแอป FPL Chei Chei/g) ?? []).length >= 2);
+});
+
+test("today fixtures Flex shows time and ordered team logos", () => {
+  const message = buildTodayFixturesFlex({
+    dateLabel: "วันเสาร์ 1 ส.ค.",
+    fixtures: [{
+      kickoffLabel: "19:30",
+      statusLabel: "เริ่มแข่ง",
+      homeTeam: { name: "Arsenal", logoUrl: "https://example.test/arsenal.png" },
+      awayTeam: { name: "Chelsea", logoUrl: "https://example.test/chelsea.png" },
+    }],
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /19:30/);
+  assert.ok(serialized.indexOf("Arsenal") < serialized.indexOf("arsenal.png"));
+  assert.ok(serialized.indexOf("chelsea.png") < serialized.indexOf("Chelsea"));
+  assert.match(serialized, /เปิดแอป FPL Chei Chei/);
 });

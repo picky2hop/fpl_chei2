@@ -1,6 +1,6 @@
 import test, { afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { POST } from "../../app/api/line/webhook/route.ts";
+import { createLineWebhookPost, POST } from "../../app/api/line/webhook/route.ts";
 import { computeLineSignature } from "../../lib/line/signature.ts";
 
 const previousSecret = process.env.LINE_CHANNEL_SECRET;
@@ -46,15 +46,15 @@ test("returns 200 for a valid LINE verification payload", async () => {
   assert.equal(response.status, 200);
 });
 
-test("replies to a valid text event without exposing configuration values", async () => {
+test("replies to a valid approved command without exposing configuration values", async () => {
   configureLineTestEnv();
   const body = JSON.stringify({
     destination: "channel",
     events: [{
       type: "message",
       replyToken: "reply-token",
-      source: { type: "group", groupId: "group-id" },
-      message: { type: "text", id: "message-id", text: "ทดสอบบอท" },
+      source: { type: "group", groupId: "group-id", userId: "line-user-id" },
+      message: { type: "text", id: "message-id", text: "ขอตาราง" },
     }],
   });
   let sentBody = "";
@@ -63,7 +63,13 @@ test("replies to a valid text event without exposing configuration values", asyn
     return new Response(null, { status: 200 });
   };
 
-  const response = await POST(new Request("https://example.test/api/line/webhook", {
+  const response = await createLineWebhookPost({
+    commandService: {
+      async replyForText() {
+        return [{ type: "text", text: "ตารางคะแนนทดสอบ" }];
+      },
+    },
+  })(new Request("https://example.test/api/line/webhook", {
     method: "POST",
     headers: { "x-line-signature": computeLineSignature(body, "channel-secret") },
     body,
@@ -71,6 +77,35 @@ test("replies to a valid text event without exposing configuration values", asyn
 
   assert.equal(response.status, 200);
   assert.match(sentBody, /reply-token/);
-  assert.match(sentBody, /ได้รับข้อความแล้ว/);
+  assert.match(sentBody, /ตารางคะแนนทดสอบ/);
   assert.doesNotMatch(sentBody, /channel-secret|access-token-for-test-only/);
+});
+
+test("returns 200 and does not call LINE when the text is unsupported", async () => {
+  configureLineTestEnv();
+  const body = JSON.stringify({
+    destination: "channel",
+    events: [{
+      type: "message",
+      replyToken: "reply-token",
+      source: { type: "group", groupId: "group-id" },
+      message: { type: "text", text: "ข้อความทั่วไป" },
+    }],
+  });
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(null, { status: 200 });
+  };
+
+  const response = await createLineWebhookPost({
+    commandService: { async replyForText() { return null; } },
+  })(new Request("https://example.test/api/line/webhook", {
+    method: "POST",
+    headers: { "x-line-signature": computeLineSignature(body, "channel-secret") },
+    body,
+  }));
+
+  assert.equal(response.status, 200);
+  assert.equal(fetchCalls, 0);
 });

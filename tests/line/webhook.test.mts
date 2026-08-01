@@ -1,10 +1,48 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { handleLineWebhookPayload } from "../../lib/line/webhook.ts";
+import { handleLineWebhookPayload, type LineBotCommandService } from "../../lib/line/webhook.ts";
 import { replyToLine } from "../../lib/line/messaging.ts";
 
-test("replies to a text message received from a LINE group", async () => {
+function fakeCommandService(
+  result: Awaited<ReturnType<LineBotCommandService["replyForText"]>>,
+  calls: Array<{ text: string; lineUserId?: string }>,
+): LineBotCommandService {
+  return {
+    async replyForText(input) {
+      calls.push(input);
+      return result;
+    },
+  };
+}
+
+test("replies to an approved command and passes the sender LINE user ID", async () => {
   const replies: unknown[] = [];
+  const calls: Array<{ text: string; lineUserId?: string }> = [];
+  const result = await handleLineWebhookPayload(
+    {
+      destination: "channel",
+      events: [{
+        type: "message",
+        replyToken: "reply-token",
+        source: { type: "group", groupId: "group-id", userId: "line-user-id" },
+        message: { type: "text", text: "ผลทาย" },
+      }],
+    },
+    async (reply) => { replies.push(reply); },
+    fakeCommandService([{ type: "flex", altText: "prediction", contents: { type: "bubble" } }], calls),
+  );
+
+  assert.deepEqual(result, { processed: 1, replied: 1 });
+  assert.deepEqual(calls, [{ text: "ผลทาย", lineUserId: "line-user-id" }]);
+  assert.deepEqual(replies, [{
+    replyToken: "reply-token",
+    messages: [{ type: "flex", altText: "prediction", contents: { type: "bubble" } }],
+  }]);
+});
+
+test("does not reply to unsupported text", async () => {
+  const replies: unknown[] = [];
+  const calls: Array<{ text: string; lineUserId?: string }> = [];
   const result = await handleLineWebhookPayload(
     {
       destination: "channel",
@@ -12,30 +50,29 @@ test("replies to a text message received from a LINE group", async () => {
         type: "message",
         replyToken: "reply-token",
         source: { type: "group", groupId: "group-id" },
-        message: { type: "text", id: "message-id", text: "ทดสอบบอท" },
+        message: { type: "text", text: "ข้อความทั่วไป" },
       }],
     },
     async (reply) => { replies.push(reply); },
+    fakeCommandService(null, calls),
   );
 
-  assert.deepEqual(result, { processed: 1, replied: 1 });
-  assert.deepEqual(replies, [{
-    replyToken: "reply-token",
-    messages: [{
-      type: "text",
-      text: "ได้รับข้อความแล้วครับ 👋 ใช้ปุ่มแชร์จาก LIFF เพื่อแชร์ผลทายเข้า group ได้เลย",
-    }],
-  }]);
+  assert.deepEqual(result, { processed: 1, replied: 0 });
+  assert.deepEqual(calls, [{ text: "ข้อความทั่วไป", lineUserId: undefined }]);
+  assert.deepEqual(replies, []);
 });
 
 test("ignores LINE verification payloads and non-text events", async () => {
   const replies: unknown[] = [];
+  const calls: Array<{ text: string; lineUserId?: string }> = [];
   const result = await handleLineWebhookPayload(
     { destination: "channel", events: [{ type: "follow", replyToken: "unused" }] },
     async (reply) => { replies.push(reply); },
+    fakeCommandService(null, calls),
   );
 
   assert.deepEqual(result, { processed: 1, replied: 0 });
+  assert.deepEqual(calls, []);
   assert.deepEqual(replies, []);
 });
 
