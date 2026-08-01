@@ -1,4 +1,5 @@
 import type { LineMessage } from "./messaging";
+import { buildCommandMenuFlex } from "./flex.ts";
 
 export type LineBotCommand = "menu" | "standings" | "todayFixtures" | "myPredictions";
 
@@ -27,14 +28,5 @@ export function parseLineCommand(text: string): LineBotCommand | null {
 }
 
 export function buildLineMenuMessage(): LineMessage {
-  return {
-    type: "text",
-    text: [
-      "คำสั่งที่ใช้ได้ครับ",
-      "• ขอตาราง — ตารางคะแนน GW ปัจจุบัน",
-      "• บอลวันนี้ — โปรแกรมแข่งวันนี้",
-      "• ผลทาย — ผลทายของคุณ",
-      "• เมนู — แสดงรายการคำสั่งนี้",
-    ].join("\n"),
-  };
+  return buildCommandMenuFlex(["ขอตาราง", "บอลวันนี้", "ผลทาย", "เมนู"]);
 }

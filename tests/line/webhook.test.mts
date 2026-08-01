@@ -75,6 +75,19 @@ test("returns a safe reply when an approved data command cannot load data", asyn
   assert.doesNotMatch(JSON.stringify(messages), /database details|secret|token/i);
 });
 
+test("returns the interactive Flex command menu for the menu command", async () => {
+  const service = createLineBotCommandService({
+    async getCurrentStandings() { throw new Error("must not load standings for menu"); },
+    async getTodayFixtures() { throw new Error("must not load fixtures for menu"); },
+    async getUserPredictions() { throw new Error("must not load predictions for menu"); },
+  });
+
+  const messages = await service.replyForText({ text: "เมนู" });
+  assert.equal(messages?.length, 1);
+  assert.equal(messages?.[0]?.type, "flex");
+  assert.match(JSON.stringify(messages), /"type":"message","label":"ขอตาราง","text":"ขอตาราง"/);
+});
+
 test("ignores LINE verification payloads and non-text events", async () => {
   const replies: unknown[] = [];
   const calls: Array<{ text: string; lineUserId?: string }> = [];

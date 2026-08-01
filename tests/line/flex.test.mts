@@ -40,8 +40,20 @@ test("prediction Flex payload contains the selected gameweek and picks", () => {
   assert.match(serialized, /"size":"giga"/);
   assert.match(serialized, /"cornerRadius":"xxl"/);
   assert.doesNotMatch(serialized, /\{"type":"image"[^}]*"cornerRadius":"xxl"/);
+  assert.doesNotMatch(serialized, /"0px"/);
+  assert.match(serialized, /"paddingAll":"none"/);
   assert.doesNotMatch(serialized, /\.svg/);
   assert.doesNotMatch(serialized, /undefined/);
+
+  const bubble = message.contents as Record<string, unknown>;
+  const footer = bubble.footer as Record<string, unknown>;
+  const footerContents = footer.contents as Array<Record<string, unknown>>;
+  const appButton = footerContents[0];
+  const appButtonContents = appButton.contents as Array<Record<string, unknown>>;
+  assert.equal(appButton.height, "56px");
+  assert.equal(appButton.justifyContent, "center");
+  assert.equal(appButton.alignItems, "center");
+  assert.equal(appButtonContents[0]?.align, "center");
 });
 
 test("standings Flex payload contains rank, player, points, avatar, and app action", () => {

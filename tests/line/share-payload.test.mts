@@ -37,6 +37,8 @@ test("builds the standings share payload from the selected app mode", () => {
 });
 
 test("builds the prediction share payload with profile and team assets", () => {
+  const originalHomeCrest = fixture.homeTeam.crest;
+  const originalAwayCrest = fixture.awayTeam.crest;
   const message = buildPredictionShareFlex({
     currentUser: entry,
     fixtures: [fixture],
@@ -49,5 +51,11 @@ test("builds the prediction share payload with profile and team assets", () => {
   assert.match(serialized, /resources\.premierleague\.com\/premierleague25\/badges\/3\.png/);
   assert.match(serialized, /resources\.premierleague\.com\/premierleague25\/badges\/8\.png/);
   assert.doesNotMatch(serialized, /\.svg/);
+  assert.doesNotMatch(serialized, /"0px"/);
+  assert.match(serialized, /"paddingAll":"none"/);
   assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
+  assert.equal(fixture.homeTeam.crest, originalHomeCrest);
+  assert.equal(fixture.awayTeam.crest, originalAwayCrest);
+  assert.match(fixture.homeTeam.crest, /\.svg$/);
+  assert.match(fixture.awayTeam.crest, /\.svg$/);
 });

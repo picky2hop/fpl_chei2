@@ -105,7 +105,7 @@ function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false) {
     layout: "horizontal",
     flex: 1,
     spacing: "sm",
-    paddingAll: highlighted ? "8px" : "0px",
+    paddingAll: highlighted ? "8px" : "none",
     cornerRadius: "md",
     backgroundColor: highlighted ? ACCENT : CARD_BACKGROUND,
     justifyContent: side === "home" ? "end" : "start",
@@ -118,13 +118,36 @@ function footerButton() {
   return {
     type: "box",
     layout: "horizontal",
-    height: "44px",
+    height: "56px",
     cornerRadius: "xl",
     backgroundColor: ACCENT,
     justifyContent: "center",
     alignItems: "center",
     action: { type: "uri", label: "เปิดแอป FPL Chei Chei", uri: APP_URI },
-    contents: [text("เปิดแอป FPL Chei Chei", "sm", "bold", "#071525")],
+    contents: [{ ...text("เปิดแอป FPL Chei Chei", "sm", "bold", "#071525"), align: "center" }],
+  };
+}
+
+export function buildCommandMenuFlex(commands: string[]): FlexMessage {
+  const buttons = commands.map((command) => ({
+    type: "box",
+    layout: "horizontal",
+    height: "48px",
+    cornerRadius: "xl",
+    backgroundColor: "#E53935",
+    justifyContent: "center",
+    alignItems: "center",
+    action: { type: "message", label: command, text: command },
+    contents: [{ ...text(command, "sm", "bold", "#FFFFFF"), align: "center" }],
+  }));
+
+  return {
+    type: "flex",
+    altText: "เมนูคำสั่ง เกมทายผลพรีเมียร์ลีก",
+    contents: bubble([
+      header("เมนูคำสั่ง", "เลือกคำสั่งที่ต้องการ"),
+      ...buttons,
+    ]),
   };
 }
 
