@@ -6,6 +6,18 @@ import {
   buildTodayFixturesFlex,
 } from "../../lib/line/flex.ts";
 
+function textComponentsWithWidth(value: unknown, result: Array<Record<string, unknown>> = []) {
+  if (Array.isArray(value)) {
+    for (const item of value) textComponentsWithWidth(item, result);
+    return result;
+  }
+  if (!value || typeof value !== "object") return result;
+  const component = value as Record<string, unknown>;
+  if (component.type === "text" && "width" in component) result.push(component);
+  for (const child of Object.values(component)) textComponentsWithWidth(child, result);
+  return result;
+}
+
 test("prediction Flex payload contains the selected gameweek and picks", () => {
   const message = buildPredictionResultFlex({
     displayName: "Picky",
@@ -128,6 +140,7 @@ test("prediction Flex matches the app detail row treatment", () => {
   const rowContents = fixtureRow.contents as Array<Record<string, unknown>>;
   const homeSide = rowContents[0];
   const vs = rowContents[1];
+  const vsText = (vs.contents as Array<Record<string, unknown>>)[0];
   const awaySide = rowContents[2];
 
   assert.doesNotMatch(JSON.stringify(body), /PLAYER PICKS/);
@@ -138,9 +151,28 @@ test("prediction Flex matches the app detail row treatment", () => {
   assert.equal(awaySide.justifyContent, "center");
   assert.equal(homeSide.backgroundColor, "#d9ff5815");
   assert.equal(homeSide.paddingAll, "8px");
-  assert.equal(vs.align, "center");
+  assert.equal(vs.layout, "vertical");
+  assert.equal(vs.width, "24px");
+  assert.equal(vs.flex, 0);
+  assert.equal(vs.justifyContent, "center");
+  assert.equal(vs.alignItems, "center");
+  assert.equal(vsText.align, "center");
   assert.equal(rowContents.at(-1)?.width, "48px");
   assert.equal(rowContents.at(-1)?.flex, 0);
+});
+
+test("prediction Flex keeps width properties on Box components only", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    gameweek: 1,
+    fixtures: [{
+      homeTeam: { name: "Arsenal" },
+      awayTeam: { name: "Chelsea" },
+      choice: "home",
+    }],
+  });
+
+  assert.deepEqual(textComponentsWithWidth(message), []);
 });
 
 test("standings Flex uses a carousel for a long table without dropping rows", () => {

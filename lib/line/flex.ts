@@ -244,7 +244,15 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
     alignItems: "center",
     contents: [
       teamSide(fixture.homeTeam, "home", fixture.choice === "home", true),
-      { ...text("VS", "xxs", "bold", MUTED_TEXT), width: "24px", flex: 0, align: "center" },
+      {
+        type: "box",
+        layout: "vertical",
+        width: "24px",
+        flex: 0,
+        justifyContent: "center",
+        alignItems: "center",
+        contents: [{ ...text("VS", "xxs", "bold", MUTED_TEXT), align: "center" }],
+      },
       teamSide(fixture.awayTeam, "away", fixture.choice === "away", true),
       predictionChoicePill(fixture.choice),
     ],
