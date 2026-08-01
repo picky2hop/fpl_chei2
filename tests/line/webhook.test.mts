@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { handleLineWebhookPayload, type LineBotCommandService } from "../../lib/line/webhook.ts";
+import { createLineBotCommandService, handleLineWebhookPayload, type LineBotCommandService } from "../../lib/line/webhook.ts";
 import { replyToLine } from "../../lib/line/messaging.ts";
 
 function fakeCommandService(
@@ -60,6 +60,19 @@ test("does not reply to unsupported text", async () => {
   assert.deepEqual(result, { processed: 1, replied: 0 });
   assert.deepEqual(calls, [{ text: "ข้อความทั่วไป", lineUserId: undefined }]);
   assert.deepEqual(replies, []);
+});
+
+test("returns a safe reply when an approved data command cannot load data", async () => {
+  const service = createLineBotCommandService({
+    async getCurrentStandings() { throw new Error("database details must stay private"); },
+    async getTodayFixtures() { throw new Error("database details must stay private"); },
+    async getUserPredictions() { throw new Error("database details must stay private"); },
+  });
+
+  const messages = await service.replyForText({ text: "บอลวันนี้" });
+  assert.equal(messages?.[0]?.type, "text");
+  assert.match(messages?.[0]?.type === "text" ? messages[0].text : "", /ลองใหม่|ยังโหลดข้อมูล/);
+  assert.doesNotMatch(JSON.stringify(messages), /database details|secret|token/i);
 });
 
 test("ignores LINE verification payloads and non-text events", async () => {

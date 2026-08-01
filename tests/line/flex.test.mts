@@ -36,7 +36,10 @@ test("prediction Flex payload contains the selected gameweek and picks", () => {
   assert.ok(serialized.indexOf("Arsenal") < serialized.indexOf("arsenal.png"));
   assert.ok(serialized.indexOf("chelsea.png") < serialized.indexOf("Chelsea"));
   assert.match(serialized, /#D9FF58/);
-  assert.match(serialized, /เปิดแอป FPL Chei Chei/);
+  assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
+  assert.match(serialized, /"size":"giga"/);
+  assert.match(serialized, /"cornerRadius":"xxl"/);
+  assert.doesNotMatch(serialized, /\.svg/);
   assert.doesNotMatch(serialized, /undefined/);
 });
 
@@ -56,7 +59,11 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   assert.match(serialized, /6/);
   assert.match(serialized, /Chei/);
   assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
-  assert.match(serialized, /เปิดแอป FPL Chei Chei/);
+  assert.match(serialized, /เกมทายผลพรีเมียร์ลีก/);
+  assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
+  assert.match(serialized, /"text":"เปิดแอป FPL Chei Chei"/);
+  assert.match(serialized, /"color":"#071525"/);
+  assert.match(serialized, /"cornerRadius":"xxl"/);
 });
 
 test("standings Flex uses a carousel for a long table without dropping rows", () => {
@@ -76,7 +83,7 @@ test("standings Flex uses a carousel for a long table without dropping rows", ()
   for (let index = 1; index <= 18; index += 1) {
     assert.match(serialized, new RegExp(`Player ${index}`));
   }
-  assert.ok((serialized.match(/เปิดแอป FPL Chei Chei/g) ?? []).length >= 2);
+  assert.ok((serialized.match(/https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/g) ?? []).length >= 2);
 });
 
 test("today fixtures Flex shows time and ordered team logos", () => {
@@ -94,5 +101,5 @@ test("today fixtures Flex shows time and ordered team logos", () => {
   assert.match(serialized, /19:30/);
   assert.ok(serialized.indexOf("Arsenal") < serialized.indexOf("arsenal.png"));
   assert.ok(serialized.indexOf("chelsea.png") < serialized.indexOf("Chelsea"));
-  assert.match(serialized, /เปิดแอป FPL Chei Chei/);
+  assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
 });

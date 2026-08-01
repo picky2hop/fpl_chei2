@@ -50,6 +50,11 @@ const unknownUserMessage: LineMessage = {
   text: "กรุณาเปิดแอป FPL Chei Chei ก่อน เพื่อเชื่อมบัญชี LINE",
 };
 
+const dataUnavailableMessage: LineMessage = {
+  type: "text",
+  text: "ขออภัย ระบบยังโหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้งครับ",
+};
+
 export function createLineBotCommandService(data: LineBotDataReader): LineBotCommandService {
   return {
     async replyForText(input) {
@@ -58,16 +63,31 @@ export function createLineBotCommandService(data: LineBotDataReader): LineBotCom
 
       if (command === "menu") return [buildLineMenuMessage()];
       if (command === "standings") {
-        const standings = await data.getCurrentStandings();
+        let standings;
+        try {
+          standings = await data.getCurrentStandings();
+        } catch {
+          return [dataUnavailableMessage];
+        }
         return [buildStandingsFlex({ period: "gameweek", gameweek: standings.gameweek, rows: standings.rows })];
       }
       if (command === "todayFixtures") {
-        const fixtures = await data.getTodayFixtures(new Date());
+        let fixtures;
+        try {
+          fixtures = await data.getTodayFixtures(new Date());
+        } catch {
+          return [dataUnavailableMessage];
+        }
         return [buildTodayFixturesFlex(fixtures)];
       }
       if (!input.lineUserId) return [unknownUserMessage];
 
-      const predictions = await data.getUserPredictions(input.lineUserId);
+      let predictions;
+      try {
+        predictions = await data.getUserPredictions(input.lineUserId);
+      } catch {
+        return [dataUnavailableMessage];
+      }
       if (!predictions) return [unknownUserMessage];
       return [buildPredictionResultFlex(predictions)];
     },

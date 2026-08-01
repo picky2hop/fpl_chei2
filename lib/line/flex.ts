@@ -48,7 +48,8 @@ const CARD_BACKGROUND = "#10253A";
 const ACCENT = "#D9FF58";
 const PRIMARY_TEXT = "#FFFFFF";
 const MUTED_TEXT = "#8CA6BD";
-const APP_URI = "https://fpl-chei2.vercel.app/";
+const APP_URI = "https://liff.line.me/2010604800-Y9eFejTF";
+const PREMIER_LEAGUE_BADGE = /^https:\/\/resources\.premierleague\.com\/premierleague25\/badges-alt\/(\d+)\.svg$/i;
 
 const choiceLabels: Record<PredictionChoice, string> = {
   home: "เหย้า",
@@ -56,8 +57,13 @@ const choiceLabels: Record<PredictionChoice, string> = {
   away: "เยือน",
 };
 
-function isHttpsUrl(value: string | undefined): value is string {
-  return Boolean(value?.trim().startsWith("https://"));
+function lineImageUrl(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed?.startsWith("https://")) return undefined;
+  const badge = trimmed.match(PREMIER_LEAGUE_BADGE);
+  if (badge) return `https://resources.premierleague.com/premierleague25/badges/${badge[1]}.png`;
+  if (/\.svg(?:$|\?)/i.test(trimmed)) return undefined;
+  return trimmed;
 }
 
 function text(value: string, size = "sm", weight = "regular", color = PRIMARY_TEXT) {
@@ -65,14 +71,15 @@ function text(value: string, size = "sm", weight = "regular", color = PRIMARY_TE
 }
 
 function imageOrFallback(url: string | undefined, fallback: string, size = "40px") {
-  return isHttpsUrl(url)
-    ? { type: "image", url, size, aspectMode: "fit", aspectRatio: "1:1", flex: 0 }
+  const imageUrl = lineImageUrl(url);
+  return imageUrl
+    ? { type: "image", url: imageUrl, size, aspectMode: "fit", aspectRatio: "1:1", cornerRadius: "xxl", flex: 0 }
     : {
         type: "box",
         layout: "vertical",
         width: size,
         height: size,
-        cornerRadius: "xl",
+        cornerRadius: "xxl",
         backgroundColor: "#29435D",
         justifyContent: "center",
         alignItems: "center",
@@ -99,17 +106,22 @@ function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false) {
 
 function footerButton() {
   return {
-    type: "button",
-    style: "primary",
-    color: ACCENT,
+    type: "box",
+    layout: "horizontal",
+    height: "44px",
+    cornerRadius: "xl",
+    backgroundColor: ACCENT,
+    justifyContent: "center",
+    alignItems: "center",
     action: { type: "uri", label: "เปิดแอป FPL Chei Chei", uri: APP_URI },
+    contents: [text("เปิดแอป FPL Chei Chei", "sm", "bold", "#071525")],
   };
 }
 
 function bubble(contents: Record<string, unknown>[]) {
   return {
     type: "bubble",
-    size: "mega",
+    size: "giga",
     styles: {
       body: { backgroundColor: MAIN_BACKGROUND },
       footer: { backgroundColor: MAIN_BACKGROUND },
@@ -209,7 +221,7 @@ export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessa
   };
   const fixtures = chunks(input.fixtures, 5);
   const bubbles = fixtures.map((page, index) => bubble([
-    header(`ผลทาย GW${input.gameweek}`, index === 0 ? "FPL Chei Chei" : `ต่อหน้า ${index + 1}`),
+    header(`ผลทาย GW${input.gameweek}`, index === 0 ? "เกมทายผลพรีเมียร์ลีก" : `ต่อหน้า ${index + 1}`),
     profile,
     ...(page.length ? page.map(predictionFixture) : [text("ยังไม่มีคำทาย", "sm", "regular", MUTED_TEXT)]),
   ]));
@@ -243,7 +255,7 @@ export function buildStandingsFlex(input: StandingsFlexInput): FlexMessage {
   const title = input.period === "gameweek" ? `ตารางคะแนน GW${input.gameweek ?? ""}` : "ตารางคะแนนทั้งฤดูกาล";
   const pages = chunks(input.rows, 8);
   const bubbles = pages.map((page, index) => bubble([
-    header(title, index === 0 ? "FPL Chei Chei" : `หน้า ${index + 1}`),
+    header(title, index === 0 ? "เกมทายผลพรีเมียร์ลีก" : `หน้า ${index + 1}`),
     ...(page.length ? page.map(standingsRow) : [text("ยังไม่มีคะแนน", "sm", "regular", MUTED_TEXT)]),
   ]));
 

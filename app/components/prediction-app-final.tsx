@@ -28,7 +28,7 @@ import {
   type PredictionMap,
 } from "@/lib/predictions";
 import {
-  predictionBookByGameweek,
+  predictionBookByGameweek as mockPredictionBookByGameweek,
   type Fixture,
   type Gameweek,
   type LeaderboardEntry,
@@ -44,8 +44,11 @@ type PredictionAppProps = {
   leaderboardByGameweek: Record<number, LeaderboardEntry[]>;
   initialPredictionsByGameweek?: Record<number, PredictionMap>;
   initialGameweek?: number;
+  predictionBookByGameweek?: Record<number, Record<string, PredictionMap>>;
   onConfirmPredictions?: (gameweek: number, predictions: PredictionMap) => Promise<void>;
 };
+
+const predictionBookByEntries = new WeakMap<LeaderboardEntry[], Record<number, Record<string, PredictionMap>>>();
 
 const tabs: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "leaderboard", label: "ตารางคะแนน", icon: ArrowUpRight },
@@ -152,13 +155,14 @@ function PlayerDetail({ player, fixtures, gameweek, predictionMap }: { player: L
 }
 
 function LegacyFixtureDetail({ fixture, entries, gameweek }: { fixture: Fixture; entries: LeaderboardEntry[]; gameweek: number }) {
-  const predictors = entries.flatMap((entry) => { const choice = predictionBookByGameweek[gameweek]?.[entry.id]?.[fixture.id]; return choice ? [{ name: entry.displayName, avatarUrl: entry.avatarUrl, choice }] : []; });
+  const predictors = entries.flatMap((entry) => { const choice = mockPredictionBookByGameweek[gameweek]?.[entry.id]?.[fixture.id]; return choice ? [{ name: entry.displayName, avatarUrl: entry.avatarUrl, choice }] : []; });
   const grouped = getFixturePredictionDetails(predictors);
   return <div className="space-y-3"><div className="flex items-center justify-center gap-3 rounded-2xl bg-white/5 p-3"><div className="text-center"><TeamLogo team={fixture.homeTeam} /><p className="mt-2 max-w-24 text-xs font-black">{fixture.homeTeam.name}</p></div><div className="text-center"><p className="text-xl font-black">{fixture.status === "finished" ? `${fixture.homeScore} - ${fixture.awayScore}` : "VS"}</p><p className="mt-1 text-[10px] text-white/45">{fixture.dateLabel}</p></div><div className="text-center"><TeamLogo team={fixture.awayTeam} /><p className="mt-2 max-w-24 text-xs font-black">{fixture.awayTeam.name}</p></div></div>{(["home", "draw", "away"] as PredictionChoice[]).map((choice) => <div key={choice} className="space-y-2"><div className="flex items-center justify-between"><span className={`rounded-full px-2 py-1 text-[10px] font-black ${choiceColors[choice]}`}>{choiceLabels[choice]}</span><span className="text-xs font-black text-white/55">{fixture.predictionPercentages[choice]}%</span></div>{grouped[choice].length ? grouped[choice].map((predictor) => <PredictorLine key={predictor.name} predictor={{ id: predictor.name, displayName: predictor.name, shortName: predictor.name.slice(0, 2), avatarUrl: predictor.avatarUrl }} choice={predictor.choice} />) : <p className="rounded-xl bg-white/5 px-3 py-2 text-xs text-white/35">ยังไม่มีคนเลือกฝั่งนี้</p>}</div>)}</div>;
 }
 
-function FixtureDetail({ fixture, entries, gameweek }: { fixture: Fixture; entries: LeaderboardEntry[]; gameweek: number }) {
-  const predictors = entries.flatMap((entry) => { const choice = predictionBookByGameweek[gameweek]?.[entry.id]?.[fixture.id]; return choice ? [{ name: entry.displayName, avatarUrl: entry.avatarUrl, choice }] : []; });
+function FixtureDetail({ fixture, entries, gameweek, predictionBook }: { fixture: Fixture; entries: LeaderboardEntry[]; gameweek: number; predictionBook?: Record<number, Record<string, PredictionMap>> }) {
+  const activePredictionBook = predictionBook ?? predictionBookByEntries.get(entries) ?? mockPredictionBookByGameweek;
+  const predictors = entries.flatMap((entry) => { const choice = activePredictionBook[gameweek]?.[entry.id]?.[fixture.id]; return choice ? [{ name: entry.displayName, avatarUrl: entry.avatarUrl, choice }] : []; });
   const grouped = getFixturePredictionDetails(predictors);
   return <div className="space-y-3"><div className="flex items-center justify-center gap-3 rounded-2xl bg-white/5 p-3"><div className="flex items-center gap-1.5 text-right"><p className="max-w-24 text-xs font-black">{fixture.homeTeam.name}</p><TeamLogo team={fixture.homeTeam} /></div><div className="text-center"><p className="text-xl font-black">{fixture.status === "finished" ? `${fixture.homeScore} - ${fixture.awayScore}` : "VS"}</p><p className="mt-1 text-[10px] text-white/45">{fixture.dateLabel}</p></div><div className="flex items-center gap-1.5"><TeamLogo team={fixture.awayTeam} /><p className="max-w-24 text-xs font-black">{fixture.awayTeam.name}</p></div></div>{(["home", "draw", "away"] as PredictionChoice[]).map((choice) => <div key={choice} className="space-y-2"><div className="flex items-center justify-between"><span className={`rounded-full px-2 py-1 text-[10px] font-black ${choiceColors[choice]}`}>{choiceLabels[choice]}</span><span className="text-xs font-black text-white/55">{fixture.predictionPercentages[choice]}%</span></div>{grouped[choice].length ? grouped[choice].map((predictor) => <PredictorLine key={predictor.name} predictor={{ id: predictor.name, displayName: predictor.name, shortName: predictor.name.slice(0, 2), avatarUrl: predictor.avatarUrl }} choice={predictor.choice} />) : <p className="rounded-xl bg-white/5 px-3 py-2 text-xs text-white/35">ยังไม่มีคนเลือกฝั่งนี้</p>}</div>)}</div>;
 }
@@ -167,7 +171,7 @@ function SharePrompt({ gameweek, completionLabel, errorMessage, onClose, onShare
   return <DetailModal eyebrow="Prediction saved" title="บันทึกคำทายแล้ว" onClose={onClose}><div className="space-y-4"><div className="flex items-center gap-3 rounded-2xl border border-[#47d7a0]/25 bg-[#47d7a0]/10 p-3"><span className="grid size-10 place-items-center rounded-full bg-[#47d7a0] text-[#06221a]"><Check size={20} /></span><p className="text-sm font-bold text-[#b7f5de]">บันทึกคำทาย {completionLabel} ใน GW {gameweek} แล้ว</p></div><p className="text-sm leading-6 text-white/65">อยากแชร์ผลทายลงกลุ่ม LINE ให้เพื่อนเห็นเลยไหม?</p>{errorMessage && <p role="alert" className="rounded-2xl border border-[#ff647c]/30 bg-[#ff647c]/10 px-3 py-2 text-xs leading-5 text-[#ffb0bc]">{errorMessage}</p>}<div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-black text-white/70 transition hover:bg-white/10">ไม่แชร์</button><button type="button" onClick={onShare} className="flex items-center justify-center gap-2 rounded-2xl bg-[#d9ff58] py-3.5 text-sm font-black text-[#071525] transition hover:bg-[#e7ff8c]"><Share2 size={16} />แชร์เข้า LINE</button></div></div></DetailModal>;
 }
 
-export default function PredictionApp({ currentUser, gameweeks, fixturesByGameweek, leaderboardByGameweek, initialPredictionsByGameweek, initialGameweek, onConfirmPredictions }: PredictionAppProps) {
+export default function PredictionApp({ currentUser, gameweeks, fixturesByGameweek, leaderboardByGameweek, initialPredictionsByGameweek, initialGameweek, predictionBookByGameweek: livePredictionBookByGameweek, onConfirmPredictions }: PredictionAppProps) {
   const [activeTab, setActiveTab] = useState<Tab>("leaderboard");
   const [selectedGameweek, setSelectedGameweek] = useState(initialGameweek ?? gameweeks[0]?.id ?? 0);
   const [predictionsByGameweek, setPredictionsByGameweek] = useState<Record<number, PredictionMap>>(initialPredictionsByGameweek ?? {});
@@ -178,6 +182,8 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
   const [showSavedToast, setShowSavedToast] = useState(false);
   const fixtures = fixturesByGameweek[selectedGameweek] ?? [];
   const entries = leaderboardByGameweek[selectedGameweek] ?? [];
+  const predictionBookByGameweek = livePredictionBookByGameweek ?? mockPredictionBookByGameweek;
+  predictionBookByEntries.set(entries, predictionBookByGameweek);
   const predictions = predictionsByGameweek[selectedGameweek] ?? {};
   const selectedCount = Object.keys(predictions).length;
   const complete = isPredictionComplete(fixtures.map((fixture) => fixture.id), predictions);

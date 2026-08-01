@@ -31,11 +31,17 @@
 
 ## Automated evidence
 
-- `npm.cmd run test` → 69 tests passed, 0 failed
+- `npm.cmd run test` → 72 tests passed, 0 failed
 - `npm.cmd run lint` → passed
 - `npm.cmd run build` → passed
 - `git diff --check` → passed
 - no Supabase write or fixture mutation was performed for this batch
+
+## Regression fixes in this review batch
+
+- Live player and fixture detail now use the active prediction book from the dashboard read model instead of the mock-only prediction book.
+- Flex payloads use `giga` bubbles, circular image assets, PNG-compatible Premier League badge URLs, the approved LIFF URL, and a dark-text app action.
+- The exact `ทายผล` bot alias is supported, and approved data commands return a safe retry message when a read-only data reader fails.
 
 ## Production smoke test pending review/deploy
 

@@ -46,7 +46,8 @@ test("builds the prediction share payload with profile and team assets", () => {
   const serialized = JSON.stringify(message);
 
   assert.match(serialized, /https:\/\/example\.com\/avatar\.jpg/);
-  assert.match(serialized, new RegExp(teams.arsenal.crest.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.match(serialized, new RegExp(teams.chelsea.crest.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.match(serialized, /เปิดแอป FPL Chei Chei/);
+  assert.match(serialized, /resources\.premierleague\.com\/premierleague25\/badges\/3\.png/);
+  assert.match(serialized, /resources\.premierleague\.com\/premierleague25\/badges\/8\.png/);
+  assert.doesNotMatch(serialized, /\.svg/);
+  assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
 });

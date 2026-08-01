@@ -12,7 +12,7 @@ test("maps approved fixture and prediction aliases exactly", () => {
   for (const text of ["บอลวันนี้", "โปรแกรมบอล", "คู่วันนี้"]) {
     assert.equal(parseLineCommand(text), "todayFixtures");
   }
-  for (const text of ["ผลทาย", "คำทาย"]) {
+  for (const text of ["ผลทาย", "คำทาย", "ทายผล"]) {
     assert.equal(parseLineCommand(text), "myPredictions");
   }
 });

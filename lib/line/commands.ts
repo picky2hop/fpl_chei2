@@ -12,6 +12,7 @@ const aliases: Record<string, LineBotCommand> = {
   "คู่วันนี้": "todayFixtures",
   "ผลทาย": "myPredictions",
   "คำทาย": "myPredictions",
+  "ทายผล": "myPredictions",
   "เมนู": "menu",
   "ช่วย": "menu",
   "คำสั่ง": "menu",

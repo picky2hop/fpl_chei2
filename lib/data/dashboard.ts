@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { mapPredictionBook, type DashboardPredictionBook } from "@/lib/data/dashboard-core";
 
 export type DashboardData = {
   season: { id: string; name: string };
@@ -18,6 +19,7 @@ export type DashboardData = {
     predictionPercentages: { home: number; draw: number; away: number };
   }>;
   predictions: Array<{ fixtureId: string; choice: string; status: string }>;
+  predictionBookByGameweek: DashboardPredictionBook;
   leaderboard: Array<{
     id: string;
     displayName: string;
@@ -105,6 +107,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       }];
     }),
     predictions: predictions.filter((prediction) => prediction.user_id === userId).map((prediction) => ({ fixtureId: prediction.fixture_id, choice: prediction.outcome, status: prediction.status })),
+    predictionBookByGameweek: mapPredictionBook({
+      gameweeks: gameweeks.map((gameweek) => ({ id: gameweek.id, number: gameweek.number })),
+      fixtures: fixtures.map((fixture) => ({ id: fixture.id, gameweekId: fixture.gameweek_id })),
+      predictions: predictions.map((prediction) => ({ userId: prediction.user_id, fixtureId: prediction.fixture_id, outcome: prediction.outcome, status: prediction.status })),
+    }),
     leaderboard: [...leaderboardUserIds].flatMap((id) => {
       const user = usersById.get(id);
       if (!user) return [];

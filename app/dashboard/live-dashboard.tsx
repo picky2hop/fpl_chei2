@@ -5,6 +5,7 @@ import PredictionApp from "../components/prediction-app-final";
 import { fixturesByGameweek as mockFixtures, gameweeks as mockGameweeks, leaderboardByGameweek as mockLeaderboard } from "@/lib/mock-data";
 import type { Fixture, Gameweek, LeaderboardEntry, Team, UserProfile } from "@/lib/mock-data";
 import type { PredictionMap } from "@/lib/predictions";
+import type { DashboardPredictionBook } from "@/lib/data/dashboard-core";
 
 type DashboardPayload = {
   gameweeks: Array<{ id: string; number: number; label: string; state: "current" | "past" | "future"; fixtureCount: number }>;
@@ -15,6 +16,7 @@ type DashboardPayload = {
     predictionPercentages: { home: number; draw: number; away: number };
   }>;
   predictions: Array<{ fixtureId: string; choice: string; status: string }>;
+  predictionBookByGameweek: DashboardPredictionBook;
   leaderboard: Array<{ id: string; displayName: string; avatarUrl: string; gameweekPoints: number; seasonPoints: number }>;
 };
 
@@ -63,7 +65,7 @@ export default function LiveDashboard({ profile }: { profile: UserProfile }) {
   }
 
   const props = buildLiveProps(payload, profile);
-  return <PredictionApp currentUser={props.profile} gameweeks={props.gameweeks} fixturesByGameweek={props.fixturesByGameweek} leaderboardByGameweek={props.leaderboardByGameweek} initialPredictionsByGameweek={props.initialPredictionsByGameweek} initialGameweek={props.current} onConfirmPredictions={async (gameweek, predictions) => {
+  return <PredictionApp currentUser={props.profile} gameweeks={props.gameweeks} fixturesByGameweek={props.fixturesByGameweek} leaderboardByGameweek={props.leaderboardByGameweek} initialPredictionsByGameweek={props.initialPredictionsByGameweek} initialGameweek={props.current} predictionBookByGameweek={payload.predictionBookByGameweek} onConfirmPredictions={async (gameweek, predictions) => {
     const gameweekId = payload.gameweeks.find((item) => item.number === gameweek)?.id;
     if (!gameweekId) throw new Error("Gameweek is unavailable");
     await Promise.all(Object.entries(predictions).map(async ([fixtureId, choice]) => {
