@@ -1,8 +1,8 @@
 import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getServerEnv } from "@/lib/env";
-import type { Database } from "@/lib/db/types";
+import { getServerEnv } from "../env.ts";
+import type { Database } from "../db/types.ts";
 
 let adminClient: SupabaseClient<Database> | undefined;
 

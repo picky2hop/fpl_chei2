@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test tests/**/*.test.mts"
+    "test": "node --experimental-strip-types --test tests/**/*.test.mts",
+    "test:integration": "node --experimental-strip-types --test tests/integration/**/*.test.mts"
   },
   "dependencies": {
     "@line/liff": "^2.29.1",
