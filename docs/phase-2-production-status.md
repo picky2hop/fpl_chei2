@@ -60,9 +60,9 @@
 
 ## Next phase
 
-LINE Flex/Bot ของ Phase 3A ผ่าน production แล้ว และมี [sync reliability implementation](phase-3a-sync-reliability-test-evidence.md) อยู่ใน working tree
+LINE Flex/Bot ของ Phase 3A ผ่าน production แล้ว และมี [sync reliability implementation](phase-3a-sync-reliability-test-evidence.md) ที่ถูก commit/push ใน `66802bc`
 
-Atomic sync migration และ application code ยังไม่ถูก deploy จึงไม่เปลี่ยน production state หรือ row counts ที่บันทึกไว้ด้านบน ต้องผ่าน review และ deployment runbook ก่อน
+Atomic sync migration ถูก apply production แล้ว และ application code ถูก push ใน `66802bc`; live authenticated provider run หลัง deployment ยังรอ scheduler ที่มี secret นอก repository
 
 ## Security and change policy
 

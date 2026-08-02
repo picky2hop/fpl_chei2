@@ -60,3 +60,12 @@ Read-only post-deployment checks ถูกเพิ่มใน `tests/sql/phase
 - post-deployment `db lint` ไม่พบ schema error
 - advisors เหลือ warning เดิม `auth_leaked_password_protection` เท่านั้น ไม่มี error และไม่เกี่ยวกับ sync migration
 - ไม่มีการเรียก sync เพื่อเปลี่ยน production fixtures/predictions/scores สำหรับ verification
+
+## Live smoke check
+
+- `https://fpl-chei2.vercel.app/` ตอบ HTTP 200
+- POST `/api/sync` โดยไม่มี `x-fpl-sync-token` ตอบ HTTP 401 และไม่เริ่ม sync
+- read-only production counts: `fixtures=380`, `distinct_external_fixture_ids=380`, `fixture_source_records=380`, duplicate fixture identity groups `=0`, `running_sync_jobs=0`
+- latest observed scheduled success และ `last_synced_at` อยู่ที่ 1 สิงหาคม 2026 ก่อน migration deployment รอบนี้
+- ยังไม่ได้ยิง authenticated provider sync เพราะ `FPL_SYNC_TOKEN` อยู่ใน Vercel/Google Apps Script secret store และจะไม่ถูกอ่าน แสดง หรือเดาใน repository/chat
+- ดังนั้น live app/auth boundary และ production data invariants ผ่านแล้ว แต่ authenticated provider end-to-end run ต้องรอ scheduler รอบถัดไปหรือผู้ดูแล trigger ด้วย secret ที่มีอยู่เดิม
