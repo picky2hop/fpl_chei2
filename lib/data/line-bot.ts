@@ -36,6 +36,7 @@ export type UserPredictionData = {
     homeTeam: FlexTeam;
     awayTeam: FlexTeam;
     choice: PredictionChoice;
+    kickoffAt: string;
   }>;
 };
 
@@ -57,6 +58,7 @@ type TodayFixtureRowInput = {
 };
 
 type UserPredictionRowInput = {
+  kickoffAt: string;
   homeTeam: FlexTeam;
   awayTeam: FlexTeam;
   outcome: string;
@@ -141,7 +143,7 @@ export function mapUserPredictionRows(input: {
     avatarUrl: input.avatarUrl ?? "",
     fixtures: input.rows.flatMap((row) => {
       if (row.outcome !== "home" && row.outcome !== "draw" && row.outcome !== "away") return [];
-      return [{ homeTeam: row.homeTeam, awayTeam: row.awayTeam, choice: row.outcome }];
+      return [{ kickoffAt: row.kickoffAt, homeTeam: row.homeTeam, awayTeam: row.awayTeam, choice: row.outcome }];
     }),
   };
 }
@@ -234,7 +236,7 @@ export function createLineBotDataReader(): LineBotDataReader {
         const awayTeam = teamsById.get(fixture.away_team_id);
         const outcome = predictionsByFixture.get(fixture.id);
         if (!homeTeam || !awayTeam || !outcome) return [];
-        return [{ homeTeam, awayTeam, outcome }];
+        return [{ kickoffAt: fixture.kickoff_at, homeTeam, awayTeam, outcome }];
       });
       return mapUserPredictionRows({ gameweek: gameweek.number, displayName: user.display_name, avatarUrl: user.avatar_url, rows });
     },

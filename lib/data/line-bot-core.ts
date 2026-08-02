@@ -32,6 +32,7 @@ export type UserPredictionData = {
     homeTeam: FlexTeam;
     awayTeam: FlexTeam;
     choice: PredictionChoice;
+    kickoffAt: string;
   }>;
 };
 
@@ -63,6 +64,7 @@ type TodayFixtureRowInput = {
 };
 
 type UserPredictionRowInput = {
+  kickoffAt: string;
   homeTeam: FlexTeam;
   awayTeam: FlexTeam;
   outcome: string;
@@ -147,7 +149,7 @@ export function mapUserPredictionRows(input: {
     avatarUrl: input.avatarUrl ?? "",
     fixtures: input.rows.flatMap((row) => {
       if (row.outcome !== "home" && row.outcome !== "draw" && row.outcome !== "away") return [];
-      return [{ homeTeam: row.homeTeam, awayTeam: row.awayTeam, choice: row.outcome }];
+      return [{ kickoffAt: row.kickoffAt, homeTeam: row.homeTeam, awayTeam: row.awayTeam, choice: row.outcome }];
     }),
   };
 }

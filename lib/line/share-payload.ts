@@ -37,6 +37,7 @@ export function buildPredictionShareFlex(input: {
       homeTeam: { name: fixture.homeTeam.name, logoUrl: fixture.homeTeam.crest },
       awayTeam: { name: fixture.awayTeam.name, logoUrl: fixture.awayTeam.crest },
       choice: input.predictions[fixture.id] ?? "draw",
+      kickoffAt: fixture.kickoff,
     })),
   });
 }

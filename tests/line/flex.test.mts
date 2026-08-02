@@ -136,7 +136,8 @@ test("prediction Flex matches the app detail row treatment", () => {
   const bubble = message.contents as Record<string, unknown>;
   const body = bubble.body as Record<string, unknown>;
   const bodyContents = body.contents as Array<Record<string, unknown>>;
-  const fixtureRow = bodyContents[1];
+  const dateGroup = bodyContents[1];
+  const fixtureRow = (dateGroup.contents as Array<Record<string, unknown>>)[1];
   const rowContents = fixtureRow.contents as Array<Record<string, unknown>>;
   const homeSide = rowContents[0];
   const vs = rowContents[1];
@@ -153,12 +154,12 @@ test("prediction Flex matches the app detail row treatment", () => {
   assert.equal(awaySide.justifyContent, "center");
   assert.equal(homeSide.backgroundColor, "#d9ff5815");
   assert.equal(homeSide.paddingAll, "8px");
-  assert.equal(homeLogo.backgroundColor, undefined);
-  assert.equal(homeLogo.cornerRadius, undefined);
-  assert.equal((homeLogo.contents as Array<Record<string, unknown>>)[0]?.aspectMode, "contain");
-  assert.equal(awayLogo.backgroundColor, undefined);
-  assert.equal(awayLogo.cornerRadius, undefined);
-  assert.equal((awayLogo.contents as Array<Record<string, unknown>>)[0]?.aspectMode, "contain");
+  assert.equal(homeLogo.type, "image");
+  assert.equal(homeLogo.aspectMode, "contain");
+  assert.equal(homeLogo.size, "36px");
+  assert.equal(awayLogo.type, "image");
+  assert.equal(awayLogo.aspectMode, "contain");
+  assert.equal(awayLogo.size, "36px");
   assert.equal(vs.layout, "vertical");
   assert.equal(vs.width, "24px");
   assert.equal(vs.flex, 0);
@@ -167,6 +168,26 @@ test("prediction Flex matches the app detail row treatment", () => {
   assert.equal(vsText.align, "center");
   assert.equal(rowContents.at(-1)?.width, "48px");
   assert.equal(rowContents.at(-1)?.flex, 0);
+});
+
+test("prediction Flex groups fixtures under Thai weekday/date headings", () => {
+  const fixtures = Array.from({ length: 10 }, (_, index) => ({
+    homeTeam: { name: `Home ${index + 1}` },
+    awayTeam: { name: `Away ${index + 1}` },
+    kickoffAt: index < 5 ? "2026-08-01T12:00:00.000Z" : "2026-08-02T12:00:00.000Z",
+    choice: "home" as const,
+  }));
+  const message = buildPredictionResultFlex({ displayName: "Picky", gameweek: 1, fixtures });
+  const bubble = message.contents as Record<string, unknown>;
+  const body = bubble.body as Record<string, unknown>;
+  const bodyContents = body.contents as Array<Record<string, unknown>>;
+  const groups = bodyContents.slice(1);
+
+  assert.equal(groups.length, 2);
+  assert.match(JSON.stringify(message), /วันเสาร์ที่ 1 สิงหาคม 2569 — 5 คู่/);
+  assert.match(JSON.stringify(message), /วันอาทิตย์ที่ 2 สิงหาคม 2569 — 5 คู่/);
+  assert.equal((groups[0]?.contents as Array<Record<string, unknown>>).length, 6);
+  assert.equal((groups[1]?.contents as Array<Record<string, unknown>>).length, 6);
 });
 
 test("prediction Flex keeps width properties on Box components only", () => {

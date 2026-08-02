@@ -222,6 +222,10 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
     } catch (error) {
       setShareError(error instanceof Error && error.message === "SHARE_TARGET_PICKER_UNAVAILABLE"
         ? "สภาพแวดล้อมนี้ยังไม่รองรับการแชร์เข้า LINE กรุณาเปิดแอปผ่าน LINE WebView"
+        : error instanceof Error && error.message === "FLEX_MESSAGE_TOO_LARGE"
+          ? "คำทายมีข้อมูลมากเกินไปสำหรับ LINE กรุณาลองแชร์ใหม่อีกครั้ง"
+          : error instanceof Error && error.message === "FLEX_MESSAGE_INVALID"
+            ? "รูปแบบผลทายไม่รองรับการแชร์เข้า LINE กรุณาลองใหม่อีกครั้ง"
         : "แชร์เข้า LINE ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     }
   };

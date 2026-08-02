@@ -1,3 +1,5 @@
+import { validateFlexMessage } from "./flex.ts";
+
 export type ShareMessage = {
   type: "flex";
   altText: string;
@@ -17,6 +19,7 @@ export async function shareFlexMessage(
     throw new Error("SHARE_TARGET_PICKER_UNAVAILABLE");
   }
 
+  validateFlexMessage(message);
   const result = await api.shareTargetPicker([message], { isMultiple: true });
   return isSuccessfulShareResult(result) ? "shared" : "cancelled";
 }

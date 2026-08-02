@@ -79,6 +79,7 @@ test("maps a user's active predictions to the current gameweek", () => {
     displayName: "Picky",
     avatarUrl: null,
     rows: [{
+      kickoffAt: "2026-08-01T12:00:00.000Z",
       homeTeam: { name: "Arsenal", logoUrl: "https://example.test/arsenal.png" },
       awayTeam: { name: "Chelsea", logoUrl: "https://example.test/chelsea.png" },
       outcome: "away",
@@ -90,6 +91,7 @@ test("maps a user's active predictions to the current gameweek", () => {
     displayName: "Picky",
     avatarUrl: "",
     fixtures: [{
+      kickoffAt: "2026-08-01T12:00:00.000Z",
       homeTeam: { name: "Arsenal", logoUrl: "https://example.test/arsenal.png" },
       awayTeam: { name: "Chelsea", logoUrl: "https://example.test/chelsea.png" },
       choice: "away",

@@ -84,3 +84,26 @@ test("prediction share payload keeps every fixture in one Flex bubble", () => {
     assert.match(serialized, new RegExp(`Away ${index}`));
   }
 });
+
+test("prediction share payload carries fixture kickoff dates into grouped sections", () => {
+  const fixtures = [
+    fixture,
+    {
+      ...fixture,
+      id: "fixture-2",
+      kickoff: "2026-08-02T12:00:00.000Z",
+      homeTeam: { ...fixture.homeTeam, name: "Liverpool" },
+      awayTeam: { ...fixture.awayTeam, name: "Spurs" },
+    },
+  ];
+  const message = buildPredictionShareFlex({
+    currentUser: entry,
+    fixtures,
+    gameweek: 1,
+    predictions: { "fixture-1": "home", "fixture-2": "away" },
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /วันเสาร์ที่ 1 สิงหาคม 2569 — 1 คู่/);
+  assert.match(serialized, /วันอาทิตย์ที่ 2 สิงหาคม 2569 — 1 คู่/);
+});

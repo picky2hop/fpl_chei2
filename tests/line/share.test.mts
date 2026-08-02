@@ -49,3 +49,57 @@ test("rejects clearly when the target picker is unavailable", async () => {
     (error: unknown) => error instanceof Error && error.message === "SHARE_TARGET_PICKER_UNAVAILABLE",
   );
 });
+
+test("rejects a Flex payload with a Box-only width on text before opening the picker", async () => {
+  let pickerCalled = false;
+  const invalidMessage = {
+    ...message,
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [{ type: "text", text: "invalid", width: "20px" }],
+      },
+    },
+  };
+
+  await assert.rejects(
+    shareFlexMessage({
+      isApiAvailable: () => true,
+      shareTargetPicker: async () => {
+        pickerCalled = true;
+        return { status: "success" };
+      },
+    }, invalidMessage),
+    (error: unknown) => error instanceof Error && error.message === "FLEX_MESSAGE_INVALID",
+  );
+  assert.equal(pickerCalled, false);
+});
+
+test("rejects an oversized Flex payload before opening the picker", async () => {
+  let pickerCalled = false;
+  const oversizedMessage = {
+    ...message,
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [{ type: "text", text: "x".repeat(31_000) }],
+      },
+    },
+  };
+
+  await assert.rejects(
+    shareFlexMessage({
+      isApiAvailable: () => true,
+      shareTargetPicker: async () => {
+        pickerCalled = true;
+        return { status: "success" };
+      },
+    }, oversizedMessage),
+    (error: unknown) => error instanceof Error && error.message === "FLEX_MESSAGE_TOO_LARGE",
+  );
+  assert.equal(pickerCalled, false);
+});

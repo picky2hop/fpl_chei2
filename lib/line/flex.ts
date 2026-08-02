@@ -13,6 +13,8 @@ export type PredictionFlexInput = {
     homeTeam: FlexTeam;
     awayTeam: FlexTeam;
     choice: PredictionChoice;
+    kickoffAt?: string;
+    dateLabel?: string;
   }>;
 };
 
@@ -103,13 +105,12 @@ function teamLogoOrFallback(url: string | undefined, fallback: string, size = "4
   const imageUrl = lineImageUrl(url);
   if (!imageUrl) return imageOrFallback(undefined, fallback, size);
   return {
-    type: "box",
-    layout: "vertical",
-    width: size,
-    height: size,
-    justifyContent: "center",
-    alignItems: "center",
-    contents: [{ type: "image", url: imageUrl, size: "full", aspectMode: "contain", aspectRatio: "1:1", flex: 0 }],
+    type: "image",
+    url: imageUrl,
+    size,
+    aspectMode: "contain",
+    aspectRatio: "1:1",
+    flex: 0,
   };
 }
 
@@ -232,6 +233,19 @@ const choiceColors: Record<PredictionChoice, { background: string; text: string 
   away: { background: "#6da9ff", text: "#071525" },
 };
 
+export function formatPredictionDateLabel(kickoffAt?: string, fallback = "วันที่แข่งขัน"): string {
+  if (!kickoffAt) return fallback;
+  const date = new Date(kickoffAt);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat("th-TH", {
+    timeZone: BANGKOK_TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 function predictionChoicePill(choice: PredictionChoice) {
   const colors = choiceColors[choice];
   return {
@@ -273,6 +287,22 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
   };
 }
 
+function predictionDateGroups(fixtures: PredictionFlexInput["fixtures"]) {
+  const groups = new Map<string, PredictionFlexInput["fixtures"]>();
+  for (const fixture of fixtures) {
+    const label = formatPredictionDateLabel(fixture.kickoffAt, fixture.dateLabel);
+    const group = groups.get(label) ?? [];
+    group.push(fixture);
+    groups.set(label, group);
+  }
+  return [...groups.entries()].map(([label, group]) => ({
+    type: "box",
+    layout: "vertical",
+    spacing: "xs",
+    contents: [text(`${label} — ${group.length} คู่`, "sm", "bold", ACCENT), ...group.map(predictionFixture)],
+  }));
+}
+
 export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessage {
   const profile = {
     type: "box",
@@ -297,9 +327,44 @@ export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessa
     altText: `FPL Chei Chei · คำทาย GW${input.gameweek} ของ ${input.displayName}`,
     contents: bubble([
       profile,
-      ...(input.fixtures.length ? input.fixtures.map(predictionFixture) : [text("ยังไม่มีคำทาย", "sm", "regular", MUTED_TEXT)]),
+      ...(input.fixtures.length ? predictionDateGroups(input.fixtures) : [text("ยังไม่มีคำทาย", "sm", "regular", MUTED_TEXT)]),
     ]),
   };
+}
+
+const MAX_FLEX_BUBBLE_BYTES = 30 * 1024;
+
+export function validateFlexMessage(message: FlexMessage): void {
+  if (message.type !== "flex" || typeof message.altText !== "string" || !message.contents || typeof message.contents !== "object") {
+    throw new Error("FLEX_MESSAGE_INVALID");
+  }
+
+  const serialized = JSON.stringify(message);
+  if (new TextEncoder().encode(serialized).byteLength > MAX_FLEX_BUBBLE_BYTES) {
+    throw new Error("FLEX_MESSAGE_TOO_LARGE");
+  }
+
+  const visit = (value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const component = value as Record<string, unknown>;
+    if (component.type === "text" && ("width" in component || "height" in component)) {
+      throw new Error("FLEX_MESSAGE_INVALID");
+    }
+    if (component.type === "image") {
+      const url = typeof component.url === "string" ? component.url : "";
+      if (!url.startsWith("https://") || /\.svg(?:$|\?)/i.test(url)) throw new Error("FLEX_MESSAGE_INVALID");
+    }
+    if ((component.type === "box" || component.type === "carousel") && Array.isArray(component.contents) && component.contents.length > 12) {
+      throw new Error("FLEX_MESSAGE_INVALID");
+    }
+    Object.values(component).forEach(visit);
+  };
+
+  visit(message.contents);
 }
 
 function standingsRow(row: StandingsFlexInput["rows"][number]) {
