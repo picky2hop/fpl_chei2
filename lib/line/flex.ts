@@ -99,12 +99,26 @@ function imageOrFallback(url: string | undefined, fallback: string, size = "40px
       };
 }
 
+function teamLogoOrFallback(url: string | undefined, fallback: string, size = "40px") {
+  const imageUrl = lineImageUrl(url);
+  if (!imageUrl) return imageOrFallback(undefined, fallback, size);
+  return {
+    type: "box",
+    layout: "vertical",
+    width: size,
+    height: size,
+    justifyContent: "center",
+    alignItems: "center",
+    contents: [{ type: "image", url: imageUrl, size: "full", aspectMode: "contain", aspectRatio: "1:1", flex: 0 }],
+  };
+}
+
 function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, centered = false) {
   const name = {
     ...text(team.name, "xs", "bold", highlighted ? "#d9ff58" : PRIMARY_TEXT),
     ...(centered ? { align: "center" } : {}),
   };
-  const logo = imageOrFallback(team.logoUrl, team.name, "36px");
+  const logo = teamLogoOrFallback(team.logoUrl, team.name, "36px");
   return {
     type: "box",
     layout: "horizontal",

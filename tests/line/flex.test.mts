@@ -142,6 +142,8 @@ test("prediction Flex matches the app detail row treatment", () => {
   const vs = rowContents[1];
   const vsText = (vs.contents as Array<Record<string, unknown>>)[0];
   const awaySide = rowContents[2];
+  const homeLogo = (homeSide.contents as Array<Record<string, unknown>>)[1];
+  const awayLogo = (awaySide.contents as Array<Record<string, unknown>>)[0];
 
   assert.doesNotMatch(JSON.stringify(body), /PLAYER PICKS/);
   assert.equal(fixtureRow.layout, "horizontal");
@@ -151,6 +153,12 @@ test("prediction Flex matches the app detail row treatment", () => {
   assert.equal(awaySide.justifyContent, "center");
   assert.equal(homeSide.backgroundColor, "#d9ff5815");
   assert.equal(homeSide.paddingAll, "8px");
+  assert.equal(homeLogo.backgroundColor, undefined);
+  assert.equal(homeLogo.cornerRadius, undefined);
+  assert.equal((homeLogo.contents as Array<Record<string, unknown>>)[0]?.aspectMode, "contain");
+  assert.equal(awayLogo.backgroundColor, undefined);
+  assert.equal(awayLogo.cornerRadius, undefined);
+  assert.equal((awayLogo.contents as Array<Record<string, unknown>>)[0]?.aspectMode, "contain");
   assert.equal(vs.layout, "vertical");
   assert.equal(vs.width, "24px");
   assert.equal(vs.flex, 0);
