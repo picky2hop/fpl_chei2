@@ -32,4 +32,15 @@
 - `git diff --check`: passed; Git only reported existing LF/CRLF normalization warnings.
 - Read-only cleanup query on the test project returned `0` synthetic fixture rows, `0` synthetic season rows, and `0` synthetic job rows.
 
-No commit or push was performed.
+The Phase 3A state-transition implementation was previously committed and pushed as `e9e6207`.
+
+## CI setup
+
+The GitHub Actions workflow is `.github/workflows/ci.yml`. It uses a Windows runner so all npm commands remain `npm.cmd`, and it runs on pushes and pull requests with `contents: read` permissions.
+
+Before enabling the integration job, a repository administrator must add these Actions secrets under GitHub Settings → Secrets and variables → Actions:
+
+- `SUPABASE_TEST_URL`
+- `SUPABASE_TEST_SERVICE_ROLE_KEY`
+
+The workflow never references production Supabase credentials and does not deploy.
