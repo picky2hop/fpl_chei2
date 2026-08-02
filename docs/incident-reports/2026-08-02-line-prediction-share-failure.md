@@ -11,16 +11,20 @@ The user can open the LINE share picker and complete the share flow, but the sel
 
 The earlier recurrence was caused by a Box-only `width` property being placed on the `VS` text component. LINE rejected the Flex payload, while the LIFF share flow did not provide a useful error to the user. This was fixed by moving the width to a vertical Box around the `VS` text.
 
-This incident is recorded because that class of error can recur whenever the Flex layout is edited. The latest report did not include a LINE platform error response, so a new server-side root cause cannot be claimed from the client symptom alone.
+## Confirmed current regression
+
+The last confirmed working commit, `7fce840`, generated team images with `aspectMode: "cover"`. Commit `060931f` introduced `aspectMode: "contain"` while changing the team-logo presentation, and the later repair kept that value. LINE Flex Image supports only `fit` and `cover`, so both the bot command and LIFF share sent the same invalid prediction Flex payload.
+
+The local validator did not catch the regression because it validated image URL rules but did not validate the `aspectMode` enum. The repair changes the transparent direct team-logo Image to `fit` and adds an enum allow-list to the validator.
 
 ## Changes made for prevention
 
 - Team logos in prediction rows are now direct HTTPS image components with PNG conversion for supported Premier League SVG badge URLs. The unnecessary fixed-size logo wrapper was removed.
 - Prediction fixtures are grouped into date sections using `Asia/Bangkok` calendar dates. The section heading is formatted as Thai weekday, date, and the actual fixture count, for example `วันเสาร์ที่ 1 สิงหาคม 2569 — 3 คู่`.
 - `shareFlexMessage` validates the payload before opening `shareTargetPicker`.
-- The validator rejects text components with Box-only `width` or `height`, SVG/non-HTTPS image URLs, more than 12 children in a Box/carousel, and payloads above 30 KiB.
+- The validator rejects text components with Box-only `width` or `height`, SVG/non-HTTPS image URLs, Image aspect modes other than `fit` or `cover`, more than 12 children in a Box/carousel, and payloads above 30 KiB.
 - Invalid payloads now produce a safe user-facing error and do not call the LINE picker. No payload content, token, key, or secret is logged.
-- Regression tests cover the previous `VS` layout failure mode, PNG-only Flex assets, Thai date grouping, and pre-share rejection.
+- Regression tests cover the previous `VS` layout failure mode, the `contain` aspect-mode regression, PNG-only Flex assets, Thai date grouping, and pre-share rejection.
 
 ## Required verification after deployment
 
@@ -35,5 +39,6 @@ This incident is recorded because that class of error can recur whenever the Fle
 - Keep Box-only properties on Box components; especially do not put `width` or `height` on Text.
 - Keep each Box at or below 12 direct children.
 - Use HTTPS image URLs and convert or omit SVG URLs before they enter a Flex payload.
+- Use only `fit` or `cover` for Flex Image `aspectMode`; CSS-style `contain` is not valid LINE Flex JSON.
 - Run `npm.cmd run test`, `npm.cmd run lint`, `npm.cmd run build`, and `git diff --check` before deployment.
 - Perform one real share in the LINE WebView after every prediction Flex layout change.

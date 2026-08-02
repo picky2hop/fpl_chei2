@@ -155,11 +155,12 @@ test("prediction Flex matches the app detail row treatment", () => {
   assert.equal(homeSide.backgroundColor, "#d9ff5815");
   assert.equal(homeSide.paddingAll, "8px");
   assert.equal(homeLogo.type, "image");
-  assert.equal(homeLogo.aspectMode, "contain");
+  assert.equal(homeLogo.aspectMode, "fit");
   assert.equal(homeLogo.size, "36px");
   assert.equal(awayLogo.type, "image");
-  assert.equal(awayLogo.aspectMode, "contain");
+  assert.equal(awayLogo.aspectMode, "fit");
   assert.equal(awayLogo.size, "36px");
+  assert.doesNotMatch(JSON.stringify(message), /"aspectMode":"contain"/);
   assert.equal(vs.layout, "vertical");
   assert.equal(vs.width, "24px");
   assert.equal(vs.flex, 0);

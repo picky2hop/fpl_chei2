@@ -108,7 +108,7 @@ function teamLogoOrFallback(url: string | undefined, fallback: string, size = "4
     type: "image",
     url: imageUrl,
     size,
-    aspectMode: "contain",
+    aspectMode: "fit",
     aspectRatio: "1:1",
     flex: 0,
   };
@@ -357,6 +357,9 @@ export function validateFlexMessage(message: FlexMessage): void {
     if (component.type === "image") {
       const url = typeof component.url === "string" ? component.url : "";
       if (!url.startsWith("https://") || /\.svg(?:$|\?)/i.test(url)) throw new Error("FLEX_MESSAGE_INVALID");
+      if (component.aspectMode !== undefined && component.aspectMode !== "fit" && component.aspectMode !== "cover") {
+        throw new Error("FLEX_MESSAGE_INVALID");
+      }
     }
     if ((component.type === "box" || component.type === "carousel") && Array.isArray(component.contents) && component.contents.length > 12) {
       throw new Error("FLEX_MESSAGE_INVALID");

@@ -103,3 +103,34 @@ test("rejects an oversized Flex payload before opening the picker", async () => 
   );
   assert.equal(pickerCalled, false);
 });
+
+test("rejects an unsupported Flex Image aspect mode before opening the picker", async () => {
+  let pickerCalled = false;
+  const invalidMessage = {
+    ...message,
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [{
+          type: "image",
+          url: "https://example.test/team.png",
+          aspectMode: "contain",
+        }],
+      },
+    },
+  };
+
+  await assert.rejects(
+    shareFlexMessage({
+      isApiAvailable: () => true,
+      shareTargetPicker: async () => {
+        pickerCalled = true;
+        return { status: "success" };
+      },
+    }, invalidMessage),
+    (error: unknown) => error instanceof Error && error.message === "FLEX_MESSAGE_INVALID",
+  );
+  assert.equal(pickerCalled, false);
+});
