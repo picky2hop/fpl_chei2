@@ -1,7 +1,7 @@
 -- Read-only live Supabase verification queries for Phase 2.
 -- Run through Supabase MCP execute_sql; this file intentionally contains no DDL/DML.
 
-select table_name, row_security as rls_enabled
+select table_name, pg_class.relrowsecurity as rls_enabled
 from information_schema.tables
 join pg_class on pg_class.relname = information_schema.tables.table_name
              and pg_class.relnamespace = 'public'::regnamespace
@@ -19,7 +19,17 @@ select
   has_function_privilege('anon', 'public.replace_gameweek_scoring(uuid,integer,jsonb,jsonb)', 'execute') as anon_can_execute_scoring,
   has_function_privilege('service_role', 'public.replace_gameweek_scoring(uuid,integer,jsonb,jsonb)', 'execute') as service_role_can_execute_scoring,
   has_function_privilege('anon', 'public.save_prediction(uuid,uuid,text)', 'execute') as anon_can_execute_prediction_write,
-  has_function_privilege('service_role', 'public.save_prediction(uuid,uuid,text)', 'execute') as service_role_can_execute_prediction_write;
+  has_function_privilege('service_role', 'public.save_prediction(uuid,uuid,text)', 'execute') as service_role_can_execute_prediction_write,
+  has_function_privilege('anon', 'public.apply_fpl_sync(uuid,timestamptz,jsonb,jsonb,jsonb)', 'execute') as anon_can_execute_atomic_sync,
+  has_function_privilege('authenticated', 'public.apply_fpl_sync(uuid,timestamptz,jsonb,jsonb,jsonb)', 'execute') as authenticated_can_execute_atomic_sync,
+  has_function_privilege('service_role', 'public.apply_fpl_sync(uuid,timestamptz,jsonb,jsonb,jsonb)', 'execute') as service_role_can_execute_atomic_sync;
+
+select column_name, data_type, is_nullable
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'job_runs'
+  and column_name in ('error_code', 'details')
+order by column_name;
 
 select indexname, indexdef
 from pg_indexes

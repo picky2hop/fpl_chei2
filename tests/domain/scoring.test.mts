@@ -95,4 +95,33 @@ describe("scoring domain rules", () => {
       { userId: "u2", points: 9, includedGameweeks: 1 },
     ]);
   });
+
+  it("rebuilds a corrected finished result without retaining the previous points", () => {
+    const input: ScoringInput = {
+      fixtures: [{ id: "fx-1", status: "finished", homeScore: 2, awayScore: 1 }],
+      predictions: [
+        { userId: "u1", fixtureId: "fx-1", choice: "home", status: "active" },
+        { userId: "u2", fixtureId: "fx-1", choice: "draw", status: "active" },
+      ],
+      participants: [
+        { userId: "u1", status: "active" },
+        { userId: "u2", status: "active" },
+      ],
+    };
+    assert.deepEqual(calculateGameweekScoring(input).scores.map(({ userId, points }) => ({ userId, points })), [
+      { userId: "u1", points: 3 },
+      { userId: "u2", points: 0 },
+    ]);
+
+    const corrected = calculateGameweekScoring({
+      ...input,
+      fixtures: [{ id: "fx-1", status: "finished", homeScore: 1, awayScore: 1 }],
+    });
+
+    assert.deepEqual(corrected.scores.map(({ userId, points }) => ({ userId, points })), [
+      { userId: "u1", points: 0 },
+      { userId: "u2", points: 3 },
+    ]);
+    assert.equal(corrected.scores.length, 2);
+  });
 });

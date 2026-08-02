@@ -427,6 +427,8 @@ export type Database = {
         Row: {
           affected_gameweek_ids: Json
           created_at: string
+          details: Json
+          error_code: string | null
           error_message: string | null
           finished_at: string | null
           id: string
@@ -443,6 +445,8 @@ export type Database = {
         Insert: {
           affected_gameweek_ids?: Json
           created_at?: string
+          details?: Json
+          error_code?: string | null
           error_message?: string | null
           finished_at?: string | null
           id?: string
@@ -459,6 +463,8 @@ export type Database = {
         Update: {
           affected_gameweek_ids?: Json
           created_at?: string
+          details?: Json
+          error_code?: string | null
           error_message?: string | null
           finished_at?: string | null
           id?: string
@@ -657,6 +663,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_fpl_sync: {
+        Args: {
+          p_fixtures: Json
+          p_gameweeks: Json
+          p_job_run_id: string
+          p_synced_at: string
+          p_teams: Json
+        }
+        Returns: Json
+      }
       replace_gameweek_scoring: {
         Args: {
           p_awards: Json
@@ -802,4 +818,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

@@ -3,4 +3,4 @@ alter table public.job_runs
 
 alter table public.job_runs
   add constraint job_runs_phase2_mode_check
-  check (mode in ('results', 'schedule', 'manual_results', 'manual_schedule', 'recalculate', 'scheduled', 'manual'));
+  check (mode in ('results', 'schedule', 'manual_results', 'manual_schedule', 'recalculate', 'scheduled', 'manual'));;

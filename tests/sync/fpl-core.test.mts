@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as fplCore from "../../lib/sync/fpl-core.ts";
 import { normalizeFplFixture, type FplFixturePayload } from "../../lib/sync/fpl-core.ts";
 
 const baseFixture: FplFixturePayload = {
@@ -39,4 +40,53 @@ test("preserves source fixture identity and scores", () => {
     awayScore: 0,
     status: "finished",
   });
+});
+
+const validSnapshot = {
+  teams: [
+    { id: 1, name: "Home", short_name: "HOM", code: 101 },
+    { id: 2, name: "Away", short_name: "AWY", code: 102 },
+  ],
+  events: [{ id: 4, name: "Gameweek 4", is_current: true }],
+  fixtures: [baseFixture],
+};
+
+test("rejects duplicate fixture ids before persistence", () => {
+  assert.equal(typeof fplCore.validateFplSnapshot, "function");
+
+  assert.throws(
+    () => fplCore.validateFplSnapshot({
+      ...validSnapshot,
+      fixtures: [baseFixture, { ...baseFixture }],
+    }),
+    (error: unknown) => error instanceof Error
+      && "code" in error
+      && error.code === "FPL_INVALID_SNAPSHOT",
+  );
+});
+
+test("rejects fixtures with missing team references before persistence", () => {
+  assert.equal(typeof fplCore.validateFplSnapshot, "function");
+
+  assert.throws(
+    () => fplCore.validateFplSnapshot({
+      ...validSnapshot,
+      fixtures: [{ ...baseFixture, team_a: 999 }],
+    }),
+    (error: unknown) => error instanceof Error
+      && "code" in error
+      && error.code === "FPL_INVALID_SNAPSHOT",
+  );
+});
+
+test("accepts a complete snapshot and preserves its 380 fixture rows", () => {
+  assert.equal(typeof fplCore.validateFplSnapshot, "function");
+  const fixtures = Array.from({ length: 380 }, (_, index) => ({
+    ...baseFixture,
+    id: index + 1,
+  }));
+
+  const snapshot = fplCore.validateFplSnapshot({ ...validSnapshot, fixtures });
+
+  assert.equal(snapshot.fixtures.length, 380);
 });

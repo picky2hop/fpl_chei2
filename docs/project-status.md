@@ -1,10 +1,56 @@
 # Project Status
 
-อัปเดตล่าสุด: 28 กรกฎาคม 2026
+> เอกสารนี้สรุปสถานะปัจจุบัน ณ 2 สิงหาคม 2026 ส่วน design/plan เดิมใน `docs/superpowers/` เป็น historical reference
 
 ## Current phase
 
-### Phase 1 — UI/UX MVP
+### Phase 2 — Production integration / live validation
+
+สถานะ: implementation และ deployment เสร็จแล้ว; อยู่ช่วงท้ายของ production smoke test และรอผลการแข่งขันจริงเพื่อยืนยัน scoring/recalculation
+
+หลักฐาน production ล่าสุด:
+
+- Production: `https://fpl-chei2.vercel.app`
+- Supabase connector เชื่อมต่อ project `bripkfdcfanjyruqcgji` ได้แบบ read-only
+- `app_users`: 1 row
+- `gameweek_participants`: 38 rows
+- `fixtures`: 380 rows
+- `predictions`: 20 rows
+- `prediction_events`: 90 rows
+- `job_runs`: 8 rows
+
+ตรวจผ่านแล้ว:
+
+- LIFF login และ auto-join active season
+- Dashboard อ่านข้อมูลจริงผ่าน server API
+- prediction ก่อน kickoff สำเร็จ 10/10 คู่ใน GW2
+- prediction หลัง kickoff ถูกปฏิเสธด้วย database error `55P03` โดยทดสอบด้วย transaction rollback
+- `/admin` และสิทธิ์ `ADMIN_LINE_USER_ID`
+- manual sync ได้ 380 fixtures
+- Google Apps Script scheduler เรียก scheduled sync สำเร็จ; transient FPL 403 ถูกบันทึกใน `job_runs` และ retry สำเร็จในรอบถัดไป
+- `npm.cmd run test`: 40 passed; lint, build และ `git diff --check` ผ่าน
+
+ยังรอการยืนยันจากการแข่งขันจริง:
+
+- fixture `finished` และการคำนวณคะแนน/leaderboard
+- postponed/rescheduled fixture และการคำนวณ GW ที่ได้รับผลกระทบ
+- scheduler ระหว่าง live match window หลายรอบ
+
+### Phase 3A — Pre-season hardening
+
+สถานะ: LINE Flex/Bot ผ่าน production แล้ว; sync reliability implementation ผ่าน automated verification และ migration ถูก apply production พร้อม read-only verification แล้วเมื่อ 2 สิงหาคม 2026
+
+Sync reliability ที่เพิ่มในรอบนี้:
+
+- whole-snapshot validation และ FPL timeout/safe error classification
+- dependency-injected job lifecycle สำหรับ fake provider/test doubles
+- atomic Supabase RPC สำหรับ upsert, move reconciliation, selective scoring และ success finalization
+- `job_runs.error_code` และ allow-listed `details`
+- automated coverage สำหรับ 380-row rerun, 403/502/timeout, malformed/duplicate source, safe job failure และ generic route response
+
+Migration `20260802083440_phase_3a_atomic_fpl_sync.sql` ถูก apply production โดยตรงตามคำอนุมัติเมื่อ 2 สิงหาคม 2026 โดยไม่มี local/staging database migration test; migration history, schema, function security และ privileges ผ่าน read-only verification ดู [รายละเอียด Phase 3A](phase-3a-preseason-hardening.md) และ [หลักฐาน sync reliability](phase-3a-sync-reliability-test-evidence.md)
+
+## Phase 1 — UI/UX MVP (เสร็จแล้ว)
 
 สถานะ: UX revision เสร็จใน mock/preview mode
 
@@ -56,18 +102,15 @@ NEXT_PUBLIC_DEMO_MODE=true
 - ใช้ system font และ SVG/image URLs เพื่อไม่ต้องดาวน์โหลด font ระหว่าง build
 - Preview mode มีไว้สำหรับพัฒนาเท่านั้น; production ต้องตั้ง LIFF ID และใช้ auto-login
 
-## Next phases
+## Historical roadmap ก่อนเริ่ม Phase 2
 
-1. เชื่อม LIFF profile กับ Supabase user table และ RLS
-2. เชื่อม FPL official API สำหรับ gameweeks, fixtures, results และ teams
-3. เพิ่ม LINE Messaging API/Flex Message
-4. ตั้งค่า Vercel environment และ deploy production
+รายการนี้ถูกดำเนินการต่อใน Phase 2 แล้ว; งาน LINE Messaging API/Flex Message ถูกย้ายมาเป็นงานแรกของ Phase 3A
 
-## Phase 2 — Approved Design
+## Phase 2 — Approved Design (historical design status)
 
 อัปเดตล่าสุด: 29 กรกฎาคม 2026
 
-สถานะ: Design ผ่านการอนุมัติแล้ว; ยังไม่เริ่ม implementation
+สถานะ: Design ผ่านการอนุมัติแล้ว และ implementation ถูกนำไปใช้ใน production แล้ว
 
 เอกสารหลัก: [FPL Phase 2 Backend Design](superpowers/specs/2026-07-29-fpl-phase-2-backend-design.md)
 
@@ -88,9 +131,8 @@ Decisions ที่ล็อกแล้ว:
 - GW เดิมคำนวณได้เมื่อไม่มี fixture scheduled/live เหลือ โดยไม่นับ fixture postponed
 - คะแนนเท่ากันทุกคนได้สถานะแชมป์หรือบ๊วย และเก็บเป็น award แยกแถว
 
-ถัดไป:
+เอกสาร implementation และผลทดสอบปัจจุบัน:
 
-1. เขียน implementation plan แยกตาม subsystem หลังผู้ใช้ตรวจ Design document
-2. อ่าน Next.js/Supabase/LINE documentation ที่เกี่ยวข้องก่อน implementation
-3. สร้าง Supabase migration และ server data flow แบบ TDD
-4. ตรวจข้อมูลจริงบน Supabase ก่อนสรุปงาน
+- [Phase 2 Production Status](phase-2-production-status.md)
+- [Phase 2 deployment runbook](phase-2-deployment-runbook.md)
+- [Phase 3A pre-season hardening](phase-3a-preseason-hardening.md)

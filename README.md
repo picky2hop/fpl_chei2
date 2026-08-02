@@ -2,6 +2,8 @@
 
 เว็บทายผลพรีเมียร์ลีกสำหรับกลุ่มเพื่อนใน LINE สร้างด้วย Next.js App Router และ Tailwind CSS
 
+สถานะล่าสุด: อยู่ช่วงท้ายของ Phase 2 production smoke test และเริ่ม Phase 3A pre-season hardening แล้ว ดู [สถานะ production](docs/phase-2-production-status.md) และ [roadmap Phase 3A](docs/phase-3a-preseason-hardening.md)
+
 ## Phase 1 MVP
 
 - Landing page ที่ `/` พร้อมทางเข้าเกมทายผลและเกมแฟนตาซีที่ยังไม่เปิด
@@ -48,23 +50,22 @@ FPL_SYNC_TOKEN=
 ## Verification
 
 ```bash
-npm run test
-npm run lint
-npm run build
+npm.cmd run test
+npm.cmd run lint
+npm.cmd run build
+git diff --check
 ```
 
-## Phase 2 integration targets
+## Current roadmap
 
-1. เพิ่ม LIFF SDK และ login/profile sync โดยใช้ LINE user ID เป็นตัวระบุหลัก
-2. สร้าง Supabase schema, RLS และ server-side data access
-3. เพิ่ม FPL API adapter สำหรับ fixtures, results, gameweeks และ club crests
-4. เพิ่ม LINE Messaging webhook และ Flex Message สำหรับแชร์ตาราง/ผลทาย
-5. ตั้งค่า environment variables บน Vercel แล้ว deploy production
+### Phase 2 — Production integration
 
-## Phase 2 approved design
+Implementation และ deployment เสร็จแล้ว. ระบบที่ยืนยันแล้วคือ LIFF login, Supabase server data flow, FPL sync 380 fixtures, prediction ก่อน kickoff, database-authoritative lock, `/admin`, manual sync และ Google Apps Script scheduler.
 
-Phase 2 ใช้ Vercel Free เป็น frontend/backend และใช้ Google Apps Script เป็น scheduler ภายนอกแทน Vercel Cron โดย Apps Script เรียก protected Vercel endpoint ทุก 10 นาทีตามช่วงเวลาที่กำหนดใน [Phase 2 backend design](docs/superpowers/specs/2026-07-29-fpl-phase-2-backend-design.md)
+สิ่งที่ยังรอข้อมูลการแข่งขันจริงคือการตรวจ scoring/leaderboard หลังมี fixture `finished` และการตรวจ postponed/rescheduled ใน production.
 
-ระบบจริงจะใช้ LIFF identity, Supabase PostgreSQL, FPL sync, server-side prediction lock, scoring/recalculation และหน้า `/admin` สำหรับ admin คนเดียว. ผู้ใช้ใหม่เข้าฤดูกาลปัจจุบันอัตโนมัติ ส่วนการ exclude เป็นราย gameweek และไม่ลบประวัติ
+### Phase 3A — Pre-season hardening
 
-ยังไม่เริ่ม implementation ของ Phase 2 จนกว่าจะตรวจสอบเอกสาร Design และสร้าง implementation plan เสร็จ
+LINE Flex/Bot ผ่าน production แล้ว ส่วน sync reliability มี implementation และ automated tests สำหรับ idempotent rerun, provider failures, safe `job_runs`, fixture moves, selective scoring และ atomic RPC โดย migration `20260802083440_phase_3a_atomic_fpl_sync.sql` ถูก apply production และตรวจ schema/privileges แบบ read-only แล้วเมื่อ 2 สิงหาคม 2026
+
+รายละเอียดอยู่ใน [Phase 3A pre-season hardening](docs/phase-3a-preseason-hardening.md) และ [sync reliability test evidence](docs/phase-3a-sync-reliability-test-evidence.md). เอกสาร design/plan เก็บไว้ที่ `docs/superpowers/`.

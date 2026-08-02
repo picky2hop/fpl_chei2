@@ -1,40 +1,59 @@
-import { getServerEnv } from "@/lib/env";
-import { normalizeFplFixture, type FplFixturePayload } from "./fpl-core";
+import { getServerEnv } from "../env.ts";
+import { validateFplSnapshot, type FplSnapshot } from "./fpl-core.ts";
+import { SyncFailure } from "./sync-errors.ts";
 
-type FplTeamPayload = {
-  id: number;
-  name: string;
-  short_name: string;
-  code: number;
+export type FetchFplSnapshotOptions = {
+  fetchImpl?: typeof fetch;
+  baseUrl?: string;
+  timeoutMs?: number;
 };
 
-type FplEventPayload = {
-  id: number;
-  name: string;
-  is_current: boolean;
-};
-
-export type FplSnapshot = {
-  teams: FplTeamPayload[];
-  events: FplEventPayload[];
-  fixtures: FplFixturePayload[];
-};
-
-async function fetchJson<T>(url: string, fetchImpl: typeof fetch): Promise<T> {
-  const response = await fetchImpl(url, { headers: { accept: "application/json", "user-agent": "fpl-chei-phase-2-sync" } });
-  if (!response.ok) throw new Error(`FPL source returned ${response.status}`);
-  return response.json() as Promise<T>;
+async function fetchJson(url: string, fetchImpl: typeof fetch, signal: AbortSignal): Promise<unknown> {
+  const response = await fetchImpl(url, {
+    headers: { accept: "application/json", "user-agent": "fpl-chei-phase-3a-sync" },
+    signal,
+  });
+  if (!response.ok) {
+    const code = response.status === 403
+      ? "FPL_HTTP_403"
+      : response.status === 502
+        ? "FPL_HTTP_502"
+        : "FPL_HTTP_ERROR";
+    throw new SyncFailure(code, "FPL source request failed", { providerStatus: response.status });
+  }
+  try {
+    return await response.json();
+  } catch {
+    throw new SyncFailure("FPL_INVALID_SNAPSHOT", "FPL source snapshot is invalid", { reason: "invalid_json" });
+  }
 }
 
-export async function fetchFplSnapshot(fetchImpl: typeof fetch = fetch): Promise<FplSnapshot> {
-  const baseUrl = getServerEnv().fplApiBaseUrl.replace(/\/$/, "");
-  const [bootstrap, fixtures] = await Promise.all([
-    fetchJson<{ teams: FplTeamPayload[]; events: FplEventPayload[] }>(`${baseUrl}/api/bootstrap-static/`, fetchImpl),
-    fetchJson<FplFixturePayload[]>(`${baseUrl}/api/fixtures/`, fetchImpl),
-  ]);
-  if (!Array.isArray(bootstrap.teams) || !Array.isArray(bootstrap.events) || !Array.isArray(fixtures)) {
-    throw new Error("FPL source payload is invalid");
+export async function fetchFplSnapshot(options: FetchFplSnapshotOptions = {}): Promise<FplSnapshot> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const baseUrl = (options.baseUrl ?? getServerEnv().fplApiBaseUrl).replace(/\/$/, "");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 10_000);
+  try {
+    const [bootstrap, fixtures] = await Promise.all([
+      fetchJson(`${baseUrl}/api/bootstrap-static/`, fetchImpl, controller.signal),
+      fetchJson(`${baseUrl}/api/fixtures/`, fetchImpl, controller.signal),
+    ]);
+    if (typeof bootstrap !== "object" || bootstrap === null) {
+      throw new SyncFailure("FPL_INVALID_SNAPSHOT", "FPL source snapshot is invalid", { reason: "invalid_bootstrap" });
+    }
+    return validateFplSnapshot({
+      teams: "teams" in bootstrap ? bootstrap.teams : undefined,
+      events: "events" in bootstrap ? bootstrap.events : undefined,
+      fixtures,
+    });
+  } catch (error) {
+    controller.abort();
+    if (error instanceof SyncFailure) throw error;
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new SyncFailure("FPL_TIMEOUT", "FPL source request timed out");
+    }
+    throw new SyncFailure("FPL_UNAVAILABLE", "FPL source is unavailable");
+  } finally {
+    clearTimeout(timeout);
   }
-  for (const fixture of fixtures) normalizeFplFixture(fixture);
-  return { teams: bootstrap.teams, events: bootstrap.events, fixtures };
 }

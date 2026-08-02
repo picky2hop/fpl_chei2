@@ -81,4 +81,4 @@ end;
 $$;
 
 revoke execute on function public.save_prediction(uuid, uuid, text) from public, anon, authenticated;
-grant execute on function public.save_prediction(uuid, uuid, text) to service_role;
+grant execute on function public.save_prediction(uuid, uuid, text) to service_role;;
