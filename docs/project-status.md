@@ -50,7 +50,9 @@ Sync reliability ที่เพิ่มในรอบนี้:
 
 Migration `20260802083440_phase_3a_atomic_fpl_sync.sql` ถูก apply production โดยตรงตามคำอนุมัติเมื่อ 2 สิงหาคม 2026 โดยไม่มี local/staging database migration test; migration history, schema, function security และ privileges ผ่าน read-only verification ดู [รายละเอียด Phase 3A](phase-3a-preseason-hardening.md) และ [หลักฐาน sync reliability](phase-3a-sync-reliability-test-evidence.md)
 
-Live smoke check: production homepage ตอบ HTTP 200, unauthenticated sync request ตอบ HTTP 401, fixtures/source records มี 380 รายการเท่ากันและไม่มี duplicate external identity; authenticated provider sync หลัง deployment ยังต้องรันผ่าน scheduler secret
+Live smoke check: production homepage ตอบ HTTP 200, unauthenticated sync request ตอบ HTTP 401, fixtures/source records มี 380 รายการเท่ากันและไม่มี duplicate external identity; authenticated provider sync ถูกส่งต่อให้ scheduler ด้วย secret ที่มีอยู่เดิม และไม่เป็น blocker ของ Phase 3A
+
+Closure: ผู้ใช้ยอมรับและข้าม `auth_leaked_password_protection` เพราะแอปปัจจุบันไม่มี password sign-in flow และปิดกระบวนการ Sync reliability แล้ว
 
 ## Phase 1 — UI/UX MVP (เสร็จแล้ว)
 

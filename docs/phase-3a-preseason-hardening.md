@@ -35,7 +35,7 @@ Phase 3A เป็นรอบ hardening และ integration test ไม่ใ
 
 ### 3. Sync reliability
 
-สถานะ: implementation และ automated tests ใน repository เสร็จแล้ว และ migration ถูก apply production พร้อม read-only schema/privilege verification เมื่อ 2 สิงหาคม 2026
+สถานะ: implementation และ automated tests ใน repository เสร็จแล้ว และ migration ถูก apply production พร้อม read-only schema/privilege verification เมื่อ 2 สิงหาคม 2026; Sync reliability ปิดกระบวนการแล้วตามคำยืนยันของผู้ใช้
 
 - validate snapshot ทั้งชุดก่อนเขียนข้อมูล รวม duplicate IDs, missing fields และ unknown references
 - จำกัด FPL request ด้วย timeout และแยก safe error code สำหรับ 403, 502, timeout และ invalid snapshot

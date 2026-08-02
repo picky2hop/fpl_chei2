@@ -64,6 +64,8 @@ LINE Flex/Bot ของ Phase 3A ผ่าน production แล้ว และ�
 
 Atomic sync migration ถูก apply production แล้ว และ application code ถูก push ใน `66802bc`; live authenticated provider run หลัง deployment ยังรอ scheduler ที่มี secret นอก repository
 
+`auth_leaked_password_protection` เป็น advisor warning ที่ผู้ใช้ยอมรับและข้าม เนื่องจากแอปปัจจุบันไม่มี password sign-in flow
+
 ## Security and change policy
 
 - ห้ามใส่ `SUPABASE_SERVICE_ROLE_KEY`, `SESSION_SECRET`, `FPL_SYNC_TOKEN`, LINE channel secret/access token หรือ secret อื่นใน Git, เอกสาร หรือแชท

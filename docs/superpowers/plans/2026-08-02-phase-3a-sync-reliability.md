@@ -2,6 +2,8 @@
 
 Deployment update (2 August 2026): after the implementation review, the user separately authorized direct production migration application plus commit/push. The migration was applied after a one-migration dry run and passed read-only schema, privilege, lint, and advisor verification without running a production fixture sync for testing.
 
+Closure update: the user accepted the `auth_leaked_password_protection` advisor warning as out of scope for the current LIFF/OAuth-only app and closed the Sync reliability process after the live smoke boundary check.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:test-driven-development for every behavior change and superpowers:verification-before-completion before reporting completion. This plan is executed inline because the user did not authorize sub-agent delegation.
 
 **Goal:** Make FPL snapshot sync idempotent, safely observable, selectively recalculating, and atomic.

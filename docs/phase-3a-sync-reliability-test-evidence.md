@@ -58,7 +58,7 @@ Read-only post-deployment checks ถูกเพิ่มใน `tests/sql/phase
 - `anon` และ `authenticated` execute function ไม่ได้ ส่วน `service_role` execute ได้
 - `job_runs.error_code` และ `job_runs.details` มีอยู่จริง
 - post-deployment `db lint` ไม่พบ schema error
-- advisors เหลือ warning เดิม `auth_leaked_password_protection` เท่านั้น ไม่มี error และไม่เกี่ยวกับ sync migration
+- advisors เหลือ warning เดิม `auth_leaked_password_protection` เท่านั้น; ผู้ใช้ยอมรับและข้าม warning นี้ เพราะแอปปัจจุบันไม่มี password sign-in flow และ warning ไม่เกี่ยวกับ sync migration
 - ไม่มีการเรียก sync เพื่อเปลี่ยน production fixtures/predictions/scores สำหรับ verification
 
 ## Live smoke check
@@ -68,4 +68,8 @@ Read-only post-deployment checks ถูกเพิ่มใน `tests/sql/phase
 - read-only production counts: `fixtures=380`, `distinct_external_fixture_ids=380`, `fixture_source_records=380`, duplicate fixture identity groups `=0`, `running_sync_jobs=0`
 - latest observed scheduled success และ `last_synced_at` อยู่ที่ 1 สิงหาคม 2026 ก่อน migration deployment รอบนี้
 - ยังไม่ได้ยิง authenticated provider sync เพราะ `FPL_SYNC_TOKEN` อยู่ใน Vercel/Google Apps Script secret store และจะไม่ถูกอ่าน แสดง หรือเดาใน repository/chat
-- ดังนั้น live app/auth boundary และ production data invariants ผ่านแล้ว แต่ authenticated provider end-to-end run ต้องรอ scheduler รอบถัดไปหรือผู้ดูแล trigger ด้วย secret ที่มีอยู่เดิม
+- ดังนั้น live app/auth boundary และ production data invariants ผ่านแล้ว; authenticated provider end-to-end run ถูกส่งต่อให้ scheduler ด้วย secret ที่มีอยู่เดิม และไม่เป็น blocker ของ Phase 3A
+
+## Closure
+
+ผู้ใช้ยืนยันให้ข้าม `auth_leaked_password_protection` และปิดกระบวนการ Sync reliability แล้ว สถานะ Phase 3A จึงถือว่า closed หลัง code verification, production migration, read-only database verification และ live smoke boundary check ครบถ้วน
