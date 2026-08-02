@@ -44,3 +44,16 @@ Before enabling the integration job, a repository administrator must add these A
 - `SUPABASE_TEST_SERVICE_ROLE_KEY`
 
 The workflow never references production Supabase credentials and does not deploy.
+
+## Post-CI production smoke
+
+After the CI run passed, Vercel automatically deployed commit `7c2a687` to the Production environment and reported `Ready`.
+
+Read-only HTTP smoke checks returned:
+
+- Production homepage: `200`
+- Unauthenticated dashboard API: `401`
+- Unauthenticated sync POST: `401`
+- Unauthenticated predictions API: `401`
+
+The production Supabase read-only invariant query remained unchanged after the smoke checks: `fixtures=380`, `distinct_fixture_ids=380`, `fixture_source_records=380`, `running_job_rows=0`, `score_rows=0`, `award_rows=0`, and `voided_event_rows=0`.
