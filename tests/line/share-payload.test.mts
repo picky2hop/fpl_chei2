@@ -53,7 +53,7 @@ test("builds the prediction share payload with profile and team assets", () => {
   assert.doesNotMatch(serialized, /\.svg/);
   assert.doesNotMatch(serialized, /"0px"/);
   assert.doesNotMatch(serialized, /"paddingAll":"none"/);
-  assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
+  assert.match(serialized, /https:\/\/liff\.line\.me\/2010404316-S8xX5pVG/);
   const bubble = message.contents as Record<string, unknown>;
   const body = bubble.body as Record<string, unknown>;
   assert.doesNotMatch(JSON.stringify(body), /PLAYER PICKS/);
