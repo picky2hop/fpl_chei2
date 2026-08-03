@@ -51,7 +51,7 @@ const CARD_BACKGROUND = "#10253A";
 const ACCENT = "#D9FF58";
 const PRIMARY_TEXT = "#FFFFFF";
 const MUTED_TEXT = "#8CA6BD";
-const APP_URI = "https://liff.line.me/2010404316-S8xX5pVG";
+const APP_URI = "https://liff.line.me/2010604800-Y9eFejTF";
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const PREMIER_LEAGUE_BADGE = /^https:\/\/resources\.premierleague\.com\/premierleague25\/badges-alt\/(\d+)\.svg$/i;
 
