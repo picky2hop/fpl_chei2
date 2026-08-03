@@ -11,6 +11,7 @@ The preview/test runtime was retired after the application code, CI workflow, an
 - Test Vercel project deleted: `fpl-chei2-test`
 - Test Supabase project deleted: `fpl-chei2-test` (`iarcgspwoordcemebdoz`)
 - Production Vercel `NEXT_PUBLIC_DEMO_MODE` variable deleted
+- GitHub Actions test secrets deleted after account re-authentication: `SUPABASE_TEST_URL` and `SUPABASE_TEST_SERVICE_ROLE_KEY`
 
 No production database rows were used as fixtures or left behind by the retired integration-test workflow.
 
