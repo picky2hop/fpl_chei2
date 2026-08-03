@@ -1,5 +1,7 @@
 # Phase 2 Production Status
 
+See the current [production-only cutover evidence](production-only-cutover-evidence.md) for the retirement of preview/test resources and the final verification checklist.
+
 อัปเดตล่าสุด: 3 สิงหาคม 2026
 
 ## Production-only cutover

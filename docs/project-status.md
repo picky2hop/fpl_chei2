@@ -1,5 +1,7 @@
 # Project Status
 
+Current cutover evidence: [production-only cutover](production-only-cutover-evidence.md).
+
 > เอกสารนี้สรุปสถานะปัจจุบัน ณ 2 สิงหาคม 2026 ส่วน design/plan เดิมใน `docs/superpowers/` เป็น historical reference
 
 ## Current phase
