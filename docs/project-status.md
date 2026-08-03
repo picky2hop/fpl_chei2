@@ -56,7 +56,7 @@ Closure: ผู้ใช้ยอมรับและข้าม `auth_leaked_
 
 ## Phase 1 — UI/UX MVP (เสร็จแล้ว)
 
-สถานะ: UX revision เสร็จใน mock/preview mode
+สถานะ: UX revision เสร็จ และ production application ใช้งานผ่าน LIFF/ข้อมูลจริงโดยไม่มี preview fallback
 
 เสร็จแล้ว:
 
@@ -78,7 +78,7 @@ Closure: ผู้ใช้ยอมรับและข้าม `auth_leaked_
 - ตัดกรอบขาวรอบ club crest
 - Share confirmation popup หลังยืนยันคำทาย
 - Lucide icons สำหรับ navigation, share, close และ success state
-- LIFF auto-login gate ตั้งแต่ Landing พร้อม preview fallback
+- LIFF auto-login gate ตั้งแต่ Landing และต้องใช้ Production LIFF authentication
 - Animation เฉพาะ loading, transition, modal และ save success
 - Test helper สำหรับ player/fixture detail
 - `@line/liff` SDK และ auto-login gate เมื่อมี `NEXT_PUBLIC_LIFF_ID`
@@ -94,7 +94,6 @@ Closure: ผู้ใช้ยอมรับและข้าม `auth_leaked_
 
 ```env
 NEXT_PUBLIC_LIFF_ID=
-NEXT_PUBLIC_DEMO_MODE=true
 ```
 
 `NEXT_PUBLIC_LIFF_ID` เป็นค่าที่ต้องสร้างจาก LINE Developers Console และเติมใน `.env.local`/Vercel ในรอบ integration จริง ห้าม commit ค่า secret หรือ token ลง Git
@@ -104,7 +103,7 @@ NEXT_PUBLIC_DEMO_MODE=true
 - Mobile-first และ max-width ประมาณ 520px เพื่อเหมาะกับ LINE WebView
 - ใช้ client state สำหรับ tab/gameweek/selection ใน Phase 1 เพื่อให้เปลี่ยนข้อมูลทันที
 - ใช้ system font และ SVG/image URLs เพื่อไม่ต้องดาวน์โหลด font ระหว่าง build
-- Preview mode มีไว้สำหรับพัฒนาเท่านั้น; production ต้องตั้ง LIFF ID และใช้ auto-login
+- Preview mode ถูกยกเลิก; production ต้องตั้ง LIFF ID และใช้ auto-login
 
 ## Historical roadmap ก่อนเริ่ม Phase 2
 

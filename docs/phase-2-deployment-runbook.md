@@ -2,6 +2,8 @@
 
 เอกสารนี้ใช้สำหรับ production ของ `https://fpl-chei2.vercel.app`. เก็บ secret ไว้เฉพาะใน Vercel Environment Variables และ Google Apps Script Script Properties ห้ามใส่ใน Git, เอกสาร หรือแชท
 
+หลัง Production-only cutover ระบบมี environment เดียวคือ Production Vercel project `fpl-chei2` และ Production Supabase project `fpl_chei` (ref `bripkfdcfanjyruqcgji`) เท่านั้น ไม่มี preview fallback, test deployment หรือ test database ให้ใช้งานอีกต่อไป
+
 ## 1. Vercel project
 
 ตั้งค่าจาก GitHub repository `picky2hop/fpl_chei2`:
@@ -15,7 +17,6 @@ Production environment variable names ที่ใช้งาน:
 
 ```text
 NEXT_PUBLIC_LIFF_ID
-NEXT_PUBLIC_DEMO_MODE=false
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 LINE_CHANNEL_ID

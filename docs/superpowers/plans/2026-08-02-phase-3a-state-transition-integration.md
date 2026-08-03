@@ -1,5 +1,7 @@
 # Phase 3A State-Transition Integration Tests Implementation Plan
 
+> Archived on 3 August 2026. The isolated Supabase/Vercel test environment and this write-integration harness were retired during the Production-only cutover. Keep this file only as historical implementation context; do not recreate the deleted resources from this plan.
+
 > **For agentic workers:** Use TDD for every behavior change and verification-before-completion before reporting results. Do not commit or push until the user separately authorizes it.
 
 **Goal:** Prove the complete prediction lifecycle from API/service/database state transitions through scoring, awards, leaderboard updates, rescheduling, recalculation, and transaction rollback without mutating production data.

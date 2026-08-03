@@ -2,7 +2,7 @@
 
 เว็บทายผลพรีเมียร์ลีกสำหรับกลุ่มเพื่อนใน LINE สร้างด้วย Next.js App Router และ Tailwind CSS
 
-สถานะล่าสุด: อยู่ช่วงท้ายของ Phase 2 production smoke test และเริ่ม Phase 3A pre-season hardening แล้ว ดู [สถานะ production](docs/phase-2-production-status.md) และ [roadmap Phase 3A](docs/phase-3a-preseason-hardening.md)
+สถานะล่าสุด: Production-only cutover เสร็จในระดับ repository; ระบบใช้งานผ่าน Production Vercel และ Production Supabase เท่านั้น ดู [สถานะ production](docs/phase-2-production-status.md) และ [roadmap Phase 3A](docs/phase-3a-preseason-hardening.md)
 
 ## Phase 1 MVP
 
@@ -12,8 +12,8 @@
 - เลือกผลเหย้า/เสมอ/เยือน พร้อม confirmation modal
 - หลังยืนยันคำทาย มี popup ถามแชร์ผลลงกลุ่ม LINE
 - ใช้ Lucide icons และ SVG club crests แบบไม่มีกรอบขาว
-- ใช้ mock data และ preview profile เพื่อให้ตรวจ flow ได้โดยไม่ต้องมี credentials
-- รอบ UX revision จะเพิ่ม LIFF entry gate, bottom navigation, player/fixture detail modals และ SVG club crests
+- ใช้ LIFF authentication และข้อมูลจริงจาก server API สำหรับการใช้งาน Production
+- preview profile และ mock dashboard fallback ถูกยกเลิกหลัง Production-only cutover
 
 ## Run locally
 
@@ -32,7 +32,6 @@ npm run dev
 
 ```env
 NEXT_PUBLIC_LIFF_ID=
-NEXT_PUBLIC_DEMO_MODE=true
 
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
@@ -43,9 +42,9 @@ FPL_API_BASE_URL=https://fantasy.premierleague.com
 FPL_SYNC_TOKEN=
 ```
 
-`NEXT_PUBLIC_*` เป็นค่าที่ถูก bundle ไปยัง browser จึงใช้ได้เฉพาะ LIFF ID และ demo flag เท่านั้น ห้ามใส่ Supabase service key, session secret, admin ID หรือ sync token ในตัวแปร public. ค่าที่เหลือเป็น server-only และต้องตั้งใน Vercel/`.env.local` โดยไม่ commit ค่า secret.
+`NEXT_PUBLIC_*` เป็นค่าที่ถูก bundle ไปยัง browser จึงใช้ได้เฉพาะ LIFF ID เท่านั้น ห้ามใส่ Supabase service key, session secret, admin ID หรือ sync token ในตัวแปร public. ค่าที่เหลือเป็น server-only และต้องตั้งใน Vercel/`.env.local` โดยไม่ commit ค่า secret.
 
-เมื่อยังไม่มีค่าฝั่ง server ให้ใช้ `NEXT_PUBLIC_DEMO_MODE=true` เพื่อดู Phase 1 preview เท่านั้น; preview mode ไม่อ่านหรือเขียน Supabase.
+การใช้งาน Production ต้องมี `NEXT_PUBLIC_LIFF_ID` และค่าฝั่ง server ครบถ้วน ระบบไม่มี preview fallback และไม่ควรใช้ข้อมูลจำลองแทน Production API.
 
 ## Verification
 
@@ -68,4 +67,4 @@ Implementation และ deployment เสร็จแล้ว. ระบบท
 
 LINE Flex/Bot ผ่าน production แล้ว ส่วน sync reliability มี implementation และ automated tests สำหรับ idempotent rerun, provider failures, safe `job_runs`, fixture moves, selective scoring และ atomic RPC โดย migration `20260802083440_phase_3a_atomic_fpl_sync.sql` ถูก apply production และตรวจ schema/privileges แบบ read-only แล้วเมื่อ 2 สิงหาคม 2026
 
-รายละเอียดอยู่ใน [Phase 3A pre-season hardening](docs/phase-3a-preseason-hardening.md) และ [sync reliability test evidence](docs/phase-3a-sync-reliability-test-evidence.md). เอกสาร design/plan เก็บไว้ที่ `docs/superpowers/`.
+รายละเอียดอยู่ใน [Phase 3A pre-season hardening](docs/phase-3a-preseason-hardening.md) และ [sync reliability test evidence](docs/phase-3a-sync-reliability-test-evidence.md). State-transition integration evidence เดิมเป็น historical หลังยกเลิก test environment; เอกสาร design/plan เก็บไว้ที่ `docs/superpowers/`.

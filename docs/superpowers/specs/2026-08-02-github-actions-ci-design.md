@@ -1,5 +1,7 @@
 # GitHub Actions CI Design
 
+> Archived on 3 August 2026. This design described a temporary Supabase test-project integration job. The job and test project were retired; the active workflow no longer consumes `SUPABASE_TEST_*` secrets.
+
 ## Goal
 
 Run the repository's unit tests, Supabase state-transition integration tests, lint, and production build automatically on pushes and pull requests without connecting CI to production Supabase.

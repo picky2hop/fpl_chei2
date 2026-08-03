@@ -1,6 +1,10 @@
 # Phase 2 Production Status
 
-อัปเดตล่าสุด: 2 สิงหาคม 2026
+อัปเดตล่าสุด: 3 สิงหาคม 2026
+
+## Production-only cutover
+
+เมื่อ 3 สิงหาคม 2026 repository และ deployment ถูกปรับให้ใช้ Production เป็น environment เดียว: Vercel project `fpl-chei2` และ Supabase project `fpl_chei` (`bripkfdcfanjyruqcgji`). Preview profile, mock dashboard fallback, Vercel test project และ Supabase test project ถูกยกเลิกตามเอกสาร [Production-only cutover](superpowers/specs/2026-08-03-production-only-cutover-design.md). ห้ามเพิ่ม test fixtures หรือใช้ Production write เพื่อจำลอง state transition.
 
 ## Current deployment
 

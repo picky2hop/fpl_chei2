@@ -33,12 +33,6 @@ jobs:
       - name: Run unit and route tests
         run: npm.cmd run test
 
-      - name: Run Supabase integration tests
-        run: npm.cmd run test:integration
-        env:
-          SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
-          SUPABASE_TEST_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
-
       - name: Run lint
         run: npm.cmd run lint
 

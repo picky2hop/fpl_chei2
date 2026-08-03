@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import PredictionApp from "../components/prediction-app-final";
-import { fixturesByGameweek as mockFixtures, gameweeks as mockGameweeks, leaderboardByGameweek as mockLeaderboard } from "@/lib/mock-data";
 import type { Fixture, Gameweek, LeaderboardEntry, Team, UserProfile } from "@/lib/mock-data";
 import type { PredictionMap } from "@/lib/predictions";
 import type { DashboardPredictionBook } from "@/lib/data/dashboard-core";
@@ -60,7 +59,6 @@ export default function LiveDashboard({ profile }: { profile: UserProfile }) {
   }, []);
 
   if (!payload) {
-    if (error && process.env.NEXT_PUBLIC_DEMO_MODE !== "false") return <PredictionApp currentUser={profile} gameweeks={mockGameweeks} fixturesByGameweek={mockFixtures} leaderboardByGameweek={mockLeaderboard} />;
     return <main className="flex min-h-screen items-center justify-center bg-[#071525] text-sm font-bold text-white/60">{error || "กำลังโหลดข้อมูลการแข่งขัน…"}</main>;
   }
 

@@ -1,6 +1,6 @@
 # Phase 3A — Pre-season hardening
 
-อัปเดตล่าสุด: 2 สิงหาคม 2026
+อัปเดตล่าสุด: 3 สิงหาคม 2026
 
 ## Purpose
 
@@ -15,6 +15,7 @@ Phase 3A เป็นรอบ hardening และ integration test ไม่ใ
 - FPL fixtures ใน Supabase: 380 รายการ
 - LIFF, dashboard, admin, manual sync และ scheduler ผ่าน smoke test แล้ว
 - prediction lock ระดับ database ผ่านด้วย `55P03` และ rollback ไม่เหลือข้อมูลทดสอบ
+- Production-only cutover เสร็จแล้ว; ไม่มี preview deployment หรือ Supabase test project เหลืออยู่
 - ยังรอ fixture จริงที่ `finished` เพื่อยืนยัน scoring/leaderboard
 
 ## Workstreams
@@ -31,7 +32,7 @@ Phase 3A เป็นรอบ hardening และ integration test ไม่ใ
 
 ### 2. State-transition test matrix
 
-ทดสอบ `scheduled → live → finished`, kickoff lock, scoring, leaderboard, tie award, excluded participant และ postponed/rescheduled โดยใช้ test data ที่ rollback ได้หรือ test environment
+State-transition integration evidence เดิมครอบคลุม `scheduled → live → finished`, kickoff lock, scoring, leaderboard, tie award, excluded participant และ postponed/rescheduled ใน test project ที่ถูกยกเลิกแล้ว และเก็บไว้เป็น historical evidence. การตรวจต่อจากนี้ใช้ unit/domain/route tests และการตรวจ Production แบบ read-only หรือการแข่งขันจริงเท่านั้น ห้ามสร้าง test fixtures ค้างใน Production.
 
 ### 3. Sync reliability
 
@@ -58,7 +59,7 @@ Phase 3A เป็นรอบ hardening และ integration test ไม่ใ
 
 - Flex Message payload ถูกต้องและแสดงผลใน LINE group ได้
 - Bot reply/push ทดสอบสำเร็จตาม scope โดยไม่เปิดเผย secret
-- prediction save/lock/scoring มี automated coverage และหลักฐานจาก production ที่เหมาะสม
+- prediction save/lock/scoring มี automated evidence เดิมและต้องยืนยัน scoring/leaderboard จากการแข่งขันจริงโดยไม่ใช้ Production เป็น test database
 - sync ซ้ำไม่สร้าง fixtures/predictions/events ซ้ำ
 - scheduler ทำงานตามช่วงเวลาและตรวจสอบย้อนหลังได้
 - failure path มีข้อความและ runbook ที่ระบุขั้นตอน recovery

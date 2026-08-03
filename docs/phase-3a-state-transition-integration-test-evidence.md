@@ -1,16 +1,17 @@
-# Phase 3A — State-transition integration test evidence
+# Phase 3A — State-transition integration test evidence (historical)
 
-## Environment
+> สถานะ: historical evidence เท่านั้น หลัง Production-only cutover เมื่อ 3 สิงหาคม 2026 test deployment, test Supabase project และ CI integration job ถูกยกเลิกแล้ว
 
-- Supabase test project: `fpl-chei2-test`
-- Project ref: `iarcgspwoordcemebdoz`
-- Region: `ap-southeast-1`
-- Production project was not used for writes.
-- Test fixtures use synthetic IDs and are cleaned in `finally` blocks.
+## Retired test environment
 
-## Test matrix
+- Former Vercel test project: `fpl-chei2-test` — retired.
+- Former Supabase test project: `fpl-chei2-test`, ref `iarcgspwoordcemebdoz` — retired.
+- Production project: `fpl-chei` (`bripkfdcfanjyruqcgji`) — retained; no synthetic test rows were copied into it.
+- No `SUPABASE_TEST_*` credentials belong in the repository or GitHub Actions after cutover.
 
-`npm.cmd run test:integration` runs eight executable tests covering the ten requested transitions:
+## Historical test matrix
+
+Before retirement, `npm.cmd run test:integration` ran eight executable tests covering the ten requested transitions:
 
 1. scheduled → live → finished, including score rows, champion/wooden-spoon awards, and leaderboard rows.
 2. Prediction API POST/PUT before kickoff.
@@ -23,37 +24,18 @@
 9. Corrected finished score recalculates points and increments scoring version.
 10. Invalid sync snapshot rolls back fixture, source, and team writes; failed job is safely recorded.
 
-## Final evidence
+## Historical result
 
-- Integration: 8 passed, 0 failed, 0 skipped against the test project.
-- Full test command: 105 passed, 0 failed; 8 integration tests skipped because test credentials were intentionally not persisted in the shell environment.
+- Integration: 8 passed, 0 failed, 0 skipped against the former isolated test project.
+- Full test command at that time: 105 passed, 0 failed; the 8 integration tests were skipped when test credentials were intentionally absent from the local shell.
 - Lint: passed with no warnings.
 - Build: passed on Next.js 16.2.12.
-- `git diff --check`: passed; Git only reported existing LF/CRLF normalization warnings.
-- Read-only cleanup query on the test project returned `0` synthetic fixture rows, `0` synthetic season rows, and `0` synthetic job rows.
+- `git diff --check`: passed.
+- Read-only cleanup query on the former test project returned 0 synthetic fixture rows, 0 synthetic season rows, and 0 synthetic job rows before the project was retired.
 
-The Phase 3A state-transition implementation was previously committed and pushed as `e9e6207`.
+## Current verification policy
 
-## CI setup
-
-The GitHub Actions workflow is `.github/workflows/ci.yml`. It uses a Windows runner so all npm commands remain `npm.cmd`, and it runs on pushes and pull requests with `contents: read` permissions.
-
-Before enabling the integration job, a repository administrator must add these Actions secrets under GitHub Settings → Secrets and variables → Actions:
-
-- `SUPABASE_TEST_URL`
-- `SUPABASE_TEST_SERVICE_ROLE_KEY`
-
-The workflow never references production Supabase credentials and does not deploy.
-
-## Post-CI production smoke
-
-After the CI run passed, Vercel automatically deployed commit `7c2a687` to the Production environment and reported `Ready`.
-
-Read-only HTTP smoke checks returned:
-
-- Production homepage: `200`
-- Unauthenticated dashboard API: `401`
-- Unauthenticated sync POST: `401`
-- Unauthenticated predictions API: `401`
-
-The production Supabase read-only invariant query remained unchanged after the smoke checks: `fixtures=380`, `distinct_fixture_ids=380`, `fixture_source_records=380`, `running_job_rows=0`, `score_rows=0`, `award_rows=0`, and `voided_event_rows=0`.
+- CI runs local unit/domain/route tests, lint, and production build only.
+- Automated write tests must not target Production.
+- Production verification is read-only unless a real user action or approved operational sync is required.
+- Scoring, awards, leaderboard, postponed/rescheduled, and retrospective correction still require confirmation from real competition data when those states occur.

@@ -10,13 +10,6 @@ type LiffGateProps = {
 
 type GateState = "loading" | "ready" | "error";
 
-const previewProfile: UserProfile = {
-  id: "line-demo-user",
-  displayName: "คุณเชยเชย",
-  shortName: "ชย",
-  avatarUrl: "https://i.pravatar.cc/120?img=12",
-};
-
 function initials(displayName: string) {
   return displayName.trim().slice(0, 2) || "LINE";
 }
@@ -31,16 +24,9 @@ export default function LiffGate({ children }: LiffGateProps) {
     setErrorMessage("");
 
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
-
     if (!liffId) {
-      if (isDemoMode) {
-        setProfile(previewProfile);
-        setState("ready");
-      } else {
-        setErrorMessage("ยังไม่ได้ตั้งค่า LIFF ID สำหรับแอปนี้");
-        setState("error");
-      }
+      setErrorMessage("ยังไม่ได้ตั้งค่า LIFF ID สำหรับแอปนี้");
+      setState("error");
       return;
     }
 

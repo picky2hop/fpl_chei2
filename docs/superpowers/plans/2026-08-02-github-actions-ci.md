@@ -1,5 +1,7 @@
 # GitHub Actions CI Implementation Plan
 
+> Archived on 3 August 2026. This plan described a temporary Supabase test-project integration job. The active workflow now runs only local tests, lint, and build and must not write to Production.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:verification-before-completion to implement and verify this plan task-by-task.
 
 **Goal:** Add a Windows GitHub Actions workflow that validates the application and runs Phase 3A integration tests against the isolated Supabase test project.
