@@ -185,10 +185,30 @@ test("prediction Flex groups fixtures under Thai weekday/date headings", () => {
   const groups = bodyContents.slice(1);
 
   assert.equal(groups.length, 2);
-  assert.match(JSON.stringify(message), /วันเสาร์ที่ 1 สิงหาคม 2569 — 5 คู่/);
-  assert.match(JSON.stringify(message), /วันอาทิตย์ที่ 2 สิงหาคม 2569 — 5 คู่/);
-  assert.equal((groups[0]?.contents as Array<Record<string, unknown>>).length, 6);
-  assert.equal((groups[1]?.contents as Array<Record<string, unknown>>).length, 6);
+  assert.match(JSON.stringify(message), /วันเสาร์ที่ 1 สิงหาคม 2569/);
+  assert.match(JSON.stringify(message), /วันอาทิตย์ที่ 2 สิงหาคม 2569/);
+  assert.equal((groups[0]?.contents as Array<Record<string, unknown>>).length, 7);
+  assert.equal((groups[1]?.contents as Array<Record<string, unknown>>).length, 7);
+});
+
+test("prediction Flex groups fixtures by Bangkok date and kickoff time", () => {
+  const fixtures = [
+    { homeTeam: { name: "Home 1" }, awayTeam: { name: "Away 1" }, kickoffAt: "2026-08-01T12:00:00.000Z", choice: "home" as const },
+    { homeTeam: { name: "Home 2" }, awayTeam: { name: "Away 2" }, kickoffAt: "2026-08-01T12:00:00.000Z", choice: "draw" as const },
+    { homeTeam: { name: "Home 3" }, awayTeam: { name: "Away 3" }, kickoffAt: "2026-08-01T13:30:00.000Z", choice: "away" as const },
+    { homeTeam: { name: "Home 4" }, awayTeam: { name: "Away 4" }, kickoffAt: "2026-08-02T12:00:00.000Z", choice: "home" as const },
+  ];
+  const message = buildPredictionResultFlex({ displayName: "Picky", gameweek: 1, fixtures });
+  const body = (message.contents as Record<string, unknown>).body as Record<string, unknown>;
+  const dateGroups = (body.contents as Array<Record<string, unknown>>).slice(1);
+  const firstDateContents = dateGroups[0]?.contents as Array<Record<string, unknown>>;
+  const secondDateContents = dateGroups[1]?.contents as Array<Record<string, unknown>>;
+
+  assert.equal(dateGroups.length, 2);
+  assert.equal(firstDateContents[1]?.text, "19:00 · 2 คู่");
+  assert.equal(firstDateContents[4]?.text, "20:30 · 1 คู่");
+  assert.equal(secondDateContents[1]?.text, "19:00 · 1 คู่");
+  assert.equal(firstDateContents.filter((item) => item.type === "text").length, 3);
 });
 
 test("prediction Flex keeps width properties on Box components only", () => {
