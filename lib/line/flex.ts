@@ -246,6 +246,18 @@ export function formatPredictionDateLabel(kickoffAt?: string, fallback = "วั
   }).format(date);
 }
 
+export function formatPredictionTimeLabel(kickoffAt?: string, fallback = "เวลาไม่ระบุ"): string {
+  if (!kickoffAt) return fallback;
+  const date = new Date(kickoffAt);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat("th-TH", {
+    timeZone: BANGKOK_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 function predictionChoicePill(choice: PredictionChoice) {
   const colors = choiceColors[choice];
   return {
@@ -288,18 +300,46 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
 }
 
 function predictionDateGroups(fixtures: PredictionFlexInput["fixtures"]) {
-  const groups = new Map<string, PredictionFlexInput["fixtures"]>();
-  for (const fixture of fixtures) {
-    const label = formatPredictionDateLabel(fixture.kickoffAt, fixture.dateLabel);
-    const group = groups.get(label) ?? [];
-    group.push(fixture);
-    groups.set(label, group);
-  }
-  return [...groups.entries()].map(([label, group]) => ({
+  type TimeGroup = {
+    label: string;
+    firstIndex: number;
+    sortTime: number;
+    fixtures: PredictionFlexInput["fixtures"];
+  };
+  type DateGroup = {
+    label: string;
+    firstIndex: number;
+    sortTime: number;
+    times: Map<string, TimeGroup>;
+  };
+
+  const groups = new Map<string, DateGroup>();
+  fixtures.forEach((fixture, index) => {
+    const timestamp = fixture.kickoffAt ? new Date(fixture.kickoffAt).getTime() : Number.NaN;
+    const sortTime = Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+    const dateLabel = formatPredictionDateLabel(fixture.kickoffAt, fixture.dateLabel);
+    const timeLabel = formatPredictionTimeLabel(fixture.kickoffAt);
+    const dateKey = Number.isNaN(timestamp) ? `fallback:${dateLabel}` : dateLabel;
+    const timeKey = Number.isNaN(timestamp) ? `fallback:${timeLabel}` : timeLabel;
+    const dateGroup = groups.get(dateKey) ?? { label: dateLabel, firstIndex: index, sortTime, times: new Map() };
+    const timeGroup = dateGroup.times.get(timeKey) ?? { label: timeLabel, firstIndex: index, sortTime, fixtures: [] };
+    timeGroup.fixtures.push(fixture);
+    dateGroup.times.set(timeKey, timeGroup);
+    groups.set(dateKey, dateGroup);
+  });
+
+  const sortGroups = <T extends { sortTime: number; firstIndex: number }>(items: T[]) => items.sort((left, right) => left.sortTime - right.sortTime || left.firstIndex - right.firstIndex);
+  return sortGroups([...groups.values()]).map((group) => ({
     type: "box",
     layout: "vertical",
     spacing: "xs",
-    contents: [text(`${label} — ${group.length} คู่`, "sm", "bold", ACCENT), ...group.map(predictionFixture)],
+    contents: [
+      text(`${group.label} — ${[...group.times.values()].reduce((count, timeGroup) => count + timeGroup.fixtures.length, 0)} คู่`, "sm", "bold", ACCENT),
+      ...sortGroups([...group.times.values()]).flatMap((timeGroup) => [
+        text(`${timeGroup.label} · ${timeGroup.fixtures.length} คู่`, "xs", "bold", ACCENT),
+        ...timeGroup.fixtures.map(predictionFixture),
+      ]),
+    ],
   }));
 }
 

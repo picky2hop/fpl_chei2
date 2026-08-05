@@ -137,7 +137,7 @@ test("prediction Flex matches the app detail row treatment", () => {
   const body = bubble.body as Record<string, unknown>;
   const bodyContents = body.contents as Array<Record<string, unknown>>;
   const dateGroup = bodyContents[1];
-  const fixtureRow = (dateGroup.contents as Array<Record<string, unknown>>)[1];
+  const fixtureRow = (dateGroup.contents as Array<Record<string, unknown>>)[2];
   const rowContents = fixtureRow.contents as Array<Record<string, unknown>>;
   const homeSide = rowContents[0];
   const vs = rowContents[1];
@@ -185,8 +185,8 @@ test("prediction Flex groups fixtures under Thai weekday/date headings", () => {
   const groups = bodyContents.slice(1);
 
   assert.equal(groups.length, 2);
-  assert.match(JSON.stringify(message), /วันเสาร์ที่ 1 สิงหาคม 2569/);
-  assert.match(JSON.stringify(message), /วันอาทิตย์ที่ 2 สิงหาคม 2569/);
+  assert.match(JSON.stringify(message), /วันเสาร์ที่ 1 สิงหาคม 2569 — 5 คู่/);
+  assert.match(JSON.stringify(message), /วันอาทิตย์ที่ 2 สิงหาคม 2569 — 5 คู่/);
   assert.equal((groups[0]?.contents as Array<Record<string, unknown>>).length, 7);
   assert.equal((groups[1]?.contents as Array<Record<string, unknown>>).length, 7);
 });
