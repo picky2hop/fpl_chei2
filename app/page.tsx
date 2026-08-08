@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import LiffGate from "./components/liff-gate";
+import { useLiffAuth } from "./components/liff-gate";
 import { hasAvatarImage } from "@/lib/avatar";
 import type { UserProfile } from "@/lib/mock-data";
 
@@ -29,5 +29,6 @@ function LandingPage({ profile }: { profile: UserProfile }) {
 }
 
 export default function Home() {
-  return <LiffGate>{(profile) => <LandingPage profile={profile} />}</LiffGate>;
+  const { profile } = useLiffAuth();
+  return profile ? <LandingPage profile={profile} /> : null;
 }

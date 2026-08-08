@@ -1,78 +1,83 @@
 "use client";
 
 import liff from "@line/liff";
-import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { UserProfile } from "@/lib/mock-data";
 
-type LiffGateProps = {
-  children: (profile: UserProfile) => ReactNode;
+type GateState = "loading" | "ready" | "error";
+
+type LiffAuthContextValue = {
+  state: GateState;
+  profile: UserProfile | null;
+  errorMessage: string;
+  retry: () => void;
 };
 
-type GateState = "loading" | "ready" | "error";
+type AuthResponse = {
+  user?: { id: string; displayName: string; avatarUrl: string | null };
+};
+
+const LiffAuthContext = createContext<LiffAuthContextValue | null>(null);
+let liffInitializationPromise: Promise<UserProfile> | null = null;
+
+class LiffLoginRedirectStarted extends Error {
+  constructor() {
+    super("LINE login redirect started");
+    this.name = "LiffLoginRedirectStarted";
+  }
+}
 
 function initials(displayName: string) {
   return displayName.trim().slice(0, 2) || "LINE";
 }
 
-export default function LiffGate({ children }: LiffGateProps) {
-  const [state, setState] = useState<GateState>("loading");
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
+async function initializeLiff(): Promise<UserProfile> {
+  const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+  if (!liffId) throw new Error("LIFF ID is not configured");
 
-  const initialize = async () => {
-    setState("loading");
-    setErrorMessage("");
+  await liff.init({ liffId });
+  if (!liff.isLoggedIn()) {
+    liff.login({ redirectUri: window.location.href });
+    throw new LiffLoginRedirectStarted();
+  }
 
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) {
-      setErrorMessage("ยังไม่ได้ตั้งค่า LIFF ID สำหรับแอปนี้");
-      setState("error");
-      return;
-    }
+  const idToken = liff.getIDToken();
+  if (!idToken) throw new Error("LIFF ID token is unavailable");
 
-    try {
-      await liff.init({ liffId });
-      if (!liff.isLoggedIn()) {
-        liff.login({ redirectUri: window.location.href });
-        return;
-      }
+  const authResponse = await fetch("/api/auth/liff", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  if (!authResponse.ok) throw new Error("Server authentication failed");
 
-      const idToken = liff.getIDToken();
-      if (!idToken) throw new Error("LIFF ID token is unavailable");
+  const authResult = await authResponse.json() as AuthResponse;
+  if (!authResult.user) throw new Error("Server authentication returned no user");
 
-      const authResponse = await fetch("/api/auth/liff", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      if (!authResponse.ok) throw new Error("Server authentication failed");
-
-      const authResult: {
-        user?: { id: string; displayName: string; avatarUrl: string | null };
-      } = await authResponse.json();
-      if (!authResult.user) throw new Error("Server authentication returned no user");
-
-      const lineProfile = authResult.user;
-      setProfile({
-        id: lineProfile.id,
-        displayName: lineProfile.displayName,
-        shortName: initials(lineProfile.displayName),
-        avatarUrl: lineProfile.avatarUrl ?? "",
-      });
-      setState("ready");
-    } catch {
-      setErrorMessage("เชื่อมต่อ LINE ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
-      setState("error");
-    }
+  return {
+    id: authResult.user.id,
+    displayName: authResult.user.displayName,
+    shortName: initials(authResult.user.displayName),
+    avatarUrl: authResult.user.avatarUrl ?? "",
   };
+}
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => void initialize(), 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+function startLiffInitialization(): Promise<UserProfile> {
+  if (!liffInitializationPromise) {
+    liffInitializationPromise = initializeLiff().catch((error: unknown) => {
+      liffInitializationPromise = null;
+      throw error;
+    });
+  }
+  return liffInitializationPromise;
+}
 
-  if (state === "ready" && profile) return <>{children(profile)}</>;
+function isAdminPath(pathname: string) {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
 
+function LiffLoadingScreen({ state, errorMessage, retry }: Pick<LiffAuthContextValue, "state" | "errorMessage" | "retry">) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#071525] px-5 text-white">
       <div className="w-full max-w-sm text-center">
@@ -87,10 +92,51 @@ export default function LiffGate({ children }: LiffGateProps) {
             <div className="mx-auto grid size-16 place-items-center rounded-[22px] bg-[#ff647c]/10 text-2xl text-[#ff647c]">!</div>
             <h1 className="mt-6 text-2xl font-black">เข้าใช้งานไม่ได้</h1>
             <p className="mt-2 text-sm leading-6 text-[#a9bbca]">{errorMessage}</p>
-            <button type="button" onClick={() => void initialize()} className="mt-6 rounded-2xl bg-[#d9ff58] px-5 py-3 text-sm font-black text-[#071525]">ลองใหม่</button>
+            <button type="button" onClick={retry} className="mt-6 rounded-2xl bg-[#d9ff58] px-5 py-3 text-sm font-black text-[#071525]">ลองใหม่</button>
           </>
         )}
       </div>
     </main>
   );
+}
+
+export function useLiffAuth(): LiffAuthContextValue {
+  const context = useContext(LiffAuthContext);
+  if (!context) throw new Error("useLiffAuth must be used inside LiffProvider");
+  return context;
+}
+
+export default function LiffProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const adminRoute = isAdminPath(pathname);
+  const [state, setState] = useState<GateState>(adminRoute ? "ready" : "loading");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const initialize = useCallback(() => {
+    if (adminRoute) return;
+    setState("loading");
+    setErrorMessage("");
+    void startLiffInitialization()
+      .then((nextProfile) => {
+        setProfile(nextProfile);
+        setState("ready");
+      })
+      .catch((error: unknown) => {
+        if (error instanceof LiffLoginRedirectStarted) return;
+        setErrorMessage("เชื่อมต่อ LINE ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        setState("error");
+      });
+  }, [adminRoute]);
+
+  useEffect(() => {
+    if (adminRoute) return;
+    const timer = window.setTimeout(initialize, 0);
+    return () => window.clearTimeout(timer);
+  }, [adminRoute, initialize]);
+
+  const value = useMemo(() => ({ state, profile, errorMessage, retry: initialize }), [errorMessage, initialize, profile, state]);
+  if (!adminRoute && (state !== "ready" || !profile)) return <LiffLoadingScreen state={state} errorMessage={errorMessage} retry={initialize} />;
+
+  return <LiffAuthContext.Provider value={value}>{children}</LiffAuthContext.Provider>;
 }
