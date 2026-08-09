@@ -79,6 +79,7 @@ test("maps a user's active predictions to the current gameweek", () => {
     displayName: "Picky",
     avatarUrl: null,
     rows: [{
+      externalFixtureId: 2001,
       kickoffAt: "2026-08-01T12:00:00.000Z",
       homeTeam: { name: "Arsenal", logoUrl: "https://example.test/arsenal.png" },
       awayTeam: { name: "Chelsea", logoUrl: "https://example.test/chelsea.png" },
@@ -97,4 +98,30 @@ test("maps a user's active predictions to the current gameweek", () => {
       choice: "away",
     }],
   });
+});
+
+test("orders a user's predictions by FPL fixture id when kickoff times are identical", () => {
+  const result = mapUserPredictionRows({
+    gameweek: 28,
+    displayName: "Picky",
+    avatarUrl: null,
+    rows: [
+      {
+        externalFixtureId: 2002,
+        kickoffAt: "2026-08-01T12:00:00.000Z",
+        homeTeam: { name: "Second fixture", logoUrl: "" },
+        awayTeam: { name: "Away second", logoUrl: "" },
+        outcome: "home",
+      },
+      {
+        externalFixtureId: 2001,
+        kickoffAt: "2026-08-01T12:00:00.000Z",
+        homeTeam: { name: "First fixture", logoUrl: "" },
+        awayTeam: { name: "Away first", logoUrl: "" },
+        outcome: "away",
+      },
+    ],
+  });
+
+  assert.deepEqual(result.fixtures.map((fixture) => fixture.homeTeam.name), ["First fixture", "Second fixture"]);
 });

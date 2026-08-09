@@ -223,7 +223,7 @@ export function createLineBotDataReader(): LineBotDataReader {
       if (!user) return null;
 
       const [{ data: fixtures, error: fixtureError }, { data: predictions, error: predictionError }, { data: teams, error: teamError }] = await Promise.all([
-        admin.from("fixtures").select("id,kickoff_at,status,home_team_id,away_team_id").eq("season_id", season.id).eq("gameweek_id", gameweek.id).order("kickoff_at"),
+        admin.from("fixtures").select("id,external_fixture_id,kickoff_at,status,home_team_id,away_team_id").eq("season_id", season.id).eq("gameweek_id", gameweek.id).order("kickoff_at").order("external_fixture_id"),
         admin.from("predictions").select("fixture_id,outcome,status").eq("user_id", user.id).eq("status", "active"),
         admin.from("teams").select("id,name,logo_url"),
       ]);
@@ -236,7 +236,7 @@ export function createLineBotDataReader(): LineBotDataReader {
         const awayTeam = teamsById.get(fixture.away_team_id);
         const outcome = predictionsByFixture.get(fixture.id);
         if (!homeTeam || !awayTeam || !outcome) return [];
-        return [{ kickoffAt: fixture.kickoff_at, homeTeam, awayTeam, outcome }];
+        return [{ externalFixtureId: fixture.external_fixture_id, kickoffAt: fixture.kickoff_at, homeTeam, awayTeam, outcome }];
       });
       return mapUserPredictionRows({ gameweek: gameweek.number, displayName: user.display_name, avatarUrl: user.avatar_url, rows });
     },

@@ -1,7 +1,8 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { mapPredictionBook, sortFixturesForFplOrder, type DashboardPredictionBook } from "@/lib/data/dashboard-core";
+import { mapPredictionBook, type DashboardPredictionBook } from "@/lib/data/dashboard-core";
+import { sortFixturesForFplOrder } from "@/lib/data/fixture-order";
 
 export type DashboardData = {
   season: { id: string; name: string };
@@ -58,7 +59,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     .order("kickoff_at")
     .order("external_fixture_id");
   if (fixtureError) throw new Error("Fixtures are unavailable");
-  const fixtures = sortFixturesForFplOrder(fixtureRows);
+  const fixtures = sortFixturesForFplOrder(fixtureRows, (fixture) => fixture.kickoff_at, (fixture) => fixture.external_fixture_id);
 
   const fixtureIds = fixtures.map((fixture) => fixture.id);
   const [{ data: participants, error: participantError }, { data: predictions, error: predictionError }, { data: users, error: userError }, { data: scores, error: scoreError }] = await Promise.all([

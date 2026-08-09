@@ -1,4 +1,5 @@
 import type { PredictionChoice, FlexTeam } from "../line/flex.ts";
+import { sortFixturesForFplOrder } from "./fixture-order.ts";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -64,6 +65,7 @@ type TodayFixtureRowInput = {
 };
 
 type UserPredictionRowInput = {
+  externalFixtureId: number;
   kickoffAt: string;
   homeTeam: FlexTeam;
   awayTeam: FlexTeam;
@@ -143,11 +145,12 @@ export function mapUserPredictionRows(input: {
   avatarUrl: string | null;
   rows: UserPredictionRowInput[];
 }): UserPredictionData {
+  const sortedRows = sortFixturesForFplOrder(input.rows, (row) => row.kickoffAt, (row) => row.externalFixtureId);
   return {
     gameweek: input.gameweek,
     displayName: input.displayName,
     avatarUrl: input.avatarUrl ?? "",
-    fixtures: input.rows.flatMap((row) => {
+    fixtures: sortedRows.flatMap((row) => {
       if (row.outcome !== "home" && row.outcome !== "draw" && row.outcome !== "away") return [];
       return [{ kickoffAt: row.kickoffAt, homeTeam: row.homeTeam, awayTeam: row.awayTeam, choice: row.outcome }];
     }),
