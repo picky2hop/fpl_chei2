@@ -2,6 +2,18 @@ export type PredictionChoice = "home" | "draw" | "away";
 
 export type DashboardPredictionBook = Record<number, Record<string, Record<string, PredictionChoice>>>;
 
+type FplOrderedFixture = {
+  kickoff_at: string;
+  external_fixture_id: number;
+};
+
+export function sortFixturesForFplOrder<T extends FplOrderedFixture>(fixtures: T[]): T[] {
+  return [...fixtures].sort((left, right) => {
+    const kickoffDifference = Date.parse(left.kickoff_at) - Date.parse(right.kickoff_at);
+    return kickoffDifference || left.external_fixture_id - right.external_fixture_id;
+  });
+}
+
 type PredictionBookInput = {
   gameweeks: Array<{ id: string; number: number }>;
   fixtures: Array<{ id: string; gameweekId: string | null }>;

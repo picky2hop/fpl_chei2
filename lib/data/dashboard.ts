@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { mapPredictionBook, type DashboardPredictionBook } from "@/lib/data/dashboard-core";
+import { mapPredictionBook, sortFixturesForFplOrder, type DashboardPredictionBook } from "@/lib/data/dashboard-core";
 
 export type DashboardData = {
   season: { id: string; name: string };
@@ -51,12 +51,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   if (gameweekError || teamError) throw new Error("Competition data is unavailable");
 
   const gameweekIds = gameweeks.map((gameweek) => gameweek.id);
-  const { data: fixtures, error: fixtureError } = await admin
+  const { data: fixtureRows, error: fixtureError } = await admin
     .from("fixtures")
-    .select("id,gameweek_id,kickoff_at,status,home_score,away_score,home_team_id,away_team_id")
+    .select("id,external_fixture_id,gameweek_id,kickoff_at,status,home_score,away_score,home_team_id,away_team_id")
     .eq("season_id", season.id)
-    .order("kickoff_at");
+    .order("kickoff_at")
+    .order("external_fixture_id");
   if (fixtureError) throw new Error("Fixtures are unavailable");
+  const fixtures = sortFixturesForFplOrder(fixtureRows);
 
   const fixtureIds = fixtures.map((fixture) => fixture.id);
   const [{ data: participants, error: participantError }, { data: predictions, error: predictionError }, { data: users, error: userError }, { data: scores, error: scoreError }] = await Promise.all([

@@ -1,6 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mapPredictionBook } from "../../lib/data/dashboard-core.ts";
+import { mapPredictionBook, sortFixturesForFplOrder } from "../../lib/data/dashboard-core.ts";
+
+test("orders fixtures like FPL when kickoff times are identical", () => {
+  const fixtures = sortFixturesForFplOrder([
+    { id: "fixture-2", kickoff_at: "2026-08-01T12:00:00.000Z", external_fixture_id: 2002 },
+    { id: "fixture-1", kickoff_at: "2026-08-01T12:00:00.000Z", external_fixture_id: 2001 },
+    { id: "fixture-3", kickoff_at: "2026-08-01T13:00:00.000Z", external_fixture_id: 2003 },
+  ]);
+
+  assert.deepEqual(fixtures.map((fixture) => fixture.id), ["fixture-1", "fixture-2", "fixture-3"]);
+});
 
 test("maps active predictions into the selected gameweek and player detail book", () => {
   const result = mapPredictionBook({
