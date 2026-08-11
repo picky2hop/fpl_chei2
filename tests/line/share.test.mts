@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { shareFlexMessage } from "../../lib/line/share.ts";
+import { formatShareErrorMessage, shareFlexMessage } from "../../lib/line/share.ts";
 
 const message = {
   type: "flex" as const,
@@ -38,6 +38,14 @@ test("does not claim success for a non-success picker result", async () => {
   }, message);
 
   assert.equal(result, "cancelled");
+});
+
+test("maps known share errors to safe user-facing messages", () => {
+  assert.match(formatShareErrorMessage(new Error("SHARE_TARGET_PICKER_UNAVAILABLE")), /LINE WebView/);
+  assert.match(formatShareErrorMessage(new Error("FLEX_MESSAGE_TOO_LARGE")), /มากเกินไป/);
+  assert.match(formatShareErrorMessage(new Error("FLEX_MESSAGE_INVALID")), /ไม่รองรับ/);
+  assert.match(formatShareErrorMessage(new Error("internal secret value")), /ไม่สำเร็จ/);
+  assert.doesNotMatch(formatShareErrorMessage(new Error("internal secret value")), /secret value/);
 });
 
 test("rejects clearly when the target picker is unavailable", async () => {

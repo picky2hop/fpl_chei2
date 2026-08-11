@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildFixturePredictionFlex,
   buildPredictionResultFlex,
   buildStandingsFlex,
   buildTodayFixturesFlex,
+  validateFlexMessage,
 } from "../../lib/line/flex.ts";
 
 function textComponentsWithWidth(value: unknown, result: Array<Record<string, unknown>> = []) {
@@ -261,4 +263,78 @@ test("today fixtures Flex shows time and ordered team logos", () => {
   assert.ok(serialized.indexOf("Arsenal") < serialized.indexOf("arsenal.png"));
   assert.ok(serialized.indexOf("chelsea.png") < serialized.indexOf("Chelsea"));
   assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
+});
+
+test("fixture prediction Flex mirrors the app detail and groups predictors", () => {
+  const message = buildFixturePredictionFlex({
+    gameweek: 1,
+    dateLabel: "เสาร์ 22 ส.ค.",
+    kickoffAt: "2026-08-22T19:00:00.000Z",
+    status: "finished",
+    homeScore: 2,
+    awayScore: 1,
+    homeTeam: { name: "Arsenal", logoUrl: "https://resources.premierleague.com/premierleague25/badges-alt/3.svg" },
+    awayTeam: { name: "Coventry City", logoUrl: "https://resources.premierleague.com/premierleague25/badges-alt/8.svg" },
+    predictionPercentages: { home: 100, draw: 0, away: 0 },
+    predictors: [
+      { name: "Picky", avatarUrl: "https://example.test/picky.png", choice: "home" },
+      { name: "Ar Tao", avatarUrl: "https://example.test/tao.png", choice: "home" },
+    ],
+  });
+
+  assert.equal(message.type, "flex");
+  assert.equal(message.contents.type, "bubble");
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /Arsenal/);
+  assert.match(serialized, /Coventry City/);
+  assert.match(serialized, /2 - 1/);
+  assert.match(serialized, /100/);
+  assert.match(serialized, /Picky/);
+  assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
+  assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
+  assert.match(serialized, /#ff647c/);
+  assert.match(serialized, /#47d7a0/);
+  assert.match(serialized, /#6da9ff/);
+  assert.doesNotMatch(serialized, /\.svg/);
+});
+
+test("fixture prediction Flex uses Bangkok time and empty states", () => {
+  const message = buildFixturePredictionFlex({
+    gameweek: 1,
+    dateLabel: "fallback date",
+    kickoffAt: "2026-08-22T19:00:00.000Z",
+    status: "upcoming",
+    homeTeam: { name: "Arsenal" },
+    awayTeam: { name: "Chelsea" },
+    predictionPercentages: { home: 50, draw: 0, away: 0 },
+    predictors: [{ name: "Picky", choice: "home" }],
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /VS/);
+  assert.match(serialized, /02:00/);
+  assert.match(serialized, /50/);
+  assert.match(serialized, /0/);
+  assert.match(serialized, /ยังไม่มีคนเลือกฝั่งนี้/);
+});
+
+test("fixture prediction Flex keeps long predictor lists within Flex child limits", () => {
+  const message = buildFixturePredictionFlex({
+    gameweek: 1,
+    dateLabel: "fallback date",
+    status: "upcoming",
+    homeTeam: { name: "Arsenal" },
+    awayTeam: { name: "Chelsea" },
+    predictionPercentages: { home: 100, draw: 0, away: 0 },
+    predictors: Array.from({ length: 13 }, (_, index) => ({
+      name: "Player " + (index + 1),
+      choice: "home" as const,
+    })),
+  });
+
+  const serialized = JSON.stringify(message);
+  for (let index = 1; index <= 13; index += 1) {
+    assert.match(serialized, new RegExp("Player " + index));
+  }
+  assert.doesNotThrow(() => validateFlexMessage(message));
 });

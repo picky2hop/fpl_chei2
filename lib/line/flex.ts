@@ -18,6 +18,23 @@ export type PredictionFlexInput = {
   }>;
 };
 
+export type FixturePredictionFlexInput = {
+  gameweek: number;
+  dateLabel: string;
+  kickoffAt?: string;
+  status: "upcoming" | "live" | "finished" | "postponed";
+  homeScore?: number;
+  awayScore?: number;
+  homeTeam: FlexTeam;
+  awayTeam: FlexTeam;
+  predictionPercentages: Record<PredictionChoice, number>;
+  predictors: Array<{
+    name: string;
+    avatarUrl?: string;
+    choice: PredictionChoice;
+  }>;
+};
+
 export type StandingsFlexInput = {
   period: "gameweek" | "season";
   gameweek?: number;
@@ -299,6 +316,120 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
   };
 }
 
+function fixtureTeam(team: FlexTeam) {
+  return {
+    type: "box",
+    layout: "vertical",
+    flex: 1,
+    spacing: "xs",
+    alignItems: "center",
+    contents: [
+      teamLogoOrFallback(team.logoUrl, team.name, "40px"),
+      { ...text(team.name, "xs", "bold"), align: "center" },
+    ],
+  };
+}
+
+function fixtureMatchHeader(input: FixturePredictionFlexInput) {
+  const scoreLabel = input.status === "finished" && input.homeScore !== undefined && input.awayScore !== undefined
+    ? input.homeScore + " - " + input.awayScore
+    : input.status === "postponed"
+      ? "เลื่อนแข่ง"
+      : input.status === "live"
+        ? "LIVE"
+        : "VS";
+  const dateLabel = formatPredictionDateLabel(input.kickoffAt, input.dateLabel);
+  const timeLabel = formatPredictionTimeLabel(input.kickoffAt);
+
+  return {
+    type: "box",
+    layout: "vertical",
+    spacing: "xs",
+    paddingAll: "12px",
+    cornerRadius: "lg",
+    backgroundColor: CARD_BACKGROUND,
+    contents: [
+      {
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        alignItems: "center",
+        contents: [
+          fixtureTeam(input.homeTeam),
+          {
+            type: "box",
+            layout: "vertical",
+            width: "44px",
+            flex: 0,
+            justifyContent: "center",
+            alignItems: "center",
+            contents: [{ ...text(scoreLabel, "md", "bold"), align: "center" }],
+          },
+          fixtureTeam(input.awayTeam),
+        ],
+      },
+      { ...text(dateLabel + " · " + timeLabel, "xs", "regular", MUTED_TEXT), align: "center" },
+    ],
+  };
+}
+
+function fixturePredictorRow(predictor: FixturePredictionFlexInput["predictors"][number]) {
+  return {
+    type: "box",
+    layout: "horizontal",
+    spacing: "sm",
+    paddingAll: "8px",
+    cornerRadius: "md",
+    backgroundColor: CARD_BACKGROUND,
+    alignItems: "center",
+    contents: [
+      imageOrFallback(predictor.avatarUrl, predictor.name, "40px"),
+      {
+        type: "box",
+        layout: "vertical",
+        flex: 1,
+        contents: [{ ...text(predictor.name, "sm", "bold"), maxLines: 2 }],
+      },
+      predictionChoicePill(predictor.choice),
+    ],
+  };
+}
+
+function fixturePredictionGroup(
+  choice: PredictionChoice,
+  percentage: number,
+  predictors: FixturePredictionFlexInput["predictors"],
+) {
+  const rows = predictors.map(fixturePredictorRow);
+  const rowGroups = rows.length
+    ? chunks(rows, 10).map((group) => ({
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: group,
+      }))
+    : [{ ...text("ยังไม่มีคนเลือกฝั่งนี้", "xs", "regular", MUTED_TEXT) }];
+
+  return {
+    type: "box",
+    layout: "vertical",
+    spacing: "sm",
+    contents: [
+      {
+        type: "box",
+        layout: "horizontal",
+        justifyContent: "space-between",
+        alignItems: "center",
+        contents: [
+          predictionChoicePill(choice),
+          text(percentage + "%", "sm", "bold", MUTED_TEXT),
+        ],
+      },
+      ...rowGroups,
+    ],
+  };
+}
+
 function predictionDateGroups(fixtures: PredictionFlexInput["fixtures"]) {
   type TimeGroup = {
     label: string;
@@ -368,6 +499,25 @@ export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessa
     contents: bubble([
       profile,
       ...(input.fixtures.length ? predictionDateGroups(input.fixtures) : [text("ยังไม่มีคำทาย", "sm", "regular", MUTED_TEXT)]),
+    ]),
+  };
+}
+
+export function buildFixturePredictionFlex(input: FixturePredictionFlexInput): FlexMessage {
+  const grouped = {
+    home: input.predictors.filter((predictor) => predictor.choice === "home"),
+    draw: input.predictors.filter((predictor) => predictor.choice === "draw"),
+    away: input.predictors.filter((predictor) => predictor.choice === "away"),
+  };
+
+  return {
+    type: "flex",
+    altText: "FPL Chei Chei · ผลคำทาย GW" + input.gameweek + " · " + input.homeTeam.name + " vs " + input.awayTeam.name,
+    contents: bubble([
+      fixtureMatchHeader(input),
+      fixturePredictionGroup("home", input.predictionPercentages.home, grouped.home),
+      fixturePredictionGroup("draw", input.predictionPercentages.draw, grouped.draw),
+      fixturePredictionGroup("away", input.predictionPercentages.away, grouped.away),
     ]),
   };
 }

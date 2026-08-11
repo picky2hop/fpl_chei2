@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyPrediction,
+  getFixturePredictors,
   getFixturePredictionDetails,
   getPredictionPercentages,
   getPredictionTeamHighlights,
@@ -63,6 +64,31 @@ describe("prediction helpers", () => {
         draw: [{ name: "นัท", avatarUrl: "nut.png", choice: "draw" }],
         away: [{ name: "แบงค์", avatarUrl: "bank.png", choice: "away" }],
       },
+    );
+  });
+
+  it("builds the selected fixture predictor list from the shared prediction book", () => {
+    assert.deepEqual(
+      getFixturePredictors(
+        [
+          { id: "u1", displayName: "Picky", avatarUrl: "picky.png" },
+          { id: "u2", displayName: "Chei", avatarUrl: "chei.png" },
+          { id: "u3", displayName: "No Pick", avatarUrl: "none.png" },
+        ],
+        {
+          1: {
+            u1: { fixture_a: "home" },
+            u2: { fixture_a: "draw" },
+            u3: { fixture_b: "away" },
+          },
+        },
+        1,
+        "fixture_a",
+      ),
+      [
+        { name: "Picky", avatarUrl: "picky.png", choice: "home" },
+        { name: "Chei", avatarUrl: "chei.png", choice: "draw" },
+      ],
     );
   });
 

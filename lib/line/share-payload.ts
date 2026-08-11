@@ -1,9 +1,10 @@
 import {
+  buildFixturePredictionFlex,
   buildPredictionResultFlex,
   buildStandingsFlex,
   type FlexMessage,
 } from "./flex.ts";
-import type { PredictionMap } from "../predictions.ts";
+import type { FixturePredictor, PredictionMap } from "../predictions.ts";
 import type { Fixture, LeaderboardEntry, UserProfile } from "../mock-data.ts";
 
 export function buildStandingsShareFlex(input: {
@@ -39,5 +40,25 @@ export function buildPredictionShareFlex(input: {
       choice: input.predictions[fixture.id] ?? "draw",
       kickoffAt: fixture.kickoff,
     })),
+  });
+}
+
+export function buildFixturePredictionShareFlex(input: {
+  fixture: Fixture;
+  gameweek: number;
+  predictors: FixturePredictor[];
+}): FlexMessage {
+  const { fixture } = input;
+  return buildFixturePredictionFlex({
+    gameweek: input.gameweek,
+    dateLabel: fixture.dateLabel,
+    kickoffAt: fixture.kickoff,
+    status: fixture.status,
+    homeScore: fixture.homeScore,
+    awayScore: fixture.awayScore,
+    homeTeam: { name: fixture.homeTeam.name, logoUrl: fixture.homeTeam.crest },
+    awayTeam: { name: fixture.awayTeam.name, logoUrl: fixture.awayTeam.crest },
+    predictionPercentages: fixture.predictionPercentages,
+    predictors: input.predictors,
   });
 }

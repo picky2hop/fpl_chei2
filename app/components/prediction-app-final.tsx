@@ -15,10 +15,11 @@ import {
 } from "lucide-react";
 import DetailModal from "./detail-modal";
 import { hasAvatarImage } from "@/lib/avatar";
-import { buildPredictionShareFlex, buildStandingsShareFlex } from "@/lib/line/share-payload";
-import { shareFlexMessage } from "@/lib/line/share";
+import { buildFixturePredictionShareFlex, buildPredictionShareFlex, buildStandingsShareFlex } from "@/lib/line/share-payload";
+import { formatShareErrorMessage, shareFlexMessage } from "@/lib/line/share";
 import {
   applyPrediction,
+  getFixturePredictors,
   getFixturePredictionDetails,
   getPredictionTeamHighlights,
   getUserPredictionDetails,
@@ -159,11 +160,53 @@ function LegacyFixtureDetail({ fixture, entries, gameweek }: { fixture: Fixture;
   return <div className="space-y-3"><div className="flex items-center justify-center gap-3 rounded-2xl bg-white/5 p-3"><div className="text-center"><TeamLogo team={fixture.homeTeam} /><p className="mt-2 max-w-24 text-xs font-black">{fixture.homeTeam.name}</p></div><div className="text-center"><p className="text-xl font-black">{fixture.status === "finished" ? `${fixture.homeScore} - ${fixture.awayScore}` : "VS"}</p><p className="mt-1 text-[10px] text-white/45">{fixture.dateLabel}</p></div><div className="text-center"><TeamLogo team={fixture.awayTeam} /><p className="mt-2 max-w-24 text-xs font-black">{fixture.awayTeam.name}</p></div></div>{(["home", "draw", "away"] as PredictionChoice[]).map((choice) => <div key={choice} className="space-y-2"><div className="flex items-center justify-between"><span className={`rounded-full px-2 py-1 text-[10px] font-black ${choiceColors[choice]}`}>{choiceLabels[choice]}</span><span className="text-xs font-black text-white/55">{fixture.predictionPercentages[choice]}%</span></div>{grouped[choice].length ? grouped[choice].map((predictor) => <PredictorLine key={predictor.name} predictor={{ id: predictor.name, displayName: predictor.name, shortName: predictor.name.slice(0, 2), avatarUrl: predictor.avatarUrl }} choice={predictor.choice} />) : <p className="rounded-xl bg-white/5 px-3 py-2 text-xs text-white/35">ยังไม่มีคนเลือกฝั่งนี้</p>}</div>)}</div>;
 }
 
+type FixtureShareStatus =
+  | { fixtureId: string; status: "sharing" }
+  | { fixtureId: string; status: "shared" | "error"; message: string }
+  | null;
+
 function FixtureDetail({ fixture, entries, gameweek, predictionBook }: { fixture: Fixture; entries: LeaderboardEntry[]; gameweek: number; predictionBook?: Record<number, Record<string, PredictionMap>> }) {
   const activePredictionBook = predictionBook ?? predictionBookByEntries.get(entries) ?? mockPredictionBookByGameweek;
-  const predictors = entries.flatMap((entry) => { const choice = activePredictionBook[gameweek]?.[entry.id]?.[fixture.id]; return choice ? [{ name: entry.displayName, avatarUrl: entry.avatarUrl, choice }] : []; });
+  const predictors = getFixturePredictors(entries, activePredictionBook, gameweek, fixture.id);
   const grouped = getFixturePredictionDetails(predictors);
   return <div className="space-y-3"><div className="flex items-center justify-center gap-3 rounded-2xl bg-white/5 p-3"><div className="flex items-center gap-1.5 text-right"><p className="max-w-24 text-xs font-black">{fixture.homeTeam.name}</p><TeamLogo team={fixture.homeTeam} /></div><div className="text-center"><p className="text-xl font-black">{fixture.status === "finished" ? `${fixture.homeScore} - ${fixture.awayScore}` : "VS"}</p><p className="mt-1 text-[10px] text-white/45">{fixture.dateLabel}</p></div><div className="flex items-center gap-1.5"><TeamLogo team={fixture.awayTeam} /><p className="max-w-24 text-xs font-black">{fixture.awayTeam.name}</p></div></div>{(["home", "draw", "away"] as PredictionChoice[]).map((choice) => <div key={choice} className="space-y-2"><div className="flex items-center justify-between"><span className={`rounded-full px-2 py-1 text-[10px] font-black ${choiceColors[choice]}`}>{choiceLabels[choice]}</span><span className="text-xs font-black text-white/55">{fixture.predictionPercentages[choice]}%</span></div>{grouped[choice].length ? grouped[choice].map((predictor) => <PredictorLine key={predictor.name} predictor={{ id: predictor.name, displayName: predictor.name, shortName: predictor.name.slice(0, 2), avatarUrl: predictor.avatarUrl }} choice={predictor.choice} />) : <p className="rounded-xl bg-white/5 px-3 py-2 text-xs text-white/35">ยังไม่มีคนเลือกฝั่งนี้</p>}</div>)}</div>;
+}
+
+function FixtureDetailWithShare({
+  fixture,
+  entries,
+  gameweek,
+  predictionBook,
+  shareStatus,
+  onShare,
+}: {
+  fixture: Fixture;
+  entries: LeaderboardEntry[];
+  gameweek: number;
+  predictionBook?: Record<number, Record<string, PredictionMap>>;
+  shareStatus: FixtureShareStatus;
+  onShare: () => void;
+}) {
+  const status = shareStatus?.fixtureId === fixture.id ? shareStatus : null;
+  const isSharing = status?.status === "sharing";
+
+  return (
+    <div className="space-y-3">
+      <FixtureDetail fixture={fixture} entries={entries} gameweek={gameweek} predictionBook={predictionBook} />
+      <button
+        type="button"
+        onClick={onShare}
+        disabled={isSharing}
+        aria-busy={isSharing}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#d9ff58] py-3.5 text-sm font-black text-[#071525] transition hover:bg-[#e7ff8c] disabled:cursor-wait disabled:opacity-60"
+      >
+        <Share2 aria-hidden="true" size={16} />
+        {isSharing ? "กำลังเปิด LINE…" : "แชร์ผลทายเข้า LINE"}
+      </button>
+      {status?.status === "shared" && <p role="status" className="text-center text-xs font-bold text-[#b7f5de]">{status.message}</p>}
+      {status?.status === "error" && <p role="alert" className="rounded-2xl border border-[#ff647c]/30 bg-[#ff647c]/10 px-3 py-2 text-xs leading-5 text-[#ffb0bc]">{status.message}</p>}
+    </div>
+  );
 }
 
 function SharePrompt({ gameweek, completionLabel, errorMessage, onClose, onShare }: { gameweek: number; completionLabel: string; errorMessage?: string; onClose: () => void; onShare: () => void }) {
@@ -178,6 +221,7 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
   const [isSharePromptOpen, setIsSharePromptOpen] = useState(false);
   const [shareError, setShareError] = useState("");
+  const [fixtureShareStatus, setFixtureShareStatus] = useState<FixtureShareStatus>(null);
   const fixtures = fixturesByGameweek[selectedGameweek] ?? [];
   const entries = leaderboardByGameweek[selectedGameweek] ?? [];
   const predictionBookByGameweek = livePredictionBookByGameweek ?? mockPredictionBookByGameweek;
@@ -186,7 +230,7 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
   const selectedCount = Object.keys(predictions).length;
   const complete = isPredictionComplete(fixtures.map((fixture) => fixture.id), predictions);
   const completionLabel = useMemo(() => `${selectedCount}/${fixtures.length} คู่`, [fixtures.length, selectedCount]);
-  const changeGameweek = (value: number) => { setSelectedGameweek(value); setSelectedPlayer(null); setSelectedFixture(null); setIsSharePromptOpen(false); setShareError(""); };
+  const changeGameweek = (value: number) => { setSelectedGameweek(value); setSelectedPlayer(null); setSelectedFixture(null); setIsSharePromptOpen(false); setShareError(""); setFixtureShareStatus(null); };
   const choosePrediction = (fixtureId: string, choice: PredictionChoice) => { setPredictionsByGameweek((current) => ({ ...current, [selectedGameweek]: applyPrediction(current[selectedGameweek] ?? {}, fixtureId, choice) })); };
   const confirmPredictions = () => {
     if (!complete) return;
@@ -199,6 +243,25 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
     setIsSharePromptOpen(true);
   };
   const finishShareFlow = () => { setIsSharePromptOpen(false); setShareError(""); };
+  const shareFixturePredictions = async (fixture: Fixture) => {
+    setFixtureShareStatus({ fixtureId: fixture.id, status: "sharing" });
+    try {
+      const predictors = getFixturePredictors(entries, predictionBookByGameweek, selectedGameweek, fixture.id);
+      const message = buildFixturePredictionShareFlex({ fixture, gameweek: selectedGameweek, predictors });
+      const result = await shareFlexMessage({
+        isApiAvailable: (apiName) => liff.isApiAvailable(apiName),
+        shareTargetPicker: (messages, options) => liff.shareTargetPicker(messages as never, options),
+      }, message);
+      if (result === "cancelled") {
+        setFixtureShareStatus({ fixtureId: fixture.id, status: "error", message: "ยกเลิกการแชร์แล้ว ยังไม่ได้ส่งข้อความเข้า LINE" });
+        return;
+      }
+      setFixtureShareStatus({ fixtureId: fixture.id, status: "shared", message: "แชร์ผลทายเข้า LINE แล้ว" });
+    } catch (error) {
+      setFixtureShareStatus({ fixtureId: fixture.id, status: "error", message: formatShareErrorMessage(error) });
+    }
+  };
+
   const sharePredictionResult = async () => {
     setShareError("");
     try {
@@ -228,5 +291,5 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
     }
   };
 
-  return <main className="app-shell min-h-screen bg-[#071525] text-white"><div className="mx-auto min-h-screen w-full max-w-[520px] pb-28"><header className="bg-[#071525] px-5 pb-6 pt-7"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Avatar user={currentUser} size={42} /><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">สวัสดีตอนเย็น</p><p className="mt-0.5 text-base font-black">{currentUser.displayName} 👋</p></div></div><span className="rounded-full border border-[#d9ff58]/25 bg-[#d9ff58]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#d9ff58]">Preview / LIFF</span></div><div className="mt-6 flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8ca6bd]">This week&apos;s arena</p><h1 className="mt-1 text-3xl font-black tracking-[-0.04em]">เกมวีค {selectedGameweek}</h1></div><GameweekPicker gameweeks={gameweeks} value={selectedGameweek} onChange={changeGameweek} /></div></header><div className="px-4 pt-5">{activeTab === "leaderboard" && <Leaderboard entries={entries} gameweek={selectedGameweek} onSelect={setSelectedPlayer} />}{activeTab === "predictions" && <Predictions fixtures={fixtures} predictions={predictions} onChoose={choosePrediction} onConfirm={confirmPredictions} />}{activeTab === "results" && <Results fixtures={fixtures} gameweek={selectedGameweek} onSelectFixture={setSelectedFixture} />}</div><p className="px-4 pt-6 text-center text-[10px] font-bold text-white/35">ข้อมูลตัวอย่าง Phase 1 · เวลาแสดงประเทศไทย (ICT)</p></div><nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-[520px] -translate-x-1/2 border-t border-white/10 bg-[#0b1d31]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl"><div className="grid grid-cols-3 gap-1 rounded-2xl bg-white/5 p-1">{tabs.map((tab) => { const Icon = tab.icon; return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black transition ${activeTab === tab.id ? "bg-[#d9ff58] text-[#071525] shadow-[0_6px_20px_rgba(217,255,88,0.15)]" : "text-white/55 hover:text-white"}`}><Icon aria-hidden="true" size={15} strokeWidth={2.4} />{tab.label}</button>; })}</div></nav>{selectedPlayer && <DetailModal eyebrow="Player picks" title={`คำทายของ ${selectedPlayer.displayName}`} onClose={() => setSelectedPlayer(null)}><PlayerDetail player={selectedPlayer} fixtures={fixtures} gameweek={selectedGameweek} predictionMap={predictionBookByGameweek[selectedGameweek]?.[selectedPlayer.id] ?? {}} /></DetailModal>}{selectedFixture && <DetailModal eyebrow="Match details" title={`${selectedFixture.homeTeam.name} vs ${selectedFixture.awayTeam.name}`} hideTitle onClose={() => setSelectedFixture(null)}><FixtureDetail fixture={selectedFixture} entries={entries} gameweek={selectedGameweek} /></DetailModal>}{isSharePromptOpen && <SharePrompt gameweek={selectedGameweek} completionLabel={completionLabel} errorMessage={shareError} onClose={finishShareFlow} onShare={() => void sharePredictionResult()} />}</main>;
+  return <main className="app-shell min-h-screen bg-[#071525] text-white"><div className="mx-auto min-h-screen w-full max-w-[520px] pb-28"><header className="bg-[#071525] px-5 pb-6 pt-7"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Avatar user={currentUser} size={42} /><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">สวัสดีตอนเย็น</p><p className="mt-0.5 text-base font-black">{currentUser.displayName} 👋</p></div></div><span className="rounded-full border border-[#d9ff58]/25 bg-[#d9ff58]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#d9ff58]">Preview / LIFF</span></div><div className="mt-6 flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8ca6bd]">This week&apos;s arena</p><h1 className="mt-1 text-3xl font-black tracking-[-0.04em]">เกมวีค {selectedGameweek}</h1></div><GameweekPicker gameweeks={gameweeks} value={selectedGameweek} onChange={changeGameweek} /></div></header><div className="px-4 pt-5">{activeTab === "leaderboard" && <Leaderboard entries={entries} gameweek={selectedGameweek} onSelect={setSelectedPlayer} />}{activeTab === "predictions" && <Predictions fixtures={fixtures} predictions={predictions} onChoose={choosePrediction} onConfirm={confirmPredictions} />}{activeTab === "results" && <Results fixtures={fixtures} gameweek={selectedGameweek} onSelectFixture={setSelectedFixture} />}</div><p className="px-4 pt-6 text-center text-[10px] font-bold text-white/35">ข้อมูลตัวอย่าง Phase 1 · เวลาแสดงประเทศไทย (ICT)</p></div><nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-[520px] -translate-x-1/2 border-t border-white/10 bg-[#0b1d31]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl"><div className="grid grid-cols-3 gap-1 rounded-2xl bg-white/5 p-1">{tabs.map((tab) => { const Icon = tab.icon; return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black transition ${activeTab === tab.id ? "bg-[#d9ff58] text-[#071525] shadow-[0_6px_20px_rgba(217,255,88,0.15)]" : "text-white/55 hover:text-white"}`}><Icon aria-hidden="true" size={15} strokeWidth={2.4} />{tab.label}</button>; })}</div></nav>{selectedPlayer && <DetailModal eyebrow="Player picks" title={`คำทายของ ${selectedPlayer.displayName}`} onClose={() => setSelectedPlayer(null)}><PlayerDetail player={selectedPlayer} fixtures={fixtures} gameweek={selectedGameweek} predictionMap={predictionBookByGameweek[selectedGameweek]?.[selectedPlayer.id] ?? {}} /></DetailModal>}{selectedFixture && <DetailModal eyebrow="Match details" title={`${selectedFixture.homeTeam.name} vs ${selectedFixture.awayTeam.name}`} hideTitle onClose={() => { setSelectedFixture(null); setFixtureShareStatus(null); }}><FixtureDetailWithShare fixture={selectedFixture} entries={entries} gameweek={selectedGameweek} predictionBook={predictionBookByGameweek} shareStatus={fixtureShareStatus} onShare={() => void shareFixturePredictions(selectedFixture)} /></DetailModal>}{isSharePromptOpen && <SharePrompt gameweek={selectedGameweek} completionLabel={completionLabel} errorMessage={shareError} onClose={finishShareFlow} onShare={() => void sharePredictionResult()} />}</main>;
 }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPredictionShareFlex, buildStandingsShareFlex } from "../../lib/line/share-payload.ts";
+import { buildFixturePredictionShareFlex, buildPredictionShareFlex, buildStandingsShareFlex } from "../../lib/line/share-payload.ts";
 import { teams, type Fixture, type LeaderboardEntry } from "../../lib/mock-data.ts";
 
 const entry: LeaderboardEntry = {
@@ -83,6 +83,31 @@ test("prediction share payload keeps every fixture in one Flex bubble", () => {
     assert.match(serialized, new RegExp(`Home ${index}`));
     assert.match(serialized, new RegExp(`Away ${index}`));
   }
+});
+
+test("builds a match-detail share payload from the app fixture and predictors", () => {
+  const originalHomeCrest = fixture.homeTeam.crest;
+  const originalAwayCrest = fixture.awayTeam.crest;
+  const message = buildFixturePredictionShareFlex({
+    fixture,
+    gameweek: 1,
+    predictors: [
+      { name: "Picky", avatarUrl: "https://example.com/picky.jpg", choice: "home" },
+      { name: "Chei", avatarUrl: "https://example.com/chei.jpg", choice: "draw" },
+    ],
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.equal(message.contents.type, "bubble");
+  assert.match(serialized, new RegExp(fixture.homeTeam.name));
+  assert.match(serialized, new RegExp(fixture.awayTeam.name));
+  assert.match(serialized, /Picky/);
+  assert.match(serialized, /https:\/\/example\.com\/chei\.jpg/);
+  assert.match(serialized, /50/);
+  assert.match(serialized, /19:00/);
+  assert.doesNotMatch(serialized, /\.svg/);
+  assert.equal(fixture.homeTeam.crest, originalHomeCrest);
+  assert.equal(fixture.awayTeam.crest, originalAwayCrest);
 });
 
 test("prediction share payload carries fixture kickoff dates into grouped sections", () => {

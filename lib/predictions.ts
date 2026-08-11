@@ -70,6 +70,20 @@ export function getUserPredictionDetails(
   });
 }
 
+export function getFixturePredictors(
+  entries: Array<{ id: string; displayName: string; avatarUrl: string }>,
+  predictionBook: Record<number, Record<string, PredictionMap>>,
+  gameweek: number,
+  fixtureId: string,
+): FixturePredictor[] {
+  return entries.flatMap((entry) => {
+    const choice = predictionBook[gameweek]?.[entry.id]?.[fixtureId];
+    return choice
+      ? [{ name: entry.displayName, avatarUrl: entry.avatarUrl, choice }]
+      : [];
+  });
+}
+
 export function getFixturePredictionDetails(
   predictors: FixturePredictor[],
 ): GroupedFixturePredictionDetails {
