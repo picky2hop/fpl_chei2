@@ -65,6 +65,19 @@ https://fpl-chei2.vercel.app/
 
 ผลที่คาดหวังคือ server/API ตอบ `409` และ database function ตอบ error code `55P03` โดยไม่สร้างหรือแก้ prediction
 
+## Match-result LINE share check
+
+ใช้ตรวจฟีเจอร์แชร์จาก modal รายละเอียดผลแข่ง โดยไม่แก้ prediction หรือข้อมูล Production:
+
+1. เปิด LIFF URL ใน LINE และเข้า `/dashboard`
+2. เปิดแท็บ `ผลแข่ง` แล้วแตะคู่แข่งขันที่ต้องการตรวจ
+3. ตรวจทีม, เวลา, สกอร์/สถานะ, เปอร์เซ็นต์ และรายชื่อผู้ทาย
+4. กด `แชร์ผลทายเข้า LINE` เพียงครั้งเดียว แล้วเลือกกลุ่ม LINE
+5. ตรวจว่าได้รับ Flex bubble เดียวที่มีข้อมูลของคู่ที่เลือกครบ และกดปุ่มเปิดแอปได้
+6. หากยกเลิกหรือ environment ไม่รองรับ ต้องเห็นข้อความแจ้งเตือนที่ปลอดภัย และไม่ควรแสดง token, key หรือ secret
+
+การตรวจนี้เป็น manual production verification ของ match-result share; automated test, lint และ build ผ่านแล้ว แต่ไม่ใช้การแก้ fixture จริงหรือการเขียนข้อมูล Supabase เพื่อจำลองผลแข่ง
+
 ## 5. Manual FPL sync
 
 1. เข้า `/admin` ด้วยบัญชี admin
@@ -87,18 +100,23 @@ limit 10;
 2. ตั้ง Script Properties:
    - `VERCEL_SYNC_URL`: `https://fpl-chei2.vercel.app/api/sync`
    - `FPL_SYNC_TOKEN`: ค่าเดียวกับ Vercel
-3. รัน `installTenMinuteTrigger` เพียงครั้งเดียว
+3. รัน `installAutosyncTrigger` เพียงครั้งเดียว; ตัวติดตั้งจะลบ trigger เดิมของ `runFplSyncScheduler` แล้วสร้าง heartbeat ทุก 10 นาที โดยระบบจะ gate live sync ให้ห่างกันอย่างน้อย 20 นาที
 4. ตรวจ Executions ของ Apps Script และ `public.job_runs`
 
 เงื่อนไขเวลา Asia/Bangkok:
 
-- เสาร์/อาทิตย์ 18:00–02:00: results sync ทุก 10 นาที
+- เสาร์ 18:00–23:50: results sync อย่างน้อยทุก 20 นาที
+- อาทิตย์ 00:01–02:10: results sync อย่างน้อยทุก 20 นาที
+- อาทิตย์ 18:00–23:50: results sync อย่างน้อยทุก 20 นาที
+- จันทร์ 00:01–02:10: results sync อย่างน้อยทุก 20 นาที
 - จันทร์–ศุกร์หลัง 06:00: results sync วันละ 1 ครั้ง
 - อังคาร/ศุกร์หลัง 18:00: schedule sync วันละ 1 ครั้ง
 
 ## 7. Phase 3A atomic sync deployment
 
-Migration `20260802083440_phase_3a_atomic_fpl_sync.sql` เป็น additive migration และต้องผ่าน review ก่อน apply production
+ขั้นตอนในหัวข้อนี้เป็น deployment procedure สำหรับอ้างอิง; migration `20260802083440_phase_3a_atomic_fpl_sync.sql` ถูก apply production แล้วเมื่อ 2 สิงหาคม 2026 และผ่าน read-only verification แล้ว
+
+Migration `20260802083440_phase_3a_atomic_fpl_sync.sql` เป็น additive migration และการ apply production รอบนี้เสร็จแล้วหลังผ่าน review และได้รับอนุมัติ
 
 ลำดับ deployment หลังได้รับอนุมัติ:
 

@@ -1,6 +1,6 @@
 # Phase 3A — Pre-season hardening
 
-อัปเดตล่าสุด: 3 สิงหาคม 2026
+อัปเดตล่าสุด: 11 สิงหาคม 2026
 
 ## Purpose
 
@@ -16,16 +16,23 @@ Phase 3A เป็นรอบ hardening และ integration test ไม่ใ
 - LIFF, dashboard, admin, manual sync และ scheduler ผ่าน smoke test แล้ว
 - prediction lock ระดับ database ผ่านด้วย `55P03` และ rollback ไม่เหลือข้อมูลทดสอบ
 - Production-only cutover เสร็จแล้ว; ไม่มี preview deployment หรือ Supabase test project เหลืออยู่
-- ยังรอ fixture จริงที่ `finished` เพื่อยืนยัน scoring/leaderboard
+- LINE Flex/Bot production smoke test ผ่านแล้วตาม [หลักฐาน LINE Flex/Bot](phase-3a-line-flex-bot-test-evidence.md)
+- เพิ่ม match-result share จาก modal ผลแข่ง โดย automated verification ผ่านแล้ว และรอ manual production check ใน LINE WebView
+- Mobile/LIFF regression ผ่านทั้ง LINE WebView และ Chrome Android
+- ยังรอ fixture จริงที่ `live`/`finished` เพื่อยืนยัน scoring/leaderboard และ state transition ใน production
 
 ## Workstreams
 
-### 1. LINE Flex Message และ Bot — งานแรก
+### 1. LINE Flex Message และ Bot — เสร็จแล้ว
 
-- ตรวจ flow แชร์จาก LIFF ด้วย `shareTargetPicker`
-- ออกแบบและทดสอบ Flex Message สำหรับผลทาย/ตารางคะแนน
-- ตรวจ LINE Messaging API webhook, signature verification, reply และ push ตามขอบเขตที่เลือก
+- ตรวจ flow แชร์ตารางและผลทายจาก LIFF ด้วย `shareTargetPicker` ในกลุ่ม LINE จริง
+- ตรวจคำสั่ง `เมนู`, `ขอตาราง`, `บอลวันนี้`, `ผลทาย` ผ่านครบ
+- ตรวจข้อความทั่วไปว่าไม่มีการตอบกลับ
+- ตรวจ Flex presentation: logo, ลำดับทีม, avatar, selected highlight, เวลาแข่ง และปุ่มเปิดแอป
+- ตรวจ implementation ของ Flex สำหรับผลแข่งรายคู่: score/status, outcome percentages, predictor list, empty state และ safe share errors
+- ตรวจ LINE Messaging API webhook, signature verification และ reply ตามขอบเขตที่เลือก
 - แยก user-initiated share ออกจาก bot push/broadcast ให้ชัดเจน
+- Bot push/broadcast ยังไม่ได้ทำและไม่อยู่ใน scope รอบนี้
 - เก็บ LINE secret/access token เฉพาะใน server/Vercel หรือ LINE Developers; ห้ามใส่ใน Git หรือแชท
 
 จุดเริ่มต้นคือ [Prompt สำหรับแชทใหม่](phase-3a-line-flex-bot-chat-prompt.md)
@@ -47,24 +54,26 @@ State-transition integration evidence เดิมครอบคลุม `sche
 
 ดู [Sync reliability test evidence](phase-3a-sync-reliability-test-evidence.md), [approved design](superpowers/specs/2026-08-02-phase-3a-sync-reliability-design.md) และ [implementation plan](superpowers/plans/2026-08-02-phase-3a-sync-reliability.md)
 
-### 4. Operations visibility
+### 4. Operations visibility — ผ่าน baseline แล้ว; ต้องติดตามระหว่างแข่งจริง
 
-ตรวจ Apps Script Executions, `job_runs`, Vercel logs และ Supabase/PostgREST health ให้สามารถแยก source failure, database failure และ scheduler failure ได้
+ตรวจ Apps Script Executions, `job_runs`, Vercel logs และ Supabase/PostgREST health ได้แล้ว; เหลือเฝ้าดู scheduler ระหว่าง live match window จริงหลายรอบ
 
-### 5. Mobile/LIFF regression
+### 5. Mobile/LIFF regression — เสร็จแล้ว
 
-ทดสอบ login, prediction, lock message, dashboard, admin และ share flow ใน LINE WebView และ Chrome Android
+ทดสอบ login, prediction, lock message, dashboard, admin และ share flow ผ่านทั้ง LINE WebView และ Chrome Android
 
 ## Acceptance criteria before the first kickoff
 
-- Flex Message payload ถูกต้องและแสดงผลใน LINE group ได้
-- Bot reply/push ทดสอบสำเร็จตาม scope โดยไม่เปิดเผย secret
+- Flex Message payload ถูกต้องและแสดงผลใน LINE group ได้ — ผ่านแล้ว
+- match-result share payload และ modal flow ผ่าน automated verification; manual production check — รอดำเนินการ
+- Bot reply ทดสอบสำเร็จตาม scope โดยไม่เปิดเผย secret — ผ่านแล้ว
+- Bot push/broadcast — ยังไม่ทำและไม่อยู่ใน scope รอบนี้
 - prediction save/lock/scoring มี automated evidence เดิมและต้องยืนยัน scoring/leaderboard จากการแข่งขันจริงโดยไม่ใช้ Production เป็น test database
 - sync ซ้ำไม่สร้าง fixtures/predictions/events ซ้ำ
 - scheduler ทำงานตามช่วงเวลาและตรวจสอบย้อนหลังได้
 - failure path มีข้อความและ runbook ที่ระบุขั้นตอน recovery
 - `npm.cmd run test`, `npm.cmd run lint`, `npm.cmd run build` และ `git diff --check` ผ่าน
-- เอกสารและ diff ผ่านการ review ก่อน commit/push
+- เอกสารและ diff ต้องอัปเดตให้ตรงกับ production status ก่อน commit/push
 
 ## Boundaries
 

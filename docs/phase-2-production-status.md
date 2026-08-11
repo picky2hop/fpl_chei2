@@ -2,7 +2,7 @@
 
 See the current [production-only cutover evidence](production-only-cutover-evidence.md) for the retirement of preview/test resources and the final verification checklist.
 
-อัปเดตล่าสุด: 3 สิงหาคม 2026
+อัปเดตล่าสุด: 11 สิงหาคม 2026
 
 ## Production-only cutover
 
@@ -46,29 +46,30 @@ See the current [production-only cutover evidence](production-only-cutover-evide
 
 ## Repository verification
 
-ผลตรวจล่าสุดจาก commit `bc9f9e7` และการตรวจหลังทดสอบ lock:
+ผลตรวจ repository ล่าสุดเมื่อ 11 สิงหาคม 2026 และ production verification ที่บันทึกไว้:
 
-- `npm.cmd run test` — 40 tests passed
+- `npm.cmd run test` — 124 tests passed
 - `npm.cmd run lint` — passed
 - `npm.cmd run build` — passed
 - `git diff --check` — passed
 
 ## Remaining Phase 2 live validation
 
-ยังไม่สามารถยืนยันด้วยการแข่งขันจริงได้จนกว่าฤดูกาลจะเริ่ม:
+งานที่เหลือของ Phase 2 เป็น live validation จากการแข่งขันจริงเท่านั้น:
 
 1. sync fixture ที่มีสถานะ `live` และ `finished`
 2. ตรวจ scoring และ leaderboard หลังมีผลแข่งจริง
 3. ตรวจ postponed/rescheduled fixture และ GW ที่ได้รับผลกระทบ
 4. เฝ้าดู scheduler ระหว่าง live match window หลายรอบ
+5. manual production check ของ match-result share ใน LINE WebView: เปิดแท็บผลแข่ง, เปิดรายละเอียดคู่, กดแชร์ และตรวจ Flex bubble ในกลุ่ม LINE
 
 การทดสอบ lock ระดับ database ผ่านแล้ว; ไม่จำเป็นต้องแก้ fixture จริงค้างไว้ใน production เพื่อจำลอง kickoff อีก
 
 ## Next phase
 
-LINE Flex/Bot ของ Phase 3A ผ่าน production แล้ว และมี [sync reliability implementation](phase-3a-sync-reliability-test-evidence.md) ที่ถูก commit/push ใน `66802bc`
+LINE Flex/Bot production smoke test และ Mobile/LIFF regression ของ Phase 3A ผ่านแล้ว โดยมีหลักฐานใน [LINE Flex/Bot test evidence](phase-3a-line-flex-bot-test-evidence.md)
 
-Atomic sync migration ถูก apply production แล้ว และ application code ถูก push ใน `66802bc`; live authenticated provider run หลัง deployment ยังรอ scheduler ที่มี secret นอก repository
+Atomic sync migration ถูก apply production แล้ว และ sync reliability ปิดกระบวนการแล้ว; ไม่ได้ยิง authenticated provider sync แบบ manual จาก repository เพราะ `FPL_SYNC_TOKEN` อยู่ใน external secret store แต่ scheduler/production boundary ผ่านแล้ว และไม่ถือเป็นงานค้าง
 
 `auth_leaked_password_protection` เป็น advisor warning ที่ผู้ใช้ยอมรับและข้าม เนื่องจากแอปปัจจุบันไม่มี password sign-in flow
 

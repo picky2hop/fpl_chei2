@@ -2,13 +2,14 @@
 
 Current cutover evidence: [production-only cutover](production-only-cutover-evidence.md).
 
-> เอกสารนี้สรุปสถานะปัจจุบัน ณ 2 สิงหาคม 2026 ส่วน design/plan เดิมใน `docs/superpowers/` เป็น historical reference
+> เอกสารนี้สรุปสถานะปัจจุบัน ณ 11 สิงหาคม 2026 ส่วน design/plan เดิมใน `docs/superpowers/` เป็น historical reference
+> กฎ Autosync ปัจจุบันอยู่ใน [scheduler README](../scheduler/google-apps-script/README.md) และ [deployment runbook](phase-2-deployment-runbook.md); ข้อความ scheduler ในส่วน historical ด้านล่างไม่ใช่ค่าปัจจุบัน
 
 ## Current phase
 
 ### Phase 2 — Production integration / live validation
 
-สถานะ: implementation และ deployment เสร็จแล้ว; อยู่ช่วงท้ายของ production smoke test และรอผลการแข่งขันจริงเพื่อยืนยัน scoring/recalculation
+สถานะ: implementation และ deployment เสร็จแล้ว; production smoke test ผ่านแล้ว และเหลือ live validation จากการแข่งขันจริงเพื่อยืนยัน scoring/recalculation
 
 หลักฐาน production ล่าสุด:
 
@@ -30,17 +31,22 @@ Current cutover evidence: [production-only cutover](production-only-cutover-evid
 - `/admin` และสิทธิ์ `ADMIN_LINE_USER_ID`
 - manual sync ได้ 380 fixtures
 - Google Apps Script scheduler เรียก scheduled sync สำเร็จ; transient FPL 403 ถูกบันทึกใน `job_runs` และ retry สำเร็จในรอบถัดไป
-- `npm.cmd run test`: 40 passed; lint, build และ `git diff --check` ผ่าน
+- LINE Flex/Bot production smoke test ผ่าน: `เมนู`, `ขอตาราง`, `บอลวันนี้`, `ผลทาย`, unknown text ไม่ตอบกลับ, standings share และ prediction share เข้า LINE group
+- เพิ่ม match-result share จาก modal รายละเอียดผลแข่ง: Flex bubble เดียวแสดงทีม/เวลา/สกอร์/เปอร์เซ็นต์ และรายชื่อผู้ทายของคู่ที่เลือก; automated verification ผ่านแล้ว และรอ manual production check
+- ตรวจ Flex presentation ผ่าน: logo, ลำดับทีม, avatar, selected highlight, เวลาแข่ง และปุ่มเปิดแอป
+- Mobile/LIFF regression ผ่านทั้ง LINE WebView และ Chrome Android ครบ login, prediction, lock message, dashboard, admin และ share flow
+- `npm.cmd run test`: 124 passed; lint, build และ `git diff --check` ผ่านเมื่อ 11 สิงหาคม 2026
 
 ยังรอการยืนยันจากการแข่งขันจริง:
 
 - fixture `finished` และการคำนวณคะแนน/leaderboard
 - postponed/rescheduled fixture และการคำนวณ GW ที่ได้รับผลกระทบ
 - scheduler ระหว่าง live match window หลายรอบ
+- manual production check ของปุ่มแชร์ผลแข่งรายคู่ใน LINE WebView
 
 ### Phase 3A — Pre-season hardening
 
-สถานะ: LINE Flex/Bot ผ่าน production แล้ว; sync reliability implementation ผ่าน automated verification และ migration ถูก apply production พร้อม read-only verification แล้วเมื่อ 2 สิงหาคม 2026
+สถานะ: LINE Flex/Bot ผ่าน production smoke test และ Mobile/LIFF regression แล้ว; sync reliability implementation ผ่าน automated verification และ migration ถูก apply production พร้อม read-only verification แล้วเมื่อ 2 สิงหาคม 2026
 
 Sync reliability ที่เพิ่มในรอบนี้:
 
@@ -54,7 +60,9 @@ Migration `20260802083440_phase_3a_atomic_fpl_sync.sql` ถูก apply producti
 
 Live smoke check: production homepage ตอบ HTTP 200, unauthenticated sync request ตอบ HTTP 401, fixtures/source records มี 380 รายการเท่ากันและไม่มี duplicate external identity; authenticated provider sync ถูกส่งต่อให้ scheduler ด้วย secret ที่มีอยู่เดิม และไม่เป็น blocker ของ Phase 3A
 
-Closure: ผู้ใช้ยอมรับและข้าม `auth_leaked_password_protection` เพราะแอปปัจจุบันไม่มี password sign-in flow และปิดกระบวนการ Sync reliability แล้ว
+Bot push/broadcast ยังไม่ได้ทำและไม่ใช่ blocker เพราะอยู่นอก scope ที่อนุมัติในรอบนี้
+
+Closure: ผู้ใช้ยอมรับและข้าม `auth_leaked_password_protection` เพราะแอปปัจจุบันไม่มี password sign-in flow และปิดกระบวนการ Sync reliability, LINE production smoke test และ Mobile/LIFF regression แล้ว
 
 ## Phase 1 — UI/UX MVP (เสร็จแล้ว)
 
@@ -76,6 +84,7 @@ Closure: ผู้ใช้ยอมรับและข้าม `auth_leaked_
 - Player prediction detail modal
 - ไฮไลท์ชื่อทีมฝั่งที่ผู้เล่นเลือกใน player detail
 - Fixture prediction detail modal
+- ปุ่มแชร์ผลทายของทุกคนจาก Fixture prediction detail modal
 - SVG club crests จาก Premier League resource
 - ตัดกรอบขาวรอบ club crest
 - Share confirmation popup หลังยืนยันคำทาย

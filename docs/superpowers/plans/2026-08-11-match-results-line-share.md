@@ -45,19 +45,19 @@ type FixturePredictionFlexInput = {
 };
 ~~~
 
-- [ ] Step 1: Add a failing test for one finished match.
+- [x] Step 1: Add a failing test for one finished match.
 
 Import buildFixturePredictionFlex. Pass Arsenal/Coventry, a finished score, 100/0/0 percentages, two home predictors, Premier League SVG badge URLs, and an HTTPS avatar. Assert the result is a single bubble containing both teams, score, percentage, predictor names, avatar URL, all three choice colors, and the existing LIFF footer URI. Assert the serialized payload does not contain .svg.
 
-- [ ] Step 2: Add failing tests for upcoming and empty states.
+- [x] Step 2: Add failing tests for upcoming and empty states.
 
 Assert that an upcoming match renders VS rather than a score, formats a valid kickoff in Asia/Bangkok, shows 0% for empty draw/away groups, and renders the muted empty-state text.
 
-- [ ] Step 3: Add a failing long-list test.
+- [x] Step 3: Add a failing long-list test.
 
 Pass at least 13 predictors and assert all names remain in the serialized message and validateFlexMessage(message) succeeds. This establishes the requirement that nested boxes, rather than silent truncation, are used for large predictor lists.
 
-- [ ] Step 4: Run the focused tests and confirm the expected failure.
+- [x] Step 4: Run the focused tests and confirm the expected failure.
 
 Run:
 
@@ -79,11 +79,11 @@ Expected: FAIL because buildFixturePredictionFlex is not exported yet.
 - Consumes existing FlexTeam, PredictionChoice, text, bubble, teamLogoOrFallback, imageOrFallback, footerButton, Bangkok date helpers, and validateFlexMessage.
 - Produces exported FixturePredictionFlexInput and buildFixturePredictionFlex(input): FlexMessage.
 
-- [ ] Step 1: Add the exported input type and match header helpers.
+- [x] Step 1: Add the exported input type and match header helpers.
 
 Define the type exactly as Task 1. Render home team, center VS or finished score, away team, and Bangkok date/time using existing background/text tokens. Use dateLabel as the date fallback and the existing time fallback when kickoffAt is missing or invalid. Render a clear postponed label without creating an invalid Flex component.
 
-- [ ] Step 2: Add predictor group rendering with bounded nested boxes.
+- [x] Step 2: Add predictor group rendering with bounded nested boxes.
 
 Group predictors by home, draw, and away. Each group has its choice pill, percentage, predictor rows with avatar/name/badge, or a muted empty state. Chunk predictor rows into nested vertical boxes so no single box has more than 12 children. Reuse the existing avatar and team-logo URL sanitization helpers.
 
@@ -95,11 +95,11 @@ draw: "#47d7a0"
 away: "#6da9ff"
 ~~~
 
-- [ ] Step 3: Assemble one bubble with the existing footer.
+- [x] Step 3: Assemble one bubble with the existing footer.
 
 Return a FlexMessage with informative altText, contents from bubble([...]), the match header first, then all three choice sections. Reuse footerButton and the existing app URI. Do not add a profile header because this is a match-detail share, not the current-user prediction share.
 
-- [ ] Step 4: Run the focused tests.
+- [x] Step 4: Run the focused tests.
 
 Run:
 
@@ -129,11 +129,11 @@ export function buildFixturePredictionShareFlex(input: {
 }): FlexMessage;
 ~~~
 
-- [ ] Step 1: Add a failing mapping test.
+- [x] Step 1: Add a failing mapping test.
 
 Create a fixture with kickoff, dateLabel, status, scores, crests, and percentages. Pass home/draw/away predictors and assert the serialized payload contains teams, score/date data, percentages, predictor names, and avatar URLs.
 
-- [ ] Step 2: Run the focused wrapper test and confirm the expected failure.
+- [x] Step 2: Run the focused wrapper test and confirm the expected failure.
 
 Run:
 
@@ -143,11 +143,11 @@ npm.cmd run test -- tests/line/share-payload.test.mts
 
 Expected: FAIL because buildFixturePredictionShareFlex is not exported yet.
 
-- [ ] Step 3: Implement the wrapper without mutating Fixture.
+- [x] Step 3: Implement the wrapper without mutating Fixture.
 
 Import FixturePredictor and buildFixturePredictionFlex. Map fixture.kickoff to kickoffAt, pass dateLabel/status/optional scores, map both team names and crests, pass predictionPercentages, and forward predictors unchanged. Do not write to or normalize the original fixture object.
 
-- [ ] Step 4: Run the wrapper suite.
+- [x] Step 4: Run the wrapper suite.
 
 Run:
 
@@ -169,11 +169,11 @@ Expected: PASS, including existing personal prediction and standings share tests
 - Consumes buildFixturePredictionShareFlex, shareFlexMessage, current entries, predictionBookByGameweek, selected Fixture, and the existing liff import.
 - Produces FixtureDetail props for onShare and share status; no public route/API changes.
 
-- [ ] Step 1: Centralize the predictor list used by rendering and sharing.
+- [x] Step 1: Centralize the predictor list used by rendering and sharing.
 
 Keep the current source exactly: iterate current gameweek entries, read predictionBookByGameweek[gameweek]?.[entry.id]?.[fixture.id], and omit entries without a valid choice. Use the same derived list for the modal rows and the Flex wrapper so the two surfaces cannot diverge.
 
-- [ ] Step 2: Add fixture-share state and safe error mapping.
+- [x] Step 2: Add fixture-share state and safe error mapping.
 
 Use a state shape equivalent to:
 
@@ -187,11 +187,11 @@ type FixtureShareState =
 
 Implement shareFixturePredictions(fixture): set sharing, build the wrapper payload, call shareFlexMessage with the existing liff.isApiAvailable and liff.shareTargetPicker adapter, then set shared or error. Map cancellation, unavailable picker, oversized payload, invalid payload, and unknown errors to user-safe Thai messages. Reset state when changing gameweek, opening another fixture, or closing the modal.
 
-- [ ] Step 3: Add the accessible button and inline status.
+- [x] Step 3: Add the accessible button and inline status.
 
 Add a full-width button after the three prediction groups. Use Share2, the existing lime button treatment, disabled during sharing, and aria-busy while sharing. Render success with role=status and errors with role=alert. Keep the modal open for success, cancellation, and errors.
 
-- [ ] Step 4: Run UI checks.
+- [x] Step 4: Run UI checks.
 
 Run:
 
@@ -210,7 +210,7 @@ Expected: PASS with no API, Supabase, environment-variable, or unrelated-file ch
 - Inspect only: files changed by Tasks 1–4
 - Preserve: all pre-existing modified/untracked files reported by initial git status
 
-- [ ] Step 1: Run the full automated suite.
+- [x] Step 1: Run the full automated suite.
 
 Run:
 
@@ -220,7 +220,7 @@ npm.cmd test
 
 Expected: PASS with no regressions in predictions, LINE, API, auth, sync, or scheduler tests.
 
-- [ ] Step 2: Run final lint and production build.
+- [x] Step 2: Run final lint and production build.
 
 Run:
 
@@ -231,7 +231,7 @@ npm.cmd run build
 
 Expected: both commands exit successfully.
 
-- [ ] Step 3: Check whitespace and inspect only the scoped diff.
+- [x] Step 3: Check whitespace and inspect only the scoped diff.
 
 Run:
 
@@ -247,6 +247,6 @@ Expected: no whitespace errors; scoped diff contains only this feature; unrelate
 
 Check mobile, tablet, and desktop. In the results tab, open a fixture, confirm modal rows/percentages, press share once, confirm LINE receives one Flex bubble, and verify success, cancel, unavailable-picker, invalid-payload, and retry states. Confirm saving, selecting, and scoring behavior remains unchanged.
 
-- [ ] Step 5: Stop for explicit user approval before any commit or push.
+- [x] Step 5: Stop for explicit user approval before any commit or push.
 
-Report changed files, test/lint/build outputs, manual checks, and any environment-dependent LINE limitation. Do not run git commit or git push.
+Implementation and automated verification are complete. Manual responsive/LINE-flow verification remains an environment-dependent follow-up for the user. The implementation was committed and pushed only after explicit user approval; this plan is retained as historical execution evidence.

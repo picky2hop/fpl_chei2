@@ -2,7 +2,7 @@
 
 เว็บทายผลพรีเมียร์ลีกสำหรับกลุ่มเพื่อนใน LINE สร้างด้วย Next.js App Router และ Tailwind CSS
 
-สถานะล่าสุด: Production-only cutover เสร็จในระดับ repository; ระบบใช้งานผ่าน Production Vercel และ Production Supabase เท่านั้น ดู [สถานะ production](docs/phase-2-production-status.md) และ [roadmap Phase 3A](docs/phase-3a-preseason-hardening.md)
+สถานะล่าสุด ณ 11 สิงหาคม 2026: ระบบ Production-only ใช้งานได้แล้ว, LINE Flex/Bot ผ่าน production smoke test แล้ว และ mobile/LIFF regression ผ่านแล้ว เหลือรอการยืนยัน scoring จากการแข่งขันจริง รวมถึง manual production check ของการแชร์ผลแข่งรายคู่ ดู [สถานะ production](docs/phase-2-production-status.md) และ [roadmap Phase 3A](docs/phase-3a-preseason-hardening.md)
 
 ## Phase 1 MVP
 
@@ -11,6 +11,7 @@
 - เปลี่ยน gameweek ได้ทันทีจาก dropdown
 - เลือกผลเหย้า/เสมอ/เยือน พร้อม confirmation modal
 - หลังยืนยันคำทาย มี popup ถามแชร์ผลลงกลุ่ม LINE
+- ในแท็บผลแข่ง เปิดรายละเอียดคู่แข่งขันแล้วแชร์คำทายของทุกคนเข้า LINE ได้ด้วย Flex bubble เดียว
 - ใช้ Lucide icons และ SVG club crests แบบไม่มีกรอบขาว
 - ใช้ LIFF authentication และข้อมูลจริงจาก server API สำหรับการใช้งาน Production
 - preview profile และ mock dashboard fallback ถูกยกเลิกหลัง Production-only cutover
@@ -61,10 +62,12 @@ git diff --check
 
 Implementation และ deployment เสร็จแล้ว. ระบบที่ยืนยันแล้วคือ LIFF login, Supabase server data flow, FPL sync 380 fixtures, prediction ก่อน kickoff, database-authoritative lock, `/admin`, manual sync และ Google Apps Script scheduler.
 
-สิ่งที่ยังรอข้อมูลการแข่งขันจริงคือการตรวจ scoring/leaderboard หลังมี fixture `finished` และการตรวจ postponed/rescheduled ใน production.
+สิ่งที่ยังรอข้อมูลการแข่งขันจริงคือการตรวจ fixture `live`/`finished`, scoring/leaderboard, awards, postponed/rescheduled และการเฝ้าดู scheduler ระหว่าง live match window.
 
 ### Phase 3A — Pre-season hardening
 
-LINE Flex/Bot ผ่าน production แล้ว ส่วน sync reliability มี implementation และ automated tests สำหรับ idempotent rerun, provider failures, safe `job_runs`, fixture moves, selective scoring และ atomic RPC โดย migration `20260802083440_phase_3a_atomic_fpl_sync.sql` ถูก apply production และตรวจ schema/privileges แบบ read-only แล้วเมื่อ 2 สิงหาคม 2026
+LINE Flex/Bot ผ่าน production smoke test แล้ว โดยตรวจคำสั่ง `เมนู`, `ขอตาราง`, `บอลวันนี้`, `ผลทาย`, การไม่ตอบข้อความทั่วไป, การแชร์ตาราง, การแชร์ผลทายเข้ากลุ่ม และการแสดงผล logo/order/avatar/highlight/เวลาแข่ง/app button แล้ว เพิ่ม implementation สำหรับแชร์ผลแข่งรายคู่จาก modal ในแท็บผลแข่ง โดยใช้ Flex bubble เดียวและข้อมูลผู้ทายของคู่นั้น; automated tests ผ่านแล้ว แต่ยังรอ manual production check จากผู้ใช้ Mobile/LIFF regression ผ่านทั้ง LINE WebView และ Chrome Android ส่วน sync reliability มี implementation และ automated tests สำหรับ idempotent rerun, provider failures, safe `job_runs`, fixture moves, selective scoring และ atomic RPC โดย migration `20260802083440_phase_3a_atomic_fpl_sync.sql` ถูก apply production และตรวจ schema/privileges แบบ read-only แล้วเมื่อ 2 สิงหาคม 2026
+
+Bot push/broadcast ยังไม่ได้ทำและยังไม่อยู่ใน scope ของรอบนี้
 
 รายละเอียดอยู่ใน [Phase 3A pre-season hardening](docs/phase-3a-preseason-hardening.md) และ [sync reliability test evidence](docs/phase-3a-sync-reliability-test-evidence.md). State-transition integration evidence เดิมเป็น historical หลังยกเลิก test environment; เอกสาร design/plan เก็บไว้ที่ `docs/superpowers/`.
