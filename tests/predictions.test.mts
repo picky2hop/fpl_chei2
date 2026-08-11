@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyPrediction,
+  getCompleteLeaderboardEntries,
   getFixturePredictors,
   getFixturePredictionDetails,
   getPredictionPercentages,
   getPredictionTeamHighlights,
   getUserPredictionDetails,
   isPredictionComplete,
+  normalizePredictionPercentage,
 } from "../lib/predictions.ts";
 
 describe("prediction helpers", () => {
@@ -21,6 +23,33 @@ describe("prediction helpers", () => {
   it("only reports complete when every fixture has a choice", () => {
     assert.equal(isPredictionComplete(["a", "b"], { a: "draw" }), false);
     assert.equal(isPredictionComplete(["a", "b"], { a: "draw", b: "home" }), true);
+  });
+
+  it("keeps only players who predicted every fixture in the selected gameweek", () => {
+    const entries = [
+      { id: "u1", displayName: "Complete" },
+      { id: "u2", displayName: "Partial" },
+      { id: "u3", displayName: "Missing" },
+    ];
+    const fixtureIds = ["fixture_a", "fixture_b"];
+
+    assert.deepEqual(
+      getCompleteLeaderboardEntries(entries, fixtureIds, {
+        5: {
+          u1: { fixture_a: "home", fixture_b: "away" },
+          u2: { fixture_a: "draw" },
+          u3: {},
+        },
+      }, 5),
+      [entries[0]],
+    );
+    assert.deepEqual(getCompleteLeaderboardEntries(entries, [], {}, 5), []);
+  });
+
+  it("normalizes percentage bar widths to the valid visual range", () => {
+    assert.equal(normalizePredictionPercentage(-10), 0);
+    assert.equal(normalizePredictionPercentage(75), 75);
+    assert.equal(normalizePredictionPercentage(140), 100);
   });
 
   it("calculates percentages and handles an empty audience", () => {

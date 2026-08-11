@@ -38,6 +38,19 @@ export function isPredictionComplete(
   return fixtureIds.length > 0 && fixtureIds.every((fixtureId) => Boolean(predictions[fixtureId]));
 }
 
+export function getCompleteLeaderboardEntries<T extends { id: string }>(
+  entries: T[],
+  fixtureIds: string[],
+  predictionBook: Record<number, Record<string, PredictionMap>>,
+  gameweek: number,
+): T[] {
+  return entries.filter((entry) => isPredictionComplete(fixtureIds, predictionBook[gameweek]?.[entry.id] ?? {}));
+}
+
+export function normalizePredictionPercentage(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 export function getPredictionPercentages(choices: PredictionChoice[]) {
   const total = choices.length;
   const counts: Record<PredictionChoice, number> = { home: 0, draw: 0, away: 0 };

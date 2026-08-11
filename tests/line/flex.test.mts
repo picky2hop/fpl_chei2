@@ -338,3 +338,41 @@ test("fixture prediction Flex keeps long predictor lists within Flex child limit
   }
   assert.doesNotThrow(() => validateFlexMessage(message));
 });
+
+test("fixture prediction Flex renders percentage bars with bounded widths", () => {
+  const message = buildFixturePredictionFlex({
+    gameweek: 5,
+    dateLabel: "เสาร์ 22 ส.ค.",
+    status: "finished",
+    homeTeam: { name: "Arsenal" },
+    awayTeam: { name: "Chelsea" },
+    predictionPercentages: { home: 0, draw: 25, away: 75 },
+    predictors: [],
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /"width":"0%"/);
+  assert.match(serialized, /"width":"25%"/);
+  assert.match(serialized, /"width":"75%"/);
+  assert.match(serialized, /"text":"25%"/);
+  assert.match(serialized, /"text":"75%"/);
+  assert.doesNotThrow(() => validateFlexMessage(message));
+});
+
+test("fixture prediction Flex clamps invalid percentage bar widths", () => {
+  const message = buildFixturePredictionFlex({
+    gameweek: 5,
+    dateLabel: "เสาร์ 22 ส.ค.",
+    status: "upcoming",
+    homeTeam: { name: "Arsenal" },
+    awayTeam: { name: "Chelsea" },
+    predictionPercentages: { home: -10, draw: 140, away: 50 },
+    predictors: [],
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /"width":"0%"/);
+  assert.match(serialized, /"width":"100%"/);
+  assert.match(serialized, /"width":"50%"/);
+  assert.doesNotThrow(() => validateFlexMessage(message));
+});

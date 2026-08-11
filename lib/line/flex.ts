@@ -1,3 +1,5 @@
+import { normalizePredictionPercentage } from "../predictions.ts";
+
 export type PredictionChoice = "home" | "draw" | "away";
 
 export type FlexTeam = {
@@ -291,6 +293,28 @@ function predictionChoicePill(choice: PredictionChoice) {
   };
 }
 
+function predictionPercentageBar(choice: PredictionChoice, percentage: number) {
+  const colors = choiceColors[choice];
+  const width = `${normalizePredictionPercentage(percentage)}%`;
+  return {
+    type: "box",
+    layout: "horizontal",
+    height: "6px",
+    cornerRadius: "sm",
+    backgroundColor: "#FFFFFF1A",
+    contents: [{
+      type: "box",
+      layout: "vertical",
+      width,
+      height: "6px",
+      flex: 0,
+      cornerRadius: "sm",
+      backgroundColor: colors.background,
+      contents: [],
+    }],
+  };
+}
+
 function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
   return {
     type: "box",
@@ -425,6 +449,7 @@ function fixturePredictionGroup(
           text(percentage + "%", "sm", "bold", MUTED_TEXT),
         ],
       },
+      predictionPercentageBar(choice, percentage),
       ...rowGroups,
     ],
   };
