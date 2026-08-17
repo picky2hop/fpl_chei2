@@ -658,6 +658,207 @@ export type Database = {
         }
         Relationships: []
       }
+      fantasy_entry_mappings: {
+        Row: {
+          app_user_id: string
+          archived_at: string | null
+          created_at: string
+          fpl_entry_id: number
+          fpl_manager_name: string
+          fpl_team_name: string
+          id: string
+          last_error_message: string | null
+          last_validation_status: string
+          linked_at: string
+          mapping_status: string
+          season_id: string
+          updated_at: string
+        }
+        Insert: {
+          app_user_id: string
+          archived_at?: string | null
+          created_at?: string
+          fpl_entry_id: number
+          fpl_manager_name: string
+          fpl_team_name: string
+          id?: string
+          last_error_message?: string | null
+          last_validation_status?: string
+          linked_at?: string
+          mapping_status?: string
+          season_id: string
+          updated_at?: string
+        }
+        Update: {
+          app_user_id?: string
+          archived_at?: string | null
+          created_at?: string
+          fpl_entry_id?: number
+          fpl_manager_name?: string
+          fpl_team_name?: string
+          id?: string
+          last_error_message?: string | null
+          last_validation_status?: string
+          linked_at?: string
+          mapping_status?: string
+          season_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "fantasy_entry_mappings_app_user_id_fkey"; columns: ["app_user_id"]; isOneToOne: false; referencedRelation: "app_users"; referencedColumns: ["id"] },
+          { foreignKeyName: "fantasy_entry_mappings_season_id_fkey"; columns: ["season_id"]; isOneToOne: false; referencedRelation: "seasons"; referencedColumns: ["id"] },
+        ]
+      }
+      fantasy_gameweek_scores: {
+        Row: {
+          created_at: string
+          event_transfers: number
+          event_transfers_cost: number
+          gameweek_id: string
+          id: string
+          mapping_id: string
+          points: number
+          points_on_bench: number
+          season_id: string
+          source_synced_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_transfers?: number
+          event_transfers_cost?: number
+          gameweek_id: string
+          id?: string
+          mapping_id: string
+          points: number
+          points_on_bench?: number
+          season_id: string
+          source_synced_at: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_transfers?: number
+          event_transfers_cost?: number
+          gameweek_id?: string
+          id?: string
+          mapping_id?: string
+          points?: number
+          points_on_bench?: number
+          season_id?: string
+          source_synced_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "fantasy_gameweek_scores_gameweek_id_fkey"; columns: ["gameweek_id"]; isOneToOne: false; referencedRelation: "gameweeks"; referencedColumns: ["id"] },
+          { foreignKeyName: "fantasy_gameweek_scores_mapping_id_fkey"; columns: ["mapping_id"]; isOneToOne: false; referencedRelation: "fantasy_entry_mappings"; referencedColumns: ["id"] },
+          { foreignKeyName: "fantasy_gameweek_scores_season_id_fkey"; columns: ["season_id"]; isOneToOne: false; referencedRelation: "seasons"; referencedColumns: ["id"] },
+        ]
+      }
+      fantasy_player_gameweek_stats: {
+        Row: {
+          club_id: number
+          club_name: string
+          created_at: string
+          fpl_player_id: number
+          form: number
+          gameweek_id: string
+          id: string
+          player_name: string
+          position: string
+          season_id: string
+          selected_by_percent: number
+          source_synced_at: string
+          status: string
+          transfers_in_event: number
+          transfers_out_event: number
+          is_global_captain: boolean
+          is_global_vice_captain: boolean
+          updated_at: string
+        }
+        Insert: {
+          club_id: number
+          club_name: string
+          created_at?: string
+          fpl_player_id: number
+          form?: number
+          gameweek_id: string
+          id?: string
+          player_name: string
+          position: string
+          season_id: string
+          selected_by_percent?: number
+          source_synced_at: string
+          status: string
+          transfers_in_event?: number
+          transfers_out_event?: number
+          is_global_captain?: boolean
+          is_global_vice_captain?: boolean
+          updated_at?: string
+        }
+        Update: {
+          club_id?: number
+          club_name?: string
+          created_at?: string
+          fpl_player_id?: number
+          form?: number
+          gameweek_id?: string
+          id?: string
+          player_name?: string
+          position?: string
+          season_id?: string
+          selected_by_percent?: number
+          source_synced_at?: string
+          status?: string
+          transfers_in_event?: number
+          transfers_out_event?: number
+          is_global_captain?: boolean
+          is_global_vice_captain?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "fantasy_player_gameweek_stats_gameweek_id_fkey"; columns: ["gameweek_id"]; isOneToOne: false; referencedRelation: "gameweeks"; referencedColumns: ["id"] },
+          { foreignKeyName: "fantasy_player_gameweek_stats_season_id_fkey"; columns: ["season_id"]; isOneToOne: false; referencedRelation: "seasons"; referencedColumns: ["id"] },
+        ]
+      }
+      fantasy_awards: {
+        Row: {
+          award: string
+          created_at: string
+          gameweek_id: string
+          id: string
+          mapping_id: string
+          season_id: string
+          selected_by: string
+          updated_at: string
+        }
+        Insert: {
+          award: string
+          created_at?: string
+          gameweek_id: string
+          id?: string
+          mapping_id: string
+          season_id: string
+          selected_by: string
+          updated_at?: string
+        }
+        Update: {
+          award?: string
+          created_at?: string
+          gameweek_id?: string
+          id?: string
+          mapping_id?: string
+          season_id?: string
+          selected_by?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "fantasy_awards_gameweek_id_fkey"; columns: ["gameweek_id"]; isOneToOne: false; referencedRelation: "gameweeks"; referencedColumns: ["id"] },
+          { foreignKeyName: "fantasy_awards_mapping_id_fkey"; columns: ["mapping_id"]; isOneToOne: false; referencedRelation: "fantasy_entry_mappings"; referencedColumns: ["id"] },
+          { foreignKeyName: "fantasy_awards_season_id_fkey"; columns: ["season_id"]; isOneToOne: false; referencedRelation: "seasons"; referencedColumns: ["id"] },
+          { foreignKeyName: "fantasy_awards_selected_by_fkey"; columns: ["selected_by"]; isOneToOne: false; referencedRelation: "app_users"; referencedColumns: ["id"] },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -684,6 +885,37 @@ export type Database = {
       }
       save_prediction: {
         Args: { p_choice: string; p_fixture_id: string; p_user_id: string }
+        Returns: Json
+      }
+      apply_fantasy_sync: {
+        Args: {
+          p_job_run_id: string
+          p_mapping_results: Json
+          p_players: Json
+          p_scores: Json
+          p_synced_at: string
+        }
+        Returns: Json
+      }
+      replace_fantasy_awards: {
+        Args: {
+          p_awards: Json
+          p_gameweek_id: string
+          p_season_id: string
+          p_selected_by: string
+        }
+        Returns: undefined
+      }
+      replace_fantasy_mapping: {
+        Args: {
+          p_app_user_id: string
+          p_archived_at: string
+          p_fpl_entry_id: number
+          p_fpl_manager_name: string
+          p_fpl_team_name: string
+          p_mapping_id: string
+          p_season_id: string
+        }
         Returns: Json
       }
     }

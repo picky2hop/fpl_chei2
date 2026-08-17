@@ -1,0 +1,47 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import type { UserProfile } from "@/lib/mock-data";
+import type { FantasyDashboardResponse } from "@/lib/fantasy/dashboard";
+
+type ViewTab = "leaderboard" | "players";
+
+function Avatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
+  return avatarUrl ? <Image src={avatarUrl} alt="" width={40} height={40} unoptimized className="size-10 rounded-full object-cover" /> : <span className="grid size-10 place-items-center rounded-full bg-[#29435d] text-xs font-black text-white/80">{name.slice(0, 2)}</span>;
+}
+
+function Leaderboard({ data, gameweek }: { data: FantasyDashboardResponse; gameweek: number }) {
+  const [mode, setMode] = useState<"gameweek" | "season">("gameweek");
+  const entries = mode === "gameweek" ? data.leaderboard.gameweek : data.leaderboard.season;
+  return <section className="space-y-4"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#8ca6bd]">Leaderboard</p><h2 className="mt-1 text-2xl font-black">ตารางคะแนน Fantasy</h2></div><div className="flex rounded-full bg-white/10 p-1 text-[11px] font-bold"><button type="button" onClick={() => setMode("gameweek")} className={`rounded-full px-3 py-1.5 ${mode === "gameweek" ? "bg-[#d9ff58] text-[#071525]" : "text-white/55"}`}>GW {gameweek}</button><button type="button" onClick={() => setMode("season")} className={`rounded-full px-3 py-1.5 ${mode === "season" ? "bg-[#d9ff58] text-[#071525]" : "text-white/55"}`}>ทั้งฤดูกาล</button></div></div><div className="overflow-hidden rounded-[24px] border border-white/10 bg-[#10253a]"><div className="flex justify-between border-b border-white/10 bg-white/5 px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white/45"><span>Rank · Manager</span><span>Points</span></div>{entries.length ? <div className="divide-y divide-white/10">{entries.map((entry, index) => <div key={entry.mappingId} className="flex items-center gap-3 px-4 py-3.5"><span className={`w-5 text-center text-sm font-black ${index === 0 ? "text-[#d9ff58]" : "text-white/45"}`}>{String(index + 1).padStart(2, "0")}</span><Avatar name={entry.displayName} avatarUrl={entry.avatarUrl} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-extrabold">{entry.displayName}</p><p className="truncate text-[10px] font-bold text-white/40">{entry.teamName} · FPL {entry.fplEntryId}{entry.mappingStatus === "archived" ? " · archived" : ""}</p></div><div className="text-right"><p className="text-lg font-black">{entry.points}</p><p className="text-[10px] font-bold text-white/40">คะแนน</p></div></div>)}</div> : <p className="px-4 py-10 text-center text-sm font-bold text-white/45">ยังไม่มีข้อมูล Fantasy</p>}</div><div className="grid grid-cols-2 gap-3 text-center text-xs font-bold"><div className="rounded-2xl border border-[#d9ff58]/20 bg-[#d9ff58]/10 px-3 py-3 text-[#d9ff58]">แชมป์ GW: {data.awards.champions.length} คน</div><div className="rounded-2xl border border-[#ff647c]/20 bg-[#ff647c]/10 px-3 py-3 text-[#ff8698]">บ๊วย GW: {data.awards.woodenSpoons.length} คน</div></div></section>;
+}
+
+function PlayerStats({ data }: { data: FantasyDashboardResponse }) {
+  const groups = [{ label: "เลือกติดทีมมากสุด", values: data.playerStats.selected }, { label: "ฟอร์มสูงสุด", values: data.playerStats.form }, { label: "ย้ายเข้ามากสุด", values: data.playerStats.transfersIn }, { label: "ย้ายออกมากสุด", values: data.playerStats.transfersOut }];
+  const positions = ["GK", "DEF", "MID", "FWD"] as const;
+  const captain = data.playerStats.globalCaptain;
+  const vice = data.playerStats.globalViceCaptain;
+  return <section className="space-y-4"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#8ca6bd]">Current GW player stats</p><h2 className="mt-1 text-2xl font-black">สถิตินักเตะ GW {data.currentGameweek}</h2></div><div className="rounded-2xl border border-[#6da9ff]/20 bg-[#6da9ff]/10 px-4 py-3 text-xs leading-5 text-[#b8d4ff]">แสดงอันดับจาก snapshot ของ GW ปัจจุบัน แยก GK / DEF / MID / FWD และเก็บนักเตะทั้งหมดจาก FPL</div>{(captain || vice) && <div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-[#d9ff58]/25 bg-[#d9ff58]/10 px-3 py-3"><p className="text-[10px] font-black text-[#d9ff58]">กัปตันที่ถูกเลือกมากสุด</p><p className="mt-1 truncate text-sm font-black">{captain?.playerName ?? "—"}</p></div><div className="rounded-2xl border border-[#6da9ff]/25 bg-[#6da9ff]/10 px-3 py-3"><p className="text-[10px] font-black text-[#b8d4ff]">รองกัปตันที่ถูกเลือกมากสุด</p><p className="mt-1 truncate text-sm font-black">{vice?.playerName ?? "—"}</p></div></div>}{groups.map((group) => <div key={group.label} className="rounded-[24px] border border-white/10 bg-[#10253a] p-4"><h3 className="text-sm font-black">{group.label}</h3><div className="mt-3 grid gap-3 sm:grid-cols-2">{positions.map((position) => <div key={position} className="rounded-2xl bg-white/5 p-3"><p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#8ca6bd]">{position}</p><div className="mt-2 space-y-2">{group.values[position].slice(0, 6).map((player, index) => <div key={player.playerId} className="flex items-center gap-2"><span className="w-4 text-center text-[10px] font-black text-white/40">{index + 1}</span><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold">{player.playerName}</p><p className="truncate text-[9px] font-bold text-white/40">{player.clubName}</p></div><span className="text-xs font-black text-[#d9ff58]">{player.metricValue}</span></div>)}{group.values[position].length === 0 && <p className="text-[10px] text-white/35">ยังไม่มีข้อมูล</p>}</div></div>)}</div></div>)}</section>;
+}
+
+export default function FantasyApp({ profile }: { profile: UserProfile }) {
+  const [data, setData] = useState<FantasyDashboardResponse | null>(null);
+  const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
+  const [tab, setTab] = useState<ViewTab>("leaderboard");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const query = selectedGameweek ? `?gameweek=${selectedGameweek}` : "";
+    void fetch(`/api/fantasy${query}`).then(async (response) => {
+      const body = await response.json() as FantasyDashboardResponse & { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "โหลด Fantasy ไม่สำเร็จ");
+      setData(body);
+      setError("");
+    }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "โหลด Fantasy ไม่สำเร็จ"));
+  }, [selectedGameweek]);
+
+  if (!data) return <main className="flex min-h-screen items-center justify-center bg-[#071525] px-5 text-sm font-bold text-white/60">{error || "กำลังโหลด Fantasy…"}</main>;
+  return <main className="min-h-screen bg-[#071525] px-5 py-7 text-white"><div className="mx-auto max-w-xl"><header className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#8ca6bd]">FPL CHEI CHEI</p><h1 className="mt-1 text-3xl font-black">แฟนตาซีเชยเชย</h1><p className="mt-1 text-xs font-bold text-white/45">{profile.displayName} · {data.season.name}</p></div><Avatar name={profile.displayName} avatarUrl={profile.avatarUrl} /></header>{data.sync.stale && <div className="mt-5 rounded-2xl border border-[#ffc857]/30 bg-[#ffc857]/10 px-4 py-3 text-xs font-bold leading-5 text-[#ffe0a0]">ข้อมูลอาจยังไม่ใช่รอบล่าสุด · {data.sync.message}</div>}<div className="mt-6 flex flex-wrap items-center justify-between gap-2"><div className="flex gap-2"><Link href="/" className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/70">หน้าแรก</Link><Link href="/dashboard" className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white/70">ไปแอปทายผล</Link></div><div className="flex gap-2"><button type="button" onClick={() => setSelectedGameweek(null)} disabled={selectedGameweek === null} className="rounded-full border border-[#d9ff58]/30 bg-[#d9ff58]/10 px-3 py-2 text-[10px] font-black text-[#d9ff58] disabled:opacity-45">GW ปัจจุบัน: GW {data.currentGameweek}</button><select aria-label="เลือกเกมวีค" value={selectedGameweek ?? data.selectedLeaderboardGameweek} onChange={(event) => setSelectedGameweek(Number(event.target.value))} className="rounded-full border border-white/15 bg-[#10253a] px-3 py-2 text-xs font-black text-white outline-none"><option value={data.currentGameweek}>GW {data.currentGameweek}</option>{Array.from({ length: data.currentGameweek - 1 }, (_, index) => index + 1).map((gameweek) => <option key={gameweek} value={gameweek}>GW {gameweek}</option>)}</select></div></div><div className="mt-6 flex rounded-2xl border border-white/10 bg-[#10253a] p-1"><button type="button" onClick={() => setTab("leaderboard")} className={`flex-1 rounded-xl py-3 text-sm font-black ${tab === "leaderboard" ? "bg-[#d9ff58] text-[#071525]" : "text-white/55"}`}>ตารางคะแนน</button><button type="button" onClick={() => setTab("players")} className={`flex-1 rounded-xl py-3 text-sm font-black ${tab === "players" ? "bg-[#d9ff58] text-[#071525]" : "text-white/55"}`}>สถิตินักเตะ</button></div><div className="mt-6">{tab === "leaderboard" ? <Leaderboard data={data} gameweek={data.selectedLeaderboardGameweek} /> : <PlayerStats data={data} />}</div></div></main>;
+}

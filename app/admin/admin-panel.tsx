@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import FantasyAdminPanel from "./fantasy-admin-panel";
 
 type ParticipantOptions = {
   users: Array<{ id: string; displayName: string; status: string }>;
@@ -80,6 +81,7 @@ export default function AdminPanel() {
             <div className="grid grid-cols-2 gap-2 pt-2"><button type="button" onClick={() => void updateParticipation("excluded")} disabled={!selectedUserId || !selectedGameweekId || state === "running"} className="rounded-xl border border-[#ff647c]/30 bg-[#ff647c]/10 py-3 text-sm font-black text-[#ff8698] disabled:opacity-40">Exclude</button><button type="button" onClick={() => void updateParticipation("active")} disabled={!selectedUserId || !selectedGameweekId || state === "running"} className="rounded-xl border border-[#47d7a0]/30 bg-[#47d7a0]/10 py-3 text-sm font-black text-[#b7f5de] disabled:opacity-40">Restore</button></div>
           </div>
         </section>
+        <FantasyAdminPanel />
       </div>
     </main>
   );
