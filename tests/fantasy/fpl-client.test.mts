@@ -79,3 +79,20 @@ test("falls back to the latest finished GW when FPL has no current GW", async ()
 
   assert.equal((await provider.getBootstrap()).currentGameweek, 2);
 });
+
+test("uses the next scheduled GW when FPL has no current or finished GW", async () => {
+  const provider = createFantasyFplProvider({
+    baseUrl: "https://fpl.test",
+    fetchImpl: async () => Response.json({
+      ...bootstrap,
+      events: [
+        { id: 1, is_current: false, is_next: true, finished: false, most_captained: null, most_vice_captained: null },
+        { id: 2, is_current: false, is_next: false, finished: false, most_captained: null, most_vice_captained: null },
+      ],
+    }),
+  });
+
+  const snapshot = await provider.getBootstrap();
+  assert.equal(snapshot.currentGameweek, 1);
+  assert.equal(snapshot.latestFinishedGameweek, null);
+});

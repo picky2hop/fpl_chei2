@@ -1,10 +1,12 @@
 import { requireAdmin } from "@/lib/auth/guards";
+import { fantasySyncResponseStatus } from "@/lib/api/admin-fantasy-handler";
 import { runAdminFantasySync } from "@/lib/data/fantasy-admin";
 
 export async function POST(): Promise<Response> {
   try {
     await requireAdmin();
-    return Response.json(await runAdminFantasySync());
+    const result = await runAdminFantasySync();
+    return Response.json(result, { status: fantasySyncResponseStatus(result) });
   } catch {
     return Response.json({ error: "ไม่สามารถซิงก์ Fantasy ได้" }, { status: 500 });
   }

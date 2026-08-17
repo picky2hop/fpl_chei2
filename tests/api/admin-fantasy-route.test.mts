@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAdminFantasyMappingsHandler, createAdminFantasyAwardsHandler } from "../../lib/api/admin-fantasy-handler.ts";
+import { createAdminFantasyMappingsHandler, createAdminFantasyAwardsHandler, fantasySyncResponseStatus } from "../../lib/api/admin-fantasy-handler.ts";
 import type { FantasyRepository } from "../../lib/fantasy/repository.ts";
 
 function repository(): FantasyRepository {
@@ -66,4 +66,9 @@ test("admin awards replace multiple recipients after validating mappings and GW"
   const response = await handler(new Request("https://example.test/api/admin/fantasy/awards", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ gameweekId: "gw-1", championMappingIds: ["m1"], woodenSpoonMappingIds: [] }) }));
   assert.equal(response.status, 200);
   assert.deepEqual((awards as { awards: unknown[] }).awards, [{ mappingId: "m1", award: "champion" }]);
+});
+
+test("admin sync reports a hard bootstrap failure as a non-success response", () => {
+  assert.equal(fantasySyncResponseStatus({ currentGameweek: null }), 502);
+  assert.equal(fantasySyncResponseStatus({ currentGameweek: 1 }), 200);
 });

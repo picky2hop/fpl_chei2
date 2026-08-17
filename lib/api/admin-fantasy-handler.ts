@@ -10,6 +10,10 @@ type AdminFantasyDependencies = {
   listUsers?: () => Promise<Array<{ id: string; displayName: string; status: string }>>;
 };
 
+export function fantasySyncResponseStatus(result: { currentGameweek: number | null }): number {
+  return result.currentGameweek === null ? 502 : 200;
+}
+
 function jsonRequest(request: Request): boolean {
   return request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() === "application/json";
 }

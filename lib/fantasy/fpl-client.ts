@@ -96,9 +96,10 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
   const current = events.find((event) => event.is_current === true);
   const finished = events.filter((event) => event.finished === true).map((event) => numberValue(event.id, "event id"));
   const latestFinishedGameweek = finished.length ? Math.max(...finished) : null;
+  const next = events.find((event) => event.is_next === true);
   const currentGameweek = current
     ? numberValue(current.id, "current event id")
-    : latestFinishedGameweek;
+    : latestFinishedGameweek ?? (next ? numberValue(next.id, "next event id") : null);
   if (currentGameweek === null) throw new FantasyFplError("FANTASY_FPL_NO_GAMEWEEK", "FPL has no current or finished gameweek");
 
   const players = arrayValue(root.elements, "players").map((item) => {
