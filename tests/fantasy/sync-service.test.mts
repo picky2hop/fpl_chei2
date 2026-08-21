@@ -26,6 +26,8 @@ function dependencies(overrides: Partial<FantasySyncDependencies> = {}): Fantasy
   const provider: FantasyFplProvider = {
     getEntrySummary: async (entryId) => ({ entryId, teamName: "Team", managerName: "Manager" }),
     getEntryHistory: async () => [{ event: 1, points: 72, event_transfers: 2, event_transfers_cost: 4, points_on_bench: 11 }],
+    getLeague: async (leagueId) => ({ leagueId, officialName: `League ${leagueId}` }),
+    getLeagueMembers: async () => [],
     getBootstrap: async () => ({
       currentGameweek: 1,
       latestFinishedGameweek: 1,

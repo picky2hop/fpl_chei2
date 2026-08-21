@@ -1,3 +1,5 @@
+import type { FplLeagueMember, FplLeagueSummary } from "./league-types.ts";
+
 export type FplEntryHistoryEvent = {
   event: number;
   points: number;
@@ -39,6 +41,8 @@ export type FantasyFplProvider = {
   getEntrySummary(entryId: number): Promise<FplEntrySummary>;
   getEntryHistory(entryId: number): Promise<FplEntryHistoryEvent[]>;
   getBootstrap(): Promise<FplBootstrapSnapshot>;
+  getLeague(leagueId: number): Promise<FplLeagueSummary>;
+  getLeagueMembers(leagueId: number): Promise<FplLeagueMember[]>;
 };
 
 export type FantasyPlayerStatInsert = {
@@ -54,6 +58,8 @@ export type FantasyPlayerStatInsert = {
   transfers_in_event: number;
   transfers_out_event: number;
   form: number;
+  is_global_captain?: boolean;
+  is_global_vice_captain?: boolean;
   source_synced_at: string;
 };
 

@@ -12,6 +12,16 @@ import type {
   FantasySyncWriteResult,
   FplPlayerSnapshot,
 } from "./types.ts";
+import type {
+  FantasyEntryGameweekScoreInsert,
+  FantasyLeagueMembershipInsert,
+  FantasyLeagueRecord,
+  CreateFantasyLeagueInput,
+  FantasyLeagueMappingCandidate,
+  FantasyLeagueSyncLeague,
+  FantasyLeagueSyncWriteResult,
+} from "./league-types.ts";
+import type { FantasyLeagueDashboardInput } from "./league-dashboard.ts";
 
 export type FantasyMappingIdentity = Pick<
   FantasyEntryMapping,
@@ -34,6 +44,27 @@ export type FantasyRepository = {
     mappingResults: Json[];
   }): Promise<FantasySyncWriteResult>;
   replaceAwards(input: { seasonId: string; gameweekId: string; selectedBy: string; awards: Array<{ mappingId: string; award: "champion" | "wooden_spoon" }> }): Promise<void>;
+};
+
+export type FantasyLeagueRepository = {
+  listActiveLeagues(seasonId: string): Promise<FantasyLeagueRecord[]>;
+  listLeagues(seasonId: string, includeArchived: boolean): Promise<FantasyLeagueRecord[]>;
+  createLeague(input: CreateFantasyLeagueInput): Promise<FantasyLeagueRecord>;
+  updateLeagueId(id: string, input: { fpl_league_id: number; official_name: string }): Promise<FantasyLeagueRecord>;
+  archiveLeague(id: string): Promise<void>;
+  listLeagueEntries(input: { seasonId: string; gameweekId: string }): Promise<FantasyLeagueMappingCandidate[]>;
+  listUnmappedLeagueEntries(input: { seasonId: string; gameweekId: string }): Promise<FantasyLeagueMappingCandidate[]>;
+  listLeagueEntryIds(input: { seasonId: string; leagueId: string; gameweekId: string }): Promise<number[]>;
+  replaceLeagueAwards(input: { seasonId: string; leagueId: string; gameweekId: string; selectedBy: string; awards: Array<{ fplEntryId: number; award: "champion" | "wooden_spoon" }> }): Promise<void>;
+  getLeagueDashboard(input: { seasonId: string; leagueId: string; selectedGameweekNumber?: number }): Promise<FantasyLeagueDashboardInput>;
+  applyLeagueSync(input: {
+    jobRunId: string;
+    syncedAt: string;
+    leagues: FantasyLeagueSyncLeague[];
+    memberships: FantasyLeagueMembershipInsert[];
+    scores: FantasyEntryGameweekScoreInsert[];
+    players: FantasyPlayerStatInsert[];
+  }): Promise<FantasyLeagueSyncWriteResult>;
 };
 
 type FantasyDatabaseClient = SupabaseClient<Database>;
@@ -72,12 +103,176 @@ function syncResultFromUnknown(value: unknown): FantasySyncWriteResult {
   };
 }
 
-export function createFantasyRepository(client: FantasyDatabaseClient): FantasyRepository {
+export function createFantasyRepository(client: FantasyDatabaseClient): FantasyRepository & FantasyLeagueRepository {
   return {
     async getActiveSeason() {
       const { data, error } = await client.from("seasons").select("id,name").eq("status", "active").maybeSingle();
       if (error || !data) throw new Error("Fantasy database operation failed");
       return data;
+    },
+
+    async listActiveLeagues(seasonId) {
+      return this.listLeagues(seasonId, false);
+    },
+
+    async listLeagues(seasonId, includeArchived) {
+      let query = client
+        .from("fantasy_leagues")
+        .select("id,season_id,fpl_league_id,official_name,status,archived_at")
+        .eq("season_id", seasonId)
+        .order("fpl_league_id");
+      if (!includeArchived) query = query.eq("status", "active");
+      const { data, error } = await query;
+      if (error || !data) throw new Error("Fantasy database operation failed");
+      return data.map((league) => ({ ...league, status: league.status as "active" | "archived" }));
+    },
+
+    async createLeague(input) {
+      const { data, error } = await client
+        .from("fantasy_leagues")
+        .insert(input)
+        .select("id,season_id,fpl_league_id,official_name,status,archived_at")
+        .single();
+      if (error || !data) throw new Error("Fantasy database operation failed");
+      return { ...data, status: data.status as "active" | "archived" };
+    },
+
+    async updateLeagueId(id, input) {
+      const { data, error } = await client
+        .from("fantasy_leagues")
+        .update({ fpl_league_id: input.fpl_league_id, official_name: input.official_name, status: "active", archived_at: null, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select("id,season_id,fpl_league_id,official_name,status,archived_at")
+        .single();
+      if (error || !data) throw new Error("Fantasy database operation failed");
+      return { ...data, status: data.status as "active" | "archived" };
+    },
+
+    async archiveLeague(id) {
+      const { error } = await client
+        .from("fantasy_leagues")
+        .update({ status: "archived", archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw new Error("Fantasy database operation failed");
+    },
+
+    async listLeagueEntries(input) {
+      const { data: leagues, error: leagueError } = await client
+        .from("fantasy_leagues")
+        .select("id,official_name")
+        .eq("season_id", input.seasonId)
+        .eq("status", "active");
+      if (leagueError || !leagues || leagues.length === 0) return [];
+      const leagueIds = leagues.map((league) => league.id);
+      const { data: memberships, error: membershipError } = await client
+        .from("fantasy_league_membership_snapshots").select("league_id,fpl_entry_id,fpl_team_name,fpl_manager_name").eq("season_id", input.seasonId).eq("gameweek_id", input.gameweekId).in("league_id", leagueIds);
+      if (membershipError || !memberships) throw new Error("Fantasy database operation failed");
+      const leagueById = new Map(leagues.map((league) => [league.id, league.official_name]));
+      const candidates = new Map<number, FantasyLeagueMappingCandidate>();
+      for (const member of memberships) {
+        const existing = candidates.get(member.fpl_entry_id);
+        const league = { id: member.league_id, official_name: leagueById.get(member.league_id) ?? "" };
+        if (!existing) {
+          candidates.set(member.fpl_entry_id, { fpl_entry_id: member.fpl_entry_id, fpl_team_name: member.fpl_team_name, fpl_manager_name: member.fpl_manager_name, leagues: [league] });
+        } else if (!existing.leagues.some((item) => item.id === league.id)) {
+          existing.leagues.push(league);
+        }
+      }
+      return [...candidates.values()].sort((left, right) => left.fpl_entry_id - right.fpl_entry_id);
+    },
+
+    async listUnmappedLeagueEntries(input) {
+      const [entries, mappings] = await Promise.all([
+        this.listLeagueEntries(input),
+        client.from("fantasy_entry_mappings").select("fpl_entry_id").eq("season_id", input.seasonId).eq("mapping_status", "active"),
+      ]);
+      if (mappings.error || !mappings.data) throw new Error("Fantasy database operation failed");
+      const mappedEntries = new Set(mappings.data.map((mapping) => mapping.fpl_entry_id));
+      return entries.filter((entry) => !mappedEntries.has(entry.fpl_entry_id));
+    },
+
+    async listLeagueEntryIds(input) {
+      const { data, error } = await client
+        .from("fantasy_league_membership_snapshots")
+        .select("fpl_entry_id")
+        .eq("season_id", input.seasonId)
+        .eq("league_id", input.leagueId)
+        .eq("gameweek_id", input.gameweekId);
+      if (error || !data) throw new Error("Fantasy database operation failed");
+      return data.map((row) => row.fpl_entry_id);
+    },
+
+    async replaceLeagueAwards(input) {
+      const { error } = await client.rpc("replace_fantasy_league_awards", {
+        p_season_id: input.seasonId,
+        p_league_id: input.leagueId,
+        p_gameweek_id: input.gameweekId,
+        p_selected_by: input.selectedBy,
+        p_awards: input.awards.map((award) => ({ fpl_entry_id: award.fplEntryId, award: award.award })),
+      });
+      if (error) throw new Error("Fantasy database operation failed");
+    },
+
+    async getLeagueDashboard(input) {
+      const [{ data: season, error: seasonError }, { data: gameweeks, error: gameweekError }, { data: leagues, error: leagueError }] = await Promise.all([
+        client.from("seasons").select("id,name").eq("id", input.seasonId).maybeSingle(),
+        client.from("gameweeks").select("id,number,name,is_current,status").eq("season_id", input.seasonId).order("number"),
+        client.from("fantasy_leagues").select("id,season_id,fpl_league_id,official_name,status,archived_at").eq("season_id", input.seasonId).order("fpl_league_id"),
+      ]);
+      if (seasonError || gameweekError || leagueError || !season || !gameweeks || !leagues) throw new Error("Fantasy database operation failed");
+      const selectedLeague = leagues.find((league) => league.id === input.leagueId);
+      if (!selectedLeague) throw new Error("Fantasy league is unavailable");
+      const currentGameweekNumber = gameweeks.find((gameweek) => gameweek.is_current)?.number
+        ?? [...gameweeks].filter((gameweek) => gameweek.status === "closed" || gameweek.status === "reopened").sort((left, right) => right.number - left.number)[0]?.number
+        ?? gameweeks[0]?.number
+        ?? 0;
+      const selectedGameweekNumber = gameweeks.some((gameweek) => gameweek.number === input.selectedGameweekNumber)
+        ? input.selectedGameweekNumber ?? currentGameweekNumber
+        : currentGameweekNumber;
+      const currentGameweekId = gameweeks.find((gameweek) => gameweek.number === currentGameweekNumber)?.id;
+      const selectedGameweekId = gameweeks.find((gameweek) => gameweek.number === selectedGameweekNumber)?.id;
+      if (!currentGameweekId || !selectedGameweekId) throw new Error("Fantasy gameweek is unavailable");
+      const [membershipResult, scoreResult, playerResult, mappingResult, usersResult, awardResult, jobResult] = await Promise.all([
+        client.from("fantasy_league_membership_snapshots").select("league_id,gameweek_id,fpl_entry_id,fpl_team_name,fpl_manager_name").eq("season_id", input.seasonId).eq("league_id", input.leagueId),
+        client.from("fantasy_entry_gameweek_scores").select("fpl_entry_id,gameweek_id,points").eq("season_id", input.seasonId),
+        client.from("fantasy_player_gameweek_stats").select("*").eq("season_id", input.seasonId).eq("gameweek_id", currentGameweekId),
+        client.from("fantasy_entry_mappings").select("fpl_entry_id,app_user_id").eq("season_id", input.seasonId).eq("mapping_status", "active"),
+        client.from("app_users").select("id,display_name,avatar_url"),
+        client.from("fantasy_league_awards").select("fpl_entry_id,award").eq("season_id", input.seasonId).eq("league_id", input.leagueId).eq("gameweek_id", selectedGameweekId),
+        client.from("job_runs").select("status,finished_at,started_at,error_message").eq("job_type", "fantasy_sync").order("started_at", { ascending: false }).limit(20),
+      ]);
+      if (membershipResult.error || scoreResult.error || playerResult.error || mappingResult.error || usersResult.error || awardResult.error || jobResult.error
+        || !membershipResult.data || !scoreResult.data || !playerResult.data || !mappingResult.data || !usersResult.data || !awardResult.data || !jobResult.data) {
+        throw new Error("Fantasy database operation failed");
+      }
+      const gameweekNumbers = new Map(gameweeks.map((gameweek) => [gameweek.id, gameweek.number]));
+      const usersById = new Map(usersResult.data.map((user) => [user.id, user]));
+      const latestSuccess = jobResult.data.find((job) => job.status === "succeeded");
+      const latestJob = jobResult.data[0];
+      return {
+        season,
+        gameweeks,
+        leagues: leagues.map((league) => ({ ...league, status: league.status as "active" | "archived" })),
+        selectedLeagueId: input.leagueId,
+        selectedGameweekNumber,
+        memberships: membershipResult.data.map((membership) => ({ ...membership, gameweek_number: gameweekNumbers.get(membership.gameweek_id) ?? 0 })),
+        scores: scoreResult.data.map((score) => ({ ...score, gameweek_number: gameweekNumbers.get(score.gameweek_id) ?? 0 })),
+        mappings: mappingResult.data.map((mapping) => ({
+          fpl_entry_id: mapping.fpl_entry_id,
+          app_user_id: mapping.app_user_id,
+          display_name: usersById.get(mapping.app_user_id)?.display_name ?? "ไม่ทราบชื่อ",
+          avatar_url: usersById.get(mapping.app_user_id)?.avatar_url ?? null,
+        })),
+        players: playerResult.data as unknown as FantasyLeagueDashboardInput["players"],
+        globalCaptainPlayerId: playerResult.data.find((player) => player.is_global_captain)?.fpl_player_id ?? null,
+        globalViceCaptainPlayerId: playerResult.data.find((player) => player.is_global_vice_captain)?.fpl_player_id ?? null,
+        awards: awardResult.data.map((award) => ({ fpl_entry_id: award.fpl_entry_id, award: award.award as "champion" | "wooden_spoon" })),
+        sync: {
+          lastSyncedAt: latestSuccess?.finished_at ?? null,
+          stale: !latestSuccess || latestJob?.status !== "succeeded",
+          message: !latestSuccess || latestJob?.status !== "succeeded" ? "ยังไม่สามารถอัปเดตข้อมูล Fantasy ล่าสุดได้" : null,
+        },
+      };
     },
 
     async getDashboard(input) {
@@ -207,6 +402,33 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
       });
       if (error || !data) throw new Error("Fantasy database operation failed");
       return syncResultFromUnknown(data);
+    },
+
+    async applyLeagueSync(input) {
+      const { data, error } = await client.rpc("apply_fantasy_league_sync", {
+        p_job_run_id: input.jobRunId,
+        p_synced_at: input.syncedAt,
+        p_leagues: input.leagues,
+        p_memberships: input.memberships,
+        p_scores: input.scores,
+        p_players: input.players,
+      });
+      if (error || !data || typeof data !== "object") throw new Error("Fantasy database operation failed");
+      const row = data as Record<string, unknown>;
+      if (typeof row.jobRunId !== "string"
+        || typeof row.leaguesUpserted !== "number"
+        || typeof row.membershipsUpserted !== "number"
+        || typeof row.scoresUpserted !== "number"
+        || typeof row.playersUpserted !== "number") {
+        throw new Error("Fantasy sync response is invalid");
+      }
+      return {
+        jobRunId: row.jobRunId,
+        leaguesUpserted: row.leaguesUpserted,
+        membershipsUpserted: row.membershipsUpserted,
+        scoresUpserted: row.scoresUpserted,
+        playersUpserted: row.playersUpserted,
+      };
     },
 
     async replaceAwards(input) {

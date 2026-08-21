@@ -1,4 +1,5 @@
 import { getServerEnv } from "../env.ts";
+import type { FplLeagueMember, FplLeagueSummary } from "./league-types.ts";
 import type {
   FantasyFplProvider,
   FplBootstrapSnapshot,
@@ -37,6 +38,34 @@ function objectValue(value: unknown, label: string): Record<string, unknown> {
 function arrayValue(value: unknown, label: string): unknown[] {
   if (!Array.isArray(value)) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", `Invalid FPL ${label}`);
   return value;
+}
+
+function leagueMeta(value: unknown): FplLeagueSummary {
+  const root = objectValue(value, "league standings");
+  const league = objectValue(root.league, "league details");
+  const leagueId = numberValue(league.id, "league id");
+  const officialName = String(league.name ?? "").trim();
+  if (!officialName) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", "FPL league name is missing");
+  return { leagueId, officialName };
+}
+
+function leagueMembersPage(value: unknown): { meta: FplLeagueSummary; members: FplLeagueMember[]; hasNext: boolean } {
+  const root = objectValue(value, "league standings");
+  const meta = leagueMeta(value);
+  const standings = objectValue(root.standings, "league standings data");
+  const members = arrayValue(standings.results, "league standings results").map((item) => {
+    const row = objectValue(item, "league member");
+    const teamName = String(row.entry_name ?? "").trim();
+    const managerName = String(row.player_name ?? "").trim();
+    if (!teamName || !managerName) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", "FPL league member identity is missing");
+    return {
+      entryId: numberValue(row.entry, "league entry id"),
+      teamName,
+      managerName,
+      rank: row.rank == null ? null : numberValue(row.rank, "league member rank"),
+    } satisfies FplLeagueMember;
+  });
+  return { meta, members, hasNext: standings.has_next === true };
 }
 
 async function fetchJson(path: string, options: Required<Pick<FetchFantasyFplOptions, "fetchImpl" | "baseUrl" | "timeoutMs">>): Promise<unknown> {
@@ -139,6 +168,13 @@ export function createFantasyFplProvider(input: FetchFantasyFplOptions = {}): Fa
     baseUrl: (input.baseUrl ?? getServerEnv().fplApiBaseUrl).replace(/\/$/, ""),
     timeoutMs: input.timeoutMs ?? 10_000,
   };
+  async function getLeagueStandingsPage(leagueId: number, page: number): Promise<{ meta: FplLeagueSummary; members: FplLeagueMember[]; hasNext: boolean }> {
+    const query = page === 1
+      ? "?page_standings=1&page_new_entries=1"
+      : `?page_standings=1&page_new_entries=1&page=${page}`;
+    return leagueMembersPage(await fetchJson(`leagues-classic/${leagueId}/standings/${query}`, options));
+  }
+
   return {
     async getEntrySummary(entryId) {
       const root = objectValue(await fetchJson(`entry/${entryId}/`, options), "entry summary");
@@ -153,6 +189,25 @@ export function createFantasyFplProvider(input: FetchFantasyFplOptions = {}): Fa
     },
     async getBootstrap() {
       return normalizeBootstrap(await fetchJson("bootstrap-static/", options));
+    },
+    async getLeague(leagueId) {
+      const page = await getLeagueStandingsPage(leagueId, 1);
+      if (page.meta.leagueId !== leagueId) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", "FPL league ID does not match request");
+      return page.meta;
+    },
+    async getLeagueMembers(leagueId) {
+      const members: FplLeagueMember[] = [];
+      let pageNumber = 1;
+      let page = await getLeagueStandingsPage(leagueId, pageNumber);
+      if (page.meta.leagueId !== leagueId) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", "FPL league ID does not match request");
+      members.push(...page.members);
+      while (page.hasNext) {
+        pageNumber += 1;
+        page = await getLeagueStandingsPage(leagueId, pageNumber);
+        if (page.meta.leagueId !== leagueId) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", "FPL league ID does not match request");
+        members.push(...page.members);
+      }
+      return members;
     },
   };
 }

@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/db/types";
 import { createFantasyFplProvider } from "@/lib/fantasy/fpl-client";
 import { createFantasyRepository } from "@/lib/fantasy/repository";
-import { runFantasySync, type FantasySyncJobFinish } from "@/lib/fantasy/sync-service";
+import { runFantasyLeagueSync, type FantasyLeagueSyncJobFinish } from "@/lib/fantasy/league-sync-service";
 
 export function getFantasyAdminRepository() {
   return createFantasyRepository(getSupabaseAdmin());
@@ -25,7 +25,7 @@ export async function runAdminFantasySync() {
   const provider = getFantasyAdminProvider();
   const season = await repository.getActiveSeason();
   const dashboard = await repository.getDashboard({ seasonId: season.id });
-  return runFantasySync({
+  return runFantasyLeagueSync({
     now: () => new Date(),
     seasonId: season.id,
     gameweeks: dashboard.gameweeks.map((gameweek) => ({ id: gameweek.id, number: gameweek.number })),
@@ -45,7 +45,7 @@ export async function runAdminFantasySync() {
       if (error || !data) throw new Error("Fantasy job could not start");
       return { id: data.id };
     },
-    finishJob: async (input: FantasySyncJobFinish) => {
+    finishJob: async (input: FantasyLeagueSyncJobFinish) => {
       const { error } = await getSupabaseAdmin().from("job_runs").update({
         status: input.status,
         finished_at: input.finishedAt,

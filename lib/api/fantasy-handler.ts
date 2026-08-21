@@ -1,6 +1,6 @@
 export type FantasyHandlerDependencies = {
   requireUser: () => Promise<{ id: string }>;
-  getDashboard: (input: { userId: string; gameweekNumber?: number }) => Promise<unknown>;
+  getDashboard: (input: { userId: string; leagueId: string; gameweekNumber?: number; mode: "gameweek" | "season" }) => Promise<unknown>;
 };
 
 function authStatus(error: unknown): 401 | 403 {
@@ -19,6 +19,8 @@ export function createFantasyHandler(dependencies: FantasyHandlerDependencies) {
     }
 
     const url = new URL(request.url);
+    const leagueId = url.searchParams.get("league")?.trim() ?? url.searchParams.get("leagueId")?.trim() ?? "";
+    if (!leagueId) return Response.json({ error: "ต้องเลือกลีก Fantasy ก่อนดูอันดับ" }, { status: 400 });
     const rawGameweek = url.searchParams.get("gameweek");
     let gameweekNumber: number | undefined;
     if (rawGameweek !== null) {
@@ -27,9 +29,12 @@ export function createFantasyHandler(dependencies: FantasyHandlerDependencies) {
         return Response.json({ error: "Invalid gameweek" }, { status: 400 });
       }
     }
+    const rawMode = url.searchParams.get("mode");
+    const mode = rawMode === null || rawMode === "gameweek" || rawMode === "season" ? (rawMode ?? "gameweek") : null;
+    if (!mode) return Response.json({ error: "Invalid Fantasy mode" }, { status: 400 });
 
     try {
-      return Response.json(await dependencies.getDashboard({ userId: user.id, gameweekNumber }));
+      return Response.json(await dependencies.getDashboard({ userId: user.id, leagueId, gameweekNumber, mode }));
     } catch {
       return Response.json({ error: "Unable to load Fantasy" }, { status: 500 });
     }

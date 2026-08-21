@@ -56,6 +56,25 @@ test("admin mapping rejects non-admin and invalid Entry IDs", async () => {
   assert.equal(response.status, 400);
 });
 
+test("admin mapping GET exposes league member candidates with badges", async () => {
+  const base = repository();
+  const response = await createAdminFantasyMappingsHandler({
+    requireAdmin: async () => ({ id: "admin-1" }),
+    repository: {
+      ...base,
+      listLeagues: async () => [{ id: "league-1", season_id: "season-1", fpl_league_id: 819498, official_name: "Cup", status: "active", archived_at: null }],
+      listUnmappedLeagueEntries: async () => [{ fpl_entry_id: 10, fpl_team_name: "Team", fpl_manager_name: "Manager", leagues: [{ id: "league-1", official_name: "Cup" }] }],
+      listLeagueEntries: async () => [{ fpl_entry_id: 10, fpl_team_name: "Team", fpl_manager_name: "Manager", leagues: [{ id: "league-1", official_name: "Cup" }] }],
+    },
+    listUsers: async () => [],
+    provider: { getEntrySummary: async (entryId) => ({ entryId, teamName: "Team", managerName: "Manager" }) },
+  })(new Request("https://example.test/api/admin/fantasy/mappings", { method: "GET" }));
+  const value = await response.json() as { unmappedEntries: Array<{ fpl_entry_id: number; leagues: unknown[] }> };
+  assert.equal(response.status, 200);
+  assert.equal(value.unmappedEntries[0].fpl_entry_id, 10);
+  assert.equal(value.unmappedEntries[0].leagues.length, 1);
+});
+
 test("admin awards replace multiple recipients after validating mappings and GW", async () => {
   let awards: unknown;
   const base = repository();
