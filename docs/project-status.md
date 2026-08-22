@@ -161,9 +161,9 @@ Decisions ที่ล็อกแล้ว:
 - [Phase 2 deployment runbook](phase-2-deployment-runbook.md)
 - [Phase 3A pre-season hardening](phase-3a-preseason-hardening.md)
 
-## 2026-08-22 — Prediction/LINE follow-up (local, pending review)
+## 2026-08-22 — Prediction/LINE follow-up (deployed code, pending live sync validation)
 
-การแก้ไขรอบนี้ทำใน local repository แล้ว แต่ยังไม่ commit, push, deploy หรือ apply migration ไป production:
+การแก้ไขรอบนี้ commit และ push แล้วที่ `0be541f`; migration ถูก apply production แล้ว แต่ยังต้องรอ Vercel deployment เสร็จและ sync รอบถัดไปเพื่อยืนยัน state transition ของ fixture จริง:
 
 - `finished_provisional` จาก FPL ถูกปฏิบัติเป็นสถานะจบการแข่งขันสำหรับการแสดงผล, การล็อกคำทาย และการคำนวณคะแนนหลัง sync; raw payload ยังเก็บไว้เพื่อ audit
 - หน้าทายผลบันทึกเฉพาะคู่ที่ยังไม่เริ่มแข่ง และคงคำทายเดิมของคู่ที่เริ่มแล้ว พร้อมแสดงข้อความเตือนและเปิด share prompt หลังบันทึกสำเร็จ
@@ -171,4 +171,4 @@ Decisions ที่ล็อกแล้ว:
 - LINE `ขอตาราง` จำกัดผู้เล่นที่มีคำทายครบทุกคู่ใน current GW; `บอลวันนี้` รวมวันนี้และพรุ่งนี้ไว้ใน Flex bubble เดียว; `ผลทาย` แสดง score ล่าสุด
 - เพิ่มปุ่มสลับจากแอปทายผลไปแอป Fantasy
 
-Migration ที่เตรียมไว้คือ `supabase/migrations/20260822100000_provisional_finished_scoring.sql` และยังต้อง review/apply ใน production ก่อนสถานะ `finished_provisional` จะเปลี่ยนเป็น `finished` ในฐานข้อมูลจริง
+Migration คือ `supabase/migrations/20260822092359_provisional_finished_scoring.sql` และ production migration history บันทึกชื่อ `provisional_finished_scoring` แล้ว; function รองรับ `finished_provisional` แล้ว แต่ fixture ที่มีอยู่จะเปลี่ยนเป็น `finished` เมื่อ sync รอบถัดไปได้รับ snapshot ใหม่
