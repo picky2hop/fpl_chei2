@@ -43,6 +43,16 @@ function fixtureSquad() {
   };
 }
 
+function imageComponents(value: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(value)) return value.flatMap(imageComponents);
+  if (!value || typeof value !== "object") return [];
+  const component = value as Record<string, unknown>;
+  return [
+    ...(component.type === "image" ? [component] : []),
+    ...Object.values(component).flatMap(imageComponents),
+  ];
+}
+
 test("builds a fantasy GW leaderboard without exposing entry ids", () => {
   const message = buildFantasyLeaderboardShareFlex({
     leagueName: "เชยเชย Cup",
@@ -133,4 +143,17 @@ test("uses LINE-supported sizing properties in the squad share", () => {
 
   validateFlexMessage(message);
   assert.doesNotMatch(JSON.stringify(message), /minWidth/);
+});
+
+test("does not put Box-only cornerRadius on leaderboard images", () => {
+  const message = buildFantasyLeaderboardShareFlex({
+    leagueName: "เชยเชย Cup",
+    gameweek: 3,
+    period: "gameweek",
+    rows: [{ rank: 1, managerName: "Picky", teamName: "Chei FC", points: 26, avatarUrl: "https://example.com/avatar.png" }],
+  });
+
+  validateFlexMessage(message);
+  assert.ok(imageComponents(message).length > 0);
+  assert.equal(imageComponents(message).some((image) => "cornerRadius" in image), false);
 });

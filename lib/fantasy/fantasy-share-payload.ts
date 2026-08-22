@@ -49,7 +49,6 @@ function imageOrFallback(url: string | null | undefined, fallback: string, size 
       size,
       aspectMode: "cover",
       aspectRatio: "1:1",
-      cornerRadius: "xxl",
     };
   }
   return {
