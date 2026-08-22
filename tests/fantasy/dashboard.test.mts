@@ -28,6 +28,28 @@ test("dashboard defaults to current GW while player stats stay current-only", ()
   assert.deepEqual(result.playerStats.selected.MID.map((entry) => entry.playerId), [2]);
 });
 
+test("dashboard keeps multiple teams separate when they share one LINE identity", () => {
+  const result = buildFantasyDashboard({
+    season: { id: "s1", name: "2026/27" },
+    gameweeks: [{ id: "gw1", number: 1, name: "GW 1", is_current: true, status: "open" }],
+    mappings: [
+      { id: "m1", season_id: "s1", app_user_id: "u1", fpl_entry_id: 100, fpl_team_name: "FC One", fpl_manager_name: "Manager One", mapping_status: "active", display_name: "LINE User", avatar_url: null },
+      { id: "m2", season_id: "s1", app_user_id: "u1", fpl_entry_id: 101, fpl_team_name: "FC Two", fpl_manager_name: "Manager Two", mapping_status: "active", display_name: "LINE User", avatar_url: null },
+    ],
+    scores: [{ mapping_id: "m1", gameweek_id: "gw1", points: 41 }, { mapping_id: "m2", gameweek_id: "gw1", points: 37 }],
+    players: [],
+    globalCaptainPlayerId: null,
+    globalViceCaptainPlayerId: null,
+    awards: [],
+    sync: { lastSyncedAt: null, stale: false, message: null },
+  });
+
+  assert.deepEqual(result.leaderboard.gameweek.map((entry) => [entry.fplEntryId, entry.points, entry.appUserId]), [
+    [100, 41, "u1"],
+    [101, 37, "u1"],
+  ]);
+});
+
 test("dashboard can select historical leaderboard GW without changing current player stats", () => {
   const result = buildFantasyDashboard({
     season: { id: "s1", name: "2026/27" },

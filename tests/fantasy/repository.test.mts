@@ -29,17 +29,19 @@ test("same-GW player sync upserts identity while a different GW adds snapshots",
   assert.equal(uniqueSnapshotKeys([...first, ...nextGw]).size, 1400);
 });
 
-test("active mapping identity cannot be duplicated by user or FPL entry", () => {
+test("allows one active LINE user to map multiple FPL Entries", () => {
+  assert.doesNotThrow(() => assertActiveMappingUniqueness([
+    { season_id: "s1", app_user_id: "u1", fpl_entry_id: 100, mapping_status: "active" },
+    { season_id: "s1", app_user_id: "u1", fpl_entry_id: 101, mapping_status: "active" },
+  ]));
+});
+
+test("active mapping identity cannot duplicate an FPL entry", () => {
   assert.doesNotThrow(() => assertActiveMappingUniqueness([
     { season_id: "s1", app_user_id: "u1", fpl_entry_id: 100, mapping_status: "active" },
     { season_id: "s1", app_user_id: "u1", fpl_entry_id: 100, mapping_status: "archived" },
     { season_id: "s1", app_user_id: "u2", fpl_entry_id: 101, mapping_status: "active" },
   ]));
-
-  assert.throws(() => assertActiveMappingUniqueness([
-    { season_id: "s1", app_user_id: "u1", fpl_entry_id: 100, mapping_status: "active" },
-    { season_id: "s1", app_user_id: "u1", fpl_entry_id: 101, mapping_status: "active" },
-  ]), /active mapping already exists for user/);
 
   assert.throws(() => assertActiveMappingUniqueness([
     { season_id: "s1", app_user_id: "u1", fpl_entry_id: 100, mapping_status: "active" },

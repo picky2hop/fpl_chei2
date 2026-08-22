@@ -40,6 +40,25 @@ test("includes mapped and unmapped members and assigns competition ranks", () =>
   assert.equal(rows[1].mapped, false);
 });
 
+test("keeps two mapped Entries as separate rows when they share one LINE identity", () => {
+  const rows = buildLeagueLeaderboard({
+    members: members.slice(0, 2),
+    scores,
+    mappings: [
+      { fpl_entry_id: 101, app_user_id: "user-1", display_name: "LINE One", avatar_url: null },
+      { fpl_entry_id: 102, app_user_id: "user-1", display_name: "LINE One", avatar_url: null },
+    ],
+    selectedGameweekId: "gw-2",
+    selectedGameweekNumber: 2,
+    mode: "gameweek",
+  });
+
+  assert.deepEqual(rows.map((row) => [row.fplEntryId, row.points, row.appUserId, row.rank]), [
+    [101, 20, "user-1", 1],
+    [102, 10, "user-1", 2],
+  ]);
+});
+
 test("season mode sums scores through the selected Gameweek", () => {
   const rows = buildLeagueLeaderboard({
     members,

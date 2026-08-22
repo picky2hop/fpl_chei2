@@ -468,16 +468,12 @@ export function uniqueSnapshotKeys(rows: FantasyPlayerStatInsert[]): Set<string>
 }
 
 export function assertActiveMappingUniqueness(rows: FantasyMappingIdentity[]): void {
-  const users = new Set<string>();
   const entries = new Set<string>();
 
   for (const row of rows) {
     if (row.mapping_status !== "active") continue;
-    const userKey = `${row.season_id}:${row.app_user_id}`;
     const entryKey = `${row.season_id}:${row.fpl_entry_id}`;
-    if (users.has(userKey)) throw new Error("active mapping already exists for user");
     if (entries.has(entryKey)) throw new Error("active mapping already exists for FPL entry");
-    users.add(userKey);
     entries.add(entryKey);
   }
 }
