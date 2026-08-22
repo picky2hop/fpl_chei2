@@ -1,9 +1,41 @@
 import type {
   FantasyGameweekScoreInsert,
   FantasyPlayerStatInsert,
+  FantasyEntryCurrentSquad,
+  FantasySquadPlayer,
   FplBootstrapSnapshot,
   FplEntryHistoryEvent,
 } from "./types.ts";
+
+function formationFor(players: FantasySquadPlayer[]): string {
+  const counts = ["DEF", "MID", "FWD"].map((position) => players.filter((player) => player.position === position).length);
+  return counts.join("-");
+}
+
+export function normalizeEntryCurrentSquad(input: {
+  gameweekNumber: number;
+  picks: FantasySquadPlayer[];
+}): FantasyEntryCurrentSquad {
+  if (!Number.isInteger(input.gameweekNumber) || input.gameweekNumber < 1 || input.picks.length !== 15) {
+    throw new Error("Fantasy squad payload is invalid");
+  }
+
+  const picks = [...input.picks].sort((left, right) => left.pickPosition - right.pickPosition);
+  if (picks.some((pick, index) => pick.pickPosition !== index + 1)) {
+    throw new Error("Fantasy squad positions are invalid");
+  }
+
+  const starters = picks.slice(0, 11);
+  const bench = picks.slice(11);
+  return {
+    gameweekNumber: input.gameweekNumber,
+    formation: formationFor(starters),
+    captainPlayerId: picks.find((pick) => pick.isCaptain)?.playerId ?? null,
+    viceCaptainPlayerId: picks.find((pick) => pick.isViceCaptain)?.playerId ?? null,
+    starters,
+    bench,
+  };
+}
 
 export function normalizePlayerSnapshot(input: {
   seasonId: string;

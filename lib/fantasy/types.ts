@@ -8,6 +8,29 @@ export type FplEntryHistoryEvent = {
   points_on_bench: number;
 };
 
+export type FantasySquadPlayer = {
+  pickPosition: number;
+  playerId: number;
+  playerName: string;
+  position: "GK" | "DEF" | "MID" | "FWD";
+  clubName: string;
+  multiplier: number;
+  isCaptain: boolean;
+  isViceCaptain: boolean;
+  points: number | null;
+};
+
+export type FplEntryCurrentSquad = {
+  gameweekNumber: number;
+  formation: string;
+  captainPlayerId: number | null;
+  viceCaptainPlayerId: number | null;
+  starters: FantasySquadPlayer[];
+  bench: FantasySquadPlayer[];
+};
+
+export type FantasyEntryCurrentSquad = FplEntryCurrentSquad;
+
 export type FplEntrySummary = {
   entryId: number;
   teamName: string;
@@ -40,9 +63,14 @@ export type FplBootstrapSnapshot = {
 export type FantasyFplProvider = {
   getEntrySummary(entryId: number): Promise<FplEntrySummary>;
   getEntryHistory(entryId: number): Promise<FplEntryHistoryEvent[]>;
+  getEntryPicks?(entryId: number, gameweekNumber: number): Promise<FplEntryCurrentSquad>;
   getBootstrap(): Promise<FplBootstrapSnapshot>;
   getLeague(leagueId: number): Promise<FplLeagueSummary>;
   getLeagueMembers(leagueId: number): Promise<FplLeagueMember[]>;
+};
+
+export type FantasyFplProviderWithPicks = FantasyFplProvider & {
+  getEntryPicks(entryId: number, gameweekNumber: number): Promise<FplEntryCurrentSquad>;
 };
 
 export type FantasyPlayerStatInsert = {

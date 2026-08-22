@@ -796,6 +796,45 @@ export type Database = {
           { foreignKeyName: "fantasy_entry_gameweek_scores_season_id_fkey"; columns: ["season_id"]; isOneToOne: false; referencedRelation: "seasons"; referencedColumns: ["id"] },
         ]
       }
+      fantasy_entry_current_squads: {
+        Row: {
+          created_at: string
+          fpl_entry_id: number
+          gameweek_id: string
+          gameweek_number: number
+          id: string
+          season_id: string
+          source_synced_at: string
+          squad: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fpl_entry_id: number
+          gameweek_id: string
+          gameweek_number: number
+          id?: string
+          season_id: string
+          source_synced_at: string
+          squad: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fpl_entry_id?: number
+          gameweek_id?: string
+          gameweek_number?: number
+          id?: string
+          season_id?: string
+          source_synced_at?: string
+          squad?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "fantasy_entry_current_squads_gameweek_id_fkey"; columns: ["gameweek_id"]; isOneToOne: false; referencedRelation: "gameweeks"; referencedColumns: ["id"] },
+          { foreignKeyName: "fantasy_entry_current_squads_season_id_fkey"; columns: ["season_id"]; isOneToOne: false; referencedRelation: "seasons"; referencedColumns: ["id"] },
+        ]
+      }
       fantasy_league_awards: {
         Row: {
           award: string

@@ -6,6 +6,7 @@ import type { FantasyDashboardInput } from "./dashboard.ts";
 export type { FantasyEntryMapping } from "./types.ts";
 import type {
   CreateFantasyMappingInput,
+  FantasyEntryCurrentSquad,
   FantasyEntryMapping,
   FantasyGameweekScoreInsert,
   FantasyPlayerStatInsert,
@@ -36,6 +37,8 @@ export type FantasyRepository = {
   createMapping(input: CreateFantasyMappingInput): Promise<FantasyEntryMapping>;
   replaceMapping(mappingId: string, input: CreateFantasyMappingInput): Promise<FantasyEntryMapping>;
   archiveMapping(mappingId: string): Promise<void>;
+  getCurrentSquad?(input: { seasonId: string; entryId: number }): Promise<(FantasyEntryCurrentSquad & { gameweekId: string; sourceSyncedAt: string }) | null>;
+  upsertCurrentSquad?(input: { seasonId: string; entryId: number; gameweekId: string; squad: FantasyEntryCurrentSquad; syncedAt: string }): Promise<void>;
   applySync(input: {
     jobRunId: string;
     syncedAt: string;
@@ -55,6 +58,7 @@ export type FantasyLeagueRepository = {
   listLeagueEntries(input: { seasonId: string; gameweekId: string }): Promise<FantasyLeagueMappingCandidate[]>;
   listUnmappedLeagueEntries(input: { seasonId: string; gameweekId: string }): Promise<FantasyLeagueMappingCandidate[]>;
   listLeagueEntryIds(input: { seasonId: string; leagueId: string; gameweekId: string }): Promise<number[]>;
+  getCurrentLeagueEntry?(input: { seasonId: string; leagueId: string; entryId: number }): Promise<{ gameweekId: string; gameweekNumber: number }>;
   replaceLeagueAwards(input: { seasonId: string; leagueId: string; gameweekId: string; selectedBy: string; awards: Array<{ fplEntryId: number; award: "champion" | "wooden_spoon" }> }): Promise<void>;
   getLeagueDashboard(input: { seasonId: string; leagueId: string; selectedGameweekNumber?: number }): Promise<FantasyLeagueDashboardInput>;
   applyLeagueSync(input: {
@@ -100,6 +104,22 @@ function syncResultFromUnknown(value: unknown): FantasySyncWriteResult {
     failedMappings: Array.isArray(row.failedMappings)
       ? row.failedMappings.filter((id): id is number => typeof id === "number")
       : [],
+  };
+}
+
+function currentSquadFromRow(value: unknown): FantasyEntryCurrentSquad & { gameweekId: string; sourceSyncedAt: string } {
+  if (typeof value !== "object" || value === null) throw new Error("Fantasy current squad response is invalid");
+  const row = value as Record<string, unknown>;
+  if (typeof row.gameweek_id !== "string"
+    || typeof row.source_synced_at !== "string"
+    || typeof row.squad !== "object"
+    || row.squad === null) {
+    throw new Error("Fantasy current squad response is invalid");
+  }
+  return {
+    ...(row.squad as FantasyEntryCurrentSquad),
+    gameweekId: row.gameweek_id,
+    sourceSyncedAt: row.source_synced_at,
   };
 }
 
@@ -200,6 +220,35 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         .eq("gameweek_id", input.gameweekId);
       if (error || !data) throw new Error("Fantasy database operation failed");
       return data.map((row) => row.fpl_entry_id);
+    },
+
+    async getCurrentLeagueEntry(input) {
+      const { data: gameweeks, error: gameweekError } = await client
+        .from("gameweeks")
+        .select("id,number,is_current,status")
+        .eq("season_id", input.seasonId)
+        .order("number");
+      if (gameweekError || !gameweeks) throw new Error("Fantasy database operation failed");
+
+      const currentGameweek = gameweeks.find((gameweek) => gameweek.is_current)
+        ?? [...gameweeks]
+          .filter((gameweek) => gameweek.status === "closed" || gameweek.status === "reopened")
+          .sort((left, right) => right.number - left.number)[0]
+        ?? gameweeks[0];
+      if (!currentGameweek) throw new Error("Fantasy gameweek is unavailable");
+
+      const { data: membership, error: membershipError } = await client
+        .from("fantasy_league_membership_snapshots")
+        .select("fpl_entry_id")
+        .eq("season_id", input.seasonId)
+        .eq("league_id", input.leagueId)
+        .eq("gameweek_id", currentGameweek.id)
+        .eq("fpl_entry_id", input.entryId)
+        .maybeSingle();
+      if (membershipError) throw new Error("Fantasy database operation failed");
+      if (!membership) throw new Error("Fantasy league Entry is unavailable");
+
+      return { gameweekId: currentGameweek.id, gameweekNumber: currentGameweek.number };
     },
 
     async replaceLeagueAwards(input) {
@@ -389,6 +438,31 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         .from("fantasy_entry_mappings")
         .update({ mapping_status: "archived", archived_at: new Date().toISOString() })
         .eq("id", mappingId);
+      if (error) throw new Error("Fantasy database operation failed");
+    },
+
+    async getCurrentSquad(input) {
+      const { data, error } = await client
+        .from("fantasy_entry_current_squads")
+        .select("gameweek_id,source_synced_at,squad")
+        .eq("season_id", input.seasonId)
+        .eq("fpl_entry_id", input.entryId)
+        .maybeSingle();
+      if (error) throw new Error("Fantasy database operation failed");
+      return data ? currentSquadFromRow(data) : null;
+    },
+
+    async upsertCurrentSquad(input) {
+      const { error } = await client
+        .from("fantasy_entry_current_squads")
+        .upsert([{
+          season_id: input.seasonId,
+          fpl_entry_id: input.entryId,
+          gameweek_id: input.gameweekId,
+          gameweek_number: input.squad.gameweekNumber,
+          squad: input.squad as unknown as Json,
+          source_synced_at: input.syncedAt,
+        }], { onConflict: "season_id,fpl_entry_id" });
       if (error) throw new Error("Fantasy database operation failed");
     },
 

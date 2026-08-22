@@ -1,8 +1,11 @@
 import { getServerEnv } from "../env.ts";
+import { normalizeEntryCurrentSquad } from "./normalizers.ts";
 import type { FplLeagueMember, FplLeagueSummary } from "./league-types.ts";
 import type {
-  FantasyFplProvider,
+  FantasyFplProviderWithPicks,
+  FantasySquadPlayer,
   FplBootstrapSnapshot,
+  FplEntryCurrentSquad,
   FplEntryHistoryEvent,
   FplEntrySummary,
   FplPlayerSnapshot,
@@ -105,6 +108,29 @@ function normalizeHistory(value: unknown): FplEntryHistoryEvent[] {
   });
 }
 
+function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, gameweekNumber: number): FplEntryCurrentSquad {
+  const root = objectValue(value, "entry picks");
+  const playersById = new Map(bootstrap.players.map((player) => [player.playerId, player]));
+  const picks = arrayValue(root.picks, "entry picks").map((item, index) => {
+    const row = objectValue(item, "entry pick");
+    const playerId = numberValue(row.element, "pick player id");
+    const player = playersById.get(playerId);
+    if (!player) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", "Entry pick player is missing from bootstrap");
+    return {
+      pickPosition: numberValue(row.position ?? index + 1, "pick position"),
+      playerId,
+      playerName: player.name,
+      position: player.position,
+      clubName: player.clubName,
+      multiplier: numberValue(row.multiplier ?? 0, "pick multiplier"),
+      isCaptain: row.is_captain === true,
+      isViceCaptain: row.is_vice_captain === true,
+      points: row.points == null ? null : numberValue(row.points, "pick points"),
+    } satisfies FantasySquadPlayer;
+  });
+  return normalizeEntryCurrentSquad({ gameweekNumber, picks });
+}
+
 function positionFor(value: unknown): FplPlayerSnapshot["position"] {
   if (value === "GKP") return "GK";
   if (value === "DEF" || value === "MID" || value === "FWD") return value;
@@ -162,7 +188,7 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
   };
 }
 
-export function createFantasyFplProvider(input: FetchFantasyFplOptions = {}): FantasyFplProvider {
+export function createFantasyFplProvider(input: FetchFantasyFplOptions = {}): FantasyFplProviderWithPicks {
   const options = {
     fetchImpl: input.fetchImpl ?? fetch,
     baseUrl: (input.baseUrl ?? getServerEnv().fplApiBaseUrl).replace(/\/$/, ""),
@@ -186,6 +212,13 @@ export function createFantasyFplProvider(input: FetchFantasyFplOptions = {}): Fa
     },
     async getEntryHistory(entryId) {
       return normalizeHistory(await fetchJson(`entry/${entryId}/history/`, options));
+    },
+    async getEntryPicks(entryId, gameweekNumber) {
+      const [picks, bootstrap] = await Promise.all([
+        fetchJson(`entry/${entryId}/event/${gameweekNumber}/picks/`, options),
+        fetchJson("bootstrap-static/", options),
+      ]);
+      return normalizeEntryPicks(picks, normalizeBootstrap(bootstrap), gameweekNumber);
     },
     async getBootstrap() {
       return normalizeBootstrap(await fetchJson("bootstrap-static/", options));
