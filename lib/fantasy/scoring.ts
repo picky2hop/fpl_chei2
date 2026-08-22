@@ -1,4 +1,5 @@
 import type { FantasyAward, FantasyEntryMapping } from "./types.ts";
+import { buildFplPlayerPhotoUrl } from "./player-image.ts";
 
 export type FantasyScoreRow = {
   mapping_id: string;
@@ -31,6 +32,7 @@ export type FantasyPlayerPosition = "GK" | "DEF" | "MID" | "FWD";
 export type FantasyPlayerStatRow = {
   gameweek_id?: string;
   fpl_player_id: number;
+  photo_key?: string;
   player_name: string;
   position: FantasyPlayerPosition;
   club_id: number;
@@ -44,6 +46,7 @@ export type FantasyPlayerStatRow = {
 
 export type FantasyPlayerStatEntry = {
   playerId: number;
+  photoUrl?: string;
   playerName: string;
   position: FantasyPlayerPosition;
   clubId: number;
@@ -100,6 +103,7 @@ function isSelectable(status: string): boolean {
 function toEntry(row: FantasyPlayerStatRow, metricValue: number): FantasyPlayerStatEntry {
   return {
     playerId: row.fpl_player_id,
+    photoUrl: row.photo_key ? buildFplPlayerPhotoUrl(row.photo_key) : undefined,
     playerName: row.player_name,
     position: row.position,
     clubId: row.club_id,

@@ -982,6 +982,7 @@ export type Database = {
           form: number
           gameweek_id: string
           id: string
+          photo_key: string | null
           player_name: string
           position: string
           season_id: string
@@ -1002,6 +1003,7 @@ export type Database = {
           form?: number
           gameweek_id: string
           id?: string
+          photo_key?: string | null
           player_name: string
           position: string
           season_id: string
@@ -1022,6 +1024,7 @@ export type Database = {
           form?: number
           gameweek_id?: string
           id?: string
+          photo_key?: string | null
           player_name?: string
           position?: string
           season_id?: string

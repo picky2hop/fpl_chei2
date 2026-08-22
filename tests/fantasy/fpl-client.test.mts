@@ -27,6 +27,7 @@ const bootstrap = {
     transfers_out_event: 20,
     form: "6.2",
     event_points: 3,
+    photo: "154561.jpg",
   }],
 };
 
@@ -70,6 +71,7 @@ test("fetches and normalizes the current Entry picks with player metadata", asyn
       transfers_out_event: 2,
       form: "5",
       event_points: index === 0 ? 6 : index,
+      photo: index === 0 ? "154561.jpg" : `${index + 1}00000.jpg`,
     })),
   };
   const picks = {
@@ -98,7 +100,7 @@ test("fetches and normalizes the current Entry picks with player metadata", asyn
   assert.equal(squad.viceCaptainPlayerId, 9);
   assert.equal(squad.starters[0].playerName, "Player 1");
   assert.equal(squad.starters[0].points, 6);
-  assert.equal(squad.starters[0].photoUrl, "https://resources.premierleague.com/premierleague25/photos/players/110x140/1.png");
+  assert.equal(squad.starters[0].photoUrl, "https://resources.premierleague.com/premierleague25/photos/players/110x140/154561.png");
   assert.equal(squad.bench[0].playerId, 12);
 });
 

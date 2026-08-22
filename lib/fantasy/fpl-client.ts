@@ -1,6 +1,6 @@
 import { getServerEnv } from "../env.ts";
 import { normalizeEntryCurrentSquad } from "./normalizers.ts";
-import { buildFplPlayerPhotoUrl } from "./player-image.ts";
+import { buildFplPlayerPhotoUrl, photoKeyFromFplPhoto } from "./player-image.ts";
 import type { FplLeagueMember, FplLeagueSummary } from "./league-types.ts";
 import type {
   FantasyFplProviderWithPicks,
@@ -126,7 +126,7 @@ function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, ga
       multiplier: numberValue(row.multiplier ?? 0, "pick multiplier"),
       isCaptain: row.is_captain === true,
       isViceCaptain: row.is_vice_captain === true,
-      photoUrl: buildFplPlayerPhotoUrl(player.playerId),
+      photoUrl: player.photoKey ? buildFplPlayerPhotoUrl(player.photoKey) : undefined,
       points: player.eventPoints ?? null,
     } satisfies FantasySquadPlayer;
   });
@@ -169,6 +169,7 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
     if (!clubName) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", `Unknown FPL club for player ${playerId}`);
     return {
       playerId,
+      photoKey: photoKeyFromFplPhoto(player.photo),
       name: String(player.web_name ?? `${player.first_name ?? ""} ${player.second_name ?? ""}`).trim(),
       position,
       clubId,

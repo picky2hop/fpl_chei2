@@ -40,6 +40,7 @@ export type FplEntrySummary = {
 
 export type FplPlayerSnapshot = {
   playerId: number;
+  photoKey?: string;
   name: string;
   position: "GK" | "DEF" | "MID" | "FWD";
   clubId: number;
@@ -79,6 +80,7 @@ export type FantasyPlayerStatInsert = {
   season_id: string;
   gameweek_id: string;
   fpl_player_id: number;
+  photo_key?: string;
   player_name: string;
   position: FplPlayerSnapshot["position"];
   club_id: number;

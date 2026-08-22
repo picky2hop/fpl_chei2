@@ -47,6 +47,7 @@ export function normalizePlayerSnapshot(input: {
     season_id: input.seasonId,
     gameweek_id: input.gameweekId,
     fpl_player_id: player.playerId,
+    photo_key: player.photoKey,
     player_name: player.name,
     position: player.position,
     club_id: player.clubId,

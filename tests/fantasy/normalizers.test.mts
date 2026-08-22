@@ -15,6 +15,7 @@ function player(index: number) {
     transfersInEvent: index * 2,
     transfersOutEvent: index,
     form: index / 100,
+    photoKey: String(index),
   };
 }
 
@@ -40,6 +41,7 @@ test("normalizes every player into a GW snapshot row", () => {
   assert.equal(rows[0].fpl_player_id, 1);
   assert.equal(rows[699].status, "u");
   assert.equal(rows[1].transfers_in_event, 4);
+  assert.equal(rows[0].photo_key, "1");
   assert.equal(rows[0].is_global_captain, true);
   assert.equal(rows[1].is_global_vice_captain, true);
 });

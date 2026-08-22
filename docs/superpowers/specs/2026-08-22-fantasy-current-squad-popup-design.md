@@ -14,7 +14,7 @@
 - คะแนนและอันดับย้อนหลังไม่เปลี่ยนแปลง และไม่ใช้ข้อมูล squad ในการคำนวณคะแนน
 - หาก FPL API ล้มเหลวหรือยังไม่มีข้อมูล GW ปัจจุบัน ระบบคง snapshot เดิมไว้และแสดงข้อความที่ปลอดภัย
 - คะแนนรายนักเตะใช้ `event_points` จาก FPL bootstrap ล่าสุด; คะแนนที่แสดงคือคะแนนดิบของนักเตะ และแสดงป้าย Captain/VC แยกต่างหาก
-- รูปนักเตะใช้ URL มาตรฐานจาก FPL player ID และมี fallback เมื่อรูปโหลดไม่ได้
+- รูปนักเตะใช้ค่า `photo` จาก FPL bootstrap เช่น `154561.jpg` เป็น photo key สำหรับ URL มาตรฐาน และมี fallback เมื่อรูปโหลดไม่ได้; ห้ามใช้ FPL player ID เป็นชื่อไฟล์รูป
 - สีของแถวผู้เล่นแยก GK, DEF, MID, FWD และตัวสำรองอย่างชัดเจน
 
 ## Architecture
@@ -37,6 +37,7 @@
 - `season_id`, `fpl_entry_id` เป็น identity ต่อทีม
 - `gameweek_id`, `gameweek_number` ระบุ GW ของ snapshot ล่าสุด
 - `squad jsonb` เก็บ formation, captain, vice-captain, ตัวจริง, ตัวสำรอง, คะแนน, position และ photo URL ที่จำเป็นต่อการแสดงผล
+- `fantasy_player_gameweek_stats.photo_key` เก็บ photo key จาก FPL เพื่อให้หน้าสถิตินักเตะสร้างรูปได้ถูกต้องทั้ง 700+ รายการ
 - `source_synced_at`, `created_at`, `updated_at`
 - unique `(season_id, fpl_entry_id)` เพื่อบังคับให้มีเพียง snapshot เดียวต่อ Entry
 - เปิด RLS, revoke การเข้าถึงจาก `anon`/`authenticated`, และให้ server ใช้ `service_role` ตาม pattern ตาราง Fantasy เดิม
@@ -64,11 +65,13 @@
 - ถ้าผู้ใช้กำลังดูอันดับย้อนหลัง Popup ยังคงแสดงทีม GW ปัจจุบัน และต้องมีป้ายระบุชัดเจน
 - แถวผู้เล่นใช้สีพื้น/เส้นขอบตามตำแหน่ง: GK, DEF, MID, FWD และใช้โทนแยกสำหรับตัวสำรอง
 - สถิตินักเตะและผู้เล่นใน Popup แสดงรูปนักเตะจาก FPL พร้อม fallback เป็นตัวอักษรย่อเมื่อรูปใช้ไม่ได้
+- ขนาดรูปนักเตะเพิ่มเป็น 2 เท่าจากขนาดเดิมใน Popup และหน้าสถิตินักเตะ
 
 ## Admin feedback modal
 
 - ผลลัพธ์ success/error ของ Fantasy admin actions และ admin prediction actions แสดงใน modal ที่เข้าถึงได้ แทนข้อความ inline ใต้ปุ่ม
 - ครอบคลุม Sync, Manual sync, Mapping, League create/update/archive, Mapping archive, Awards และ Participation exclude/restore
+- ปุ่ม Archive ของลีกและ Mapping ต้องเปิด confirmation modal ก่อนเรียก API; ยกเลิกแล้วต้องไม่มีการเปลี่ยนข้อมูล
 - modal มี title, ข้อความภาษาไทย, สถานะ success/error, ปุ่มปิด และไม่เปิดเผยรายละเอียดภายในของ server
 
 ## Testing
@@ -81,5 +84,6 @@
 - Leaderboard rows remain Entry-based and clickable without aggregating shared LINE IDs
 - FPL player event points and image URL are normalized into current squad/player-stat display data
 - Admin success and error actions expose an accessible feedback modal instead of inline status text
+- Archive confirmation does not call the archive endpoint until the user confirms
 - Position colors and player-image fallback are deterministic and render for both stats and squad rows
 - Existing Fantasy and prediction tests remain green
