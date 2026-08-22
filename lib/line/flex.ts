@@ -172,8 +172,10 @@ function footerButton() {
   };
 }
 
-export function buildCommandMenuFlex(commands: string[]): FlexMessage {
-  const buttons = commands.map((command) => ({
+export function buildCommandMenuFlex(commands: Array<string | { label: string; text: string }>): FlexMessage {
+  const buttons = commands.map((command) => {
+    const item = typeof command === "string" ? { label: command, text: command } : command;
+    return {
     type: "box",
     layout: "horizontal",
     height: "48px",
@@ -181,9 +183,10 @@ export function buildCommandMenuFlex(commands: string[]): FlexMessage {
     backgroundColor: "#E53935",
     justifyContent: "center",
     alignItems: "center",
-    action: { type: "message", label: command, text: command },
-    contents: [{ ...text(command, "sm", "bold", "#FFFFFF"), align: "center" }],
-  }));
+    action: { type: "message", label: item.label, text: item.text },
+    contents: [{ ...text(item.label, "sm", "bold", "#FFFFFF"), align: "center" }],
+    };
+  });
 
   return {
     type: "flex",
@@ -322,7 +325,7 @@ function predictionPercentageBar(choice: PredictionChoice, percentage: number) {
 
 function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
   const hasScore = typeof fixture.homeScore === "number" && typeof fixture.awayScore === "number";
-  const scoreLabel = hasScore ? `${fixture.homeScore} - ${fixture.awayScore}` : "VS";
+  const scoreLabel = hasScore ? `${fixture.homeScore}-${fixture.awayScore}` : "VS";
   const statusLabel = fixture.status === "finished"
     ? "จบแล้ว"
     : fixture.status === "live"
@@ -343,12 +346,12 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
       {
         type: "box",
         layout: "vertical",
-        width: "24px",
+         width: "32px",
         flex: 0,
         justifyContent: "center",
         alignItems: "center",
          contents: [
-           { ...text(scoreLabel, "xs", "bold", hasScore ? PRIMARY_TEXT : MUTED_TEXT), align: "center" },
+           { ...text(scoreLabel, "xs", "bold", hasScore ? PRIMARY_TEXT : MUTED_TEXT), align: "center", wrap: false },
            ...(statusLabel ? [{ ...text(statusLabel, "xxs", "regular", statusColor), align: "center" }] : []),
          ],
       },
@@ -374,7 +377,7 @@ function fixtureTeam(team: FlexTeam) {
 
 function fixtureMatchHeader(input: FixturePredictionFlexInput) {
   const scoreLabel = typeof input.homeScore === "number" && typeof input.awayScore === "number"
-    ? input.homeScore + " - " + input.awayScore
+    ? input.homeScore + "-" + input.awayScore
     : input.status === "postponed"
       ? "เลื่อนแข่ง"
       : input.status === "live"
@@ -414,7 +417,7 @@ function fixtureMatchHeader(input: FixturePredictionFlexInput) {
             justifyContent: "center",
             alignItems: "center",
              contents: [
-               { ...text(scoreLabel, "md", "bold"), align: "center" },
+               { ...text(scoreLabel, "md", "bold"), align: "center", wrap: false },
                ...(statusLabel ? [{ ...text(statusLabel, "xxs", "regular", statusColor), align: "center" }] : []),
              ],
           },

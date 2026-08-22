@@ -164,7 +164,7 @@ test("prediction Flex matches the app detail row treatment", () => {
   assert.equal(awayLogo.size, "36px");
   assert.doesNotMatch(JSON.stringify(message), /"aspectMode":"contain"/);
   assert.equal(vs.layout, "vertical");
-  assert.equal(vs.width, "24px");
+  assert.equal(vs.width, "32px");
   assert.equal(vs.flex, 0);
   assert.equal(vs.justifyContent, "center");
   assert.equal(vs.alignItems, "center");
@@ -301,8 +301,27 @@ test("prediction result Flex shows the latest score for a live fixture", () => {
     }],
   });
 
-  assert.match(JSON.stringify(message), /2 - 1/);
+  assert.match(JSON.stringify(message), /2-1/);
   assert.match(JSON.stringify(message), /"text":"Live","size":"xxs","weight":"regular","color":"#FF647C"/);
+});
+
+test("prediction result Flex keeps a score on one line", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    gameweek: 1,
+    fixtures: [{
+      homeTeam: { name: "Arsenal" },
+      awayTeam: { name: "Chelsea" },
+      choice: "home",
+      status: "finished",
+      homeScore: 1,
+      awayScore: 1,
+    }],
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /"text":"1-1","size":"xs","weight":"bold"/);
+  assert.doesNotMatch(serialized, /"text":"1 - 1"/);
 });
 
 test("prediction result Flex labels finished fixtures below the latest score", () => {
@@ -344,7 +363,7 @@ test("fixture prediction Flex mirrors the app detail and groups predictors", () 
   const serialized = JSON.stringify(message);
   assert.match(serialized, /Arsenal/);
   assert.match(serialized, /Coventry City/);
-  assert.match(serialized, /2 - 1/);
+  assert.match(serialized, /2-1/);
   assert.match(serialized, /100/);
   assert.match(serialized, /Picky/);
   assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
