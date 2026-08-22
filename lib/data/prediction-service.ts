@@ -46,6 +46,28 @@ export function createPredictionService(admin: SupabaseClient<Database>) {
       };
     },
 
+    async savePredictions(input: {
+      userId: string;
+      predictions: Array<{ fixtureId: string; choice: PredictionChoice }>;
+    }): Promise<PredictionResponse[]> {
+      const { data, error } = await admin.rpc("save_predictions", {
+        p_user_id: input.userId,
+        p_predictions: input.predictions,
+      });
+
+      if (error) {
+        if (error.code === "55P03") throw new PredictionWriteError(409, "Prediction is locked");
+        if (error.code === "42501") throw new PredictionWriteError(422, "User is not an active participant");
+        throw new Error(`Unable to save predictions: ${error.message}`);
+      }
+
+      if (!Array.isArray(data)) throw new Error("Unable to save predictions: invalid response");
+      return data.map((prediction) => {
+        const row = prediction as unknown as SavedPrediction;
+        return { fixtureId: row.fixture_id, choice: row.outcome, status: row.status };
+      });
+    },
+
     async listPredictions(input: {
       userId: string;
       gameweekId: string;

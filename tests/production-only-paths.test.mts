@@ -16,6 +16,8 @@ test("dashboard never falls back to mock fixtures", async () => {
   assert.equal(source.includes("mockFixtures"), false);
   assert.equal(source.includes("NEXT_PUBLIC_DEMO_MODE"), false);
   assert.equal(source.includes("/api/dashboard"), true);
+  assert.equal(source.includes("setInterval"), true);
+  assert.equal(source.includes("cache: \"no-store\""), true);
 });
 
 test("landing copy does not advertise preview mode", async () => {

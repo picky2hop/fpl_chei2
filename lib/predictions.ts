@@ -2,6 +2,11 @@ export type PredictionChoice = "home" | "draw" | "away";
 
 export type PredictionMap = Record<string, PredictionChoice>;
 
+export type PredictionEditableFixture = {
+  status: "scheduled" | "upcoming" | "live" | "finished" | "postponed";
+  kickoffAt: string;
+};
+
 export type PredictionFixture = {
   id: string;
   homeTeam: string;
@@ -22,6 +27,19 @@ export type FixturePredictor = {
 };
 
 export type GroupedFixturePredictionDetails = Record<PredictionChoice, FixturePredictor[]>;
+
+export function canEditPrediction(fixture: PredictionEditableFixture, now: Date): boolean {
+  const kickoffAt = new Date(fixture.kickoffAt);
+  return (fixture.status === "scheduled" || fixture.status === "upcoming")
+    && Number.isFinite(kickoffAt.getTime())
+    && now.getTime() < kickoffAt.getTime();
+}
+
+export function getFixtureScoreText(fixture: { homeScore?: number; awayScore?: number }): string | null {
+  return typeof fixture.homeScore === "number" && typeof fixture.awayScore === "number"
+    ? `${fixture.homeScore} - ${fixture.awayScore}`
+    : null;
+}
 
 export function applyPrediction(
   current: PredictionMap,

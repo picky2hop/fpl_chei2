@@ -1087,6 +1087,10 @@ export type Database = {
         Args: { p_choice: string; p_fixture_id: string; p_user_id: string }
         Returns: Json
       }
+      save_predictions: {
+        Args: { p_predictions: Json; p_user_id: string }
+        Returns: Json
+      }
       apply_fantasy_sync: {
         Args: {
           p_job_run_id: string

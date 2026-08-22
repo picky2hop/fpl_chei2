@@ -85,6 +85,25 @@ describe("scoring domain rules", () => {
     assert.deepEqual(result.awards, []);
   });
 
+  it("scores finished fixtures even while later fixtures in the gameweek remain scheduled", () => {
+    const result = calculateGameweekScoring({
+      fixtures: [
+        { id: "fx-finished", status: "finished", homeScore: 1, awayScore: 0 },
+        { id: "fx-later", status: "scheduled", homeScore: null, awayScore: null },
+      ],
+      predictions: [{ userId: "u1", fixtureId: "fx-finished", choice: "home", status: "active" }],
+      participants: [{ userId: "u1", status: "active" }],
+    });
+
+    assert.deepEqual(result.scores, [{
+      userId: "u1",
+      points: 3,
+      correctPredictions: 1,
+      predictedFixtures: 1,
+      countedFixtures: 1,
+    }]);
+  });
+
   it("rebuilds season totals from included gameweeks instead of deltas", () => {
     assert.deepEqual(calculateSeasonTotals([
       { userId: "u1", gameweekId: "gw-1", points: 3 },

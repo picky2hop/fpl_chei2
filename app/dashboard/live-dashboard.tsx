@@ -51,24 +51,43 @@ function buildLiveProps(payload: DashboardPayload, profile: UserProfile) {
 export default function LiveDashboard({ profile }: { profile: UserProfile }) {
   const [payload, setPayload] = useState<DashboardPayload | null>(null);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    void fetch("/api/dashboard").then(async (response) => {
-      if (!response.ok) throw new Error("Unable to load live dashboard");
-      setPayload(await response.json() as DashboardPayload);
-    }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load live dashboard"));
+    let disposed = false;
+    const load = async () => {
+      try {
+        const response = await fetch("/api/dashboard", { cache: "no-store" });
+        if (!response.ok) throw new Error("Unable to load live dashboard");
+        const nextPayload = await response.json() as DashboardPayload;
+        if (!disposed) {
+          setPayload(nextPayload);
+          setError("");
+        }
+      } catch (reason: unknown) {
+        if (!disposed) setError(reason instanceof Error ? reason.message : "Unable to load live dashboard");
+      } finally {
+        if (!disposed) setIsLoading(false);
+      }
+    };
+
+    void load();
+    const interval = window.setInterval(() => void load(), 30_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
   }, []);
 
   if (!payload) {
-    return <main className="flex min-h-screen items-center justify-center bg-[#071525] text-sm font-bold text-white/60">{error || "กำลังโหลดข้อมูลการแข่งขัน…"}</main>;
+    return <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#071525] text-sm font-bold text-white/60">{error || "กำลังโหลดข้อมูลการแข่งขัน…"}{!isLoading && error && <button type="button" onClick={() => window.location.reload()} className="rounded-xl bg-[#d9ff58] px-4 py-2 text-xs font-black text-[#071525]">ลองใหม่</button>}</main>;
   }
 
   const props = buildLiveProps(payload, profile);
-  return <PredictionApp currentUser={props.profile} gameweeks={props.gameweeks} fixturesByGameweek={props.fixturesByGameweek} leaderboardByGameweek={props.leaderboardByGameweek} initialPredictionsByGameweek={props.initialPredictionsByGameweek} initialGameweek={props.current} predictionBookByGameweek={payload.predictionBookByGameweek} onConfirmPredictions={async (gameweek, predictions) => {
-    const gameweekId = payload.gameweeks.find((item) => item.number === gameweek)?.id;
-    if (!gameweekId) throw new Error("Gameweek is unavailable");
-    await Promise.all(Object.entries(predictions).map(async ([fixtureId, choice]) => {
-      const response = await fetch("/api/predictions", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ fixtureId, choice }) });
-      if (!response.ok) throw new Error("Unable to save predictions");
-    }));
+  return <PredictionApp currentUser={props.profile} gameweeks={props.gameweeks} fixturesByGameweek={props.fixturesByGameweek} leaderboardByGameweek={props.leaderboardByGameweek} initialPredictionsByGameweek={props.initialPredictionsByGameweek} initialGameweek={props.current} predictionBookByGameweek={payload.predictionBookByGameweek} onConfirmPredictions={async (_gameweek, predictions) => {
+    const response = await fetch("/api/predictions", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ predictions: Object.entries(predictions).map(([fixtureId, choice]) => ({ fixtureId, choice })) }) });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(body?.error === "Prediction is locked" ? "มีคู่ที่เริ่มแข่งแล้ว กรุณาตรวจสอบคำทายอีกครั้ง" : "บันทึกคำทายไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    }
   }} />;
 }

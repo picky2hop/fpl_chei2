@@ -6,7 +6,7 @@ export type Team = {
   crest: string;
 };
 
-export type FixtureStatus = "upcoming" | "live" | "finished" | "postponed";
+export type FixtureStatus = "scheduled" | "upcoming" | "live" | "finished" | "postponed";
 
 export type Fixture = {
   id: string;

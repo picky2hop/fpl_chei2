@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyPrediction,
+  canEditPrediction,
   getCompleteLeaderboardEntries,
   getFixturePredictors,
   getFixturePredictionDetails,
@@ -13,6 +14,15 @@ import {
 } from "../lib/predictions.ts";
 
 describe("prediction helpers", () => {
+  it("only allows prediction edits before kickoff for scheduled fixtures", () => {
+    const kickoffAt = "2026-08-22T12:00:00.000Z";
+
+    assert.equal(canEditPrediction({ status: "scheduled", kickoffAt }, new Date("2026-08-22T11:59:59.000Z")), true);
+    assert.equal(canEditPrediction({ status: "scheduled", kickoffAt }, new Date("2026-08-22T12:00:00.000Z")), false);
+    assert.equal(canEditPrediction({ status: "live", kickoffAt }, new Date("2026-08-22T11:00:00.000Z")), false);
+    assert.equal(canEditPrediction({ status: "finished", kickoffAt }, new Date("2026-08-22T11:00:00.000Z")), false);
+  });
+
   it("updates one fixture without mutating the existing map", () => {
     const original = { fixture_a: "home" as const };
     const next = applyPrediction(original, "fixture_b", "away");

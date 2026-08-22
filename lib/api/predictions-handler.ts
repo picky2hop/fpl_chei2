@@ -9,11 +9,23 @@ export type PredictionResponse = {
 export type PredictionsHandlerDependencies = {
   requireUser: () => Promise<{ id: string }>;
   savePrediction: (input: { userId: string; fixtureId: string; choice: PredictionChoice }) => Promise<PredictionResponse>;
+  savePredictions?: (input: { userId: string; predictions: Array<{ fixtureId: string; choice: PredictionChoice }> }) => Promise<PredictionResponse[]>;
   listPredictions: (input: { userId: string; gameweekId: string }) => Promise<PredictionResponse[]>;
 };
 
 function isValidId(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.length <= 100;
+}
+
+function isPredictionBatch(value: unknown): value is Array<{ fixtureId: string; choice: PredictionChoice }> {
+  return Array.isArray(value)
+    && value.length > 0
+    && value.every((item) => typeof item === "object"
+      && item !== null
+      && "fixtureId" in item
+      && "choice" in item
+      && isValidId(item.fixtureId)
+      && isPredictionChoice(item.choice));
 }
 
 export function createPredictionsHandler(dependencies: PredictionsHandlerDependencies) {
@@ -48,6 +60,26 @@ export function createPredictionsHandler(dependencies: PredictionsHandlerDepende
       body = await request.json();
     } catch {
       return Response.json({ error: "Invalid request" }, { status: 400 });
+    }
+
+    if (typeof body === "object" && body !== null && "predictions" in body) {
+      if (!dependencies.savePredictions || !isPredictionBatch(body.predictions)) {
+        return Response.json({ error: "predictions must be a non-empty list of valid choices" }, { status: 400 });
+      }
+
+      const fixtureIds = body.predictions.map((prediction) => prediction.fixtureId);
+      if (new Set(fixtureIds).size !== fixtureIds.length) {
+        return Response.json({ error: "Each fixture may appear only once" }, { status: 400 });
+      }
+
+      try {
+        return Response.json({ predictions: await dependencies.savePredictions({ userId: user.id, predictions: body.predictions }) });
+      } catch (error) {
+        const status = typeof error === "object" && error !== null && "status" in error && (error.status === 409 || error.status === 422)
+          ? error.status
+          : 500;
+        return Response.json({ error: status === 409 ? "Prediction is locked" : "Unable to save predictions" }, { status });
+      }
     }
 
     if (

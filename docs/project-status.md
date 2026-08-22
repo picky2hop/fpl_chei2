@@ -11,6 +11,16 @@ Current cutover evidence: [production-only cutover](production-only-cutover-evid
 
 สถานะ: implementation และ deployment เสร็จแล้ว; production smoke test ผ่านแล้ว และเหลือ live validation จากการแข่งขันจริงเพื่อยืนยัน scoring/recalculation
 
+### 2026-08-22 — Prediction reliability remediation (implemented and migrations applied)
+
+- เพิ่ม dashboard re-fetch ทุก 30 วินาทีแบบ `no-store` และแสดง score/status ของคู่ `live` ในหน้าทายผล ผลแข่ง และรายละเอียดผู้เล่น/คู่แข่ง
+- ล็อกปุ่มทายฝั่ง client หลัง kickoff และเปลี่ยนการบันทึกทั้ง GW เป็น batch RPC transaction เดียว เพื่อลด partial save
+- เพิ่ม migration `20260822074829_prediction_batch_write.sql` สำหรับ batch prediction write
+- เพิ่ม migration `20260822074947_partial_finished_scoring.sql` ให้คำนวณคะแนนจากคู่ `finished` ได้ทันที แม้คู่ถัดไปใน GW ยัง `scheduled`/`live`; ไม่คำนวณจากคู่ `live`
+- Production apply สำเร็จผ่าน Supabase connector; migration history บันทึกทั้งสองรายการด้วย version ข้างต้น และตรวจ function/privilege แบบ read-only แล้ว
+- ก่อน apply เวลา `2026-08-22 07:28 UTC`: fixtures 380/source records 380, สถานะยัง `live=1`, `scheduled=379`, score rows 0, award rows 0; ไม่มีการ trigger sync หรือแก้ข้อมูล production เพื่อทดสอบ
+- คงเวลา scheduler เดิมตามที่อนุมัติ; การเปลี่ยนสถานะ fixture/คำนวณคะแนนจะเกิดเมื่อ sync รอบถัดไปรับ snapshot จาก provider
+
 หลักฐาน production ล่าสุด:
 
 - Production: `https://fpl-chei2.vercel.app`

@@ -53,7 +53,7 @@ export function buildFixturePredictionShareFlex(input: {
     gameweek: input.gameweek,
     dateLabel: fixture.dateLabel,
     kickoffAt: fixture.kickoff,
-    status: fixture.status,
+    status: fixture.status === "scheduled" ? "upcoming" : fixture.status,
     homeScore: fixture.homeScore,
     awayScore: fixture.awayScore,
     homeTeam: { name: fixture.homeTeam.name, logoUrl: fixture.homeTeam.crest },

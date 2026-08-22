@@ -62,3 +62,42 @@ test("prediction API lists the requested gameweek for the authenticated user", a
     predictions: [{ fixtureId: "gw-28", choice: "draw", status: "active" }],
   });
 });
+
+test("prediction API saves a gameweek batch through one atomic persistence call", async () => {
+  const calls: unknown[] = [];
+  const handler = createPredictionsHandler({
+    requireUser: async () => ({ id: "user-1" }),
+    savePrediction: async () => {
+      throw new Error("single-fixture persistence must not be used for batches");
+    },
+    savePredictions: async (input) => {
+      calls.push(input);
+      return input.predictions.map((prediction) => ({ ...prediction, status: "active" }));
+    },
+    listPredictions: async () => [],
+  });
+
+  const response = await handler(new Request("https://example.test/api/predictions", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ predictions: [
+      { fixtureId: "fixture-1", choice: "home" },
+      { fixtureId: "fixture-2", choice: "draw" },
+    ] }),
+  }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls, [{
+    userId: "user-1",
+    predictions: [
+      { fixtureId: "fixture-1", choice: "home" },
+      { fixtureId: "fixture-2", choice: "draw" },
+    ],
+  }]);
+  assert.deepEqual(await response.json(), {
+    predictions: [
+      { fixtureId: "fixture-1", choice: "home", status: "active" },
+      { fixtureId: "fixture-2", choice: "draw", status: "active" },
+    ],
+  });
+});

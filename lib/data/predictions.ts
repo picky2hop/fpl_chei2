@@ -15,6 +15,13 @@ export async function savePrediction(input: {
   return createPredictionService(getSupabaseAdmin()).savePrediction(input);
 }
 
+export async function savePredictions(input: {
+  userId: string;
+  predictions: Array<{ fixtureId: string; choice: PredictionChoice }>;
+}): Promise<PredictionResponse[]> {
+  return createPredictionService(getSupabaseAdmin()).savePredictions(input);
+}
+
 export async function listPredictions(input: {
   userId: string;
   gameweekId: string;
