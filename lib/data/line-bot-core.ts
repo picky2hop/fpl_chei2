@@ -18,6 +18,7 @@ export type StandingsData = {
 export type TodayFixturesData = {
   dateLabel: string;
   fixtures: Array<{
+    dayLabel: string;
     kickoffLabel: string;
     statusLabel: string;
     homeTeam: FlexTeam;
@@ -34,6 +35,9 @@ export type UserPredictionData = {
     awayTeam: FlexTeam;
     choice: PredictionChoice;
     kickoffAt: string;
+    status: string;
+    homeScore: number | null;
+    awayScore: number | null;
   }>;
 };
 
@@ -57,9 +61,10 @@ type StandingsRowInput = {
 type TodayFixtureRowInput = {
   id: string;
   kickoffAt: string;
-  status: string;
-  homeScore: number | null;
-  awayScore: number | null;
+  dayLabel?: string;
+  status?: string;
+  homeScore?: number | null;
+  awayScore?: number | null;
   homeTeam: FlexTeam;
   awayTeam: FlexTeam;
 };
@@ -70,6 +75,9 @@ type UserPredictionRowInput = {
   homeTeam: FlexTeam;
   awayTeam: FlexTeam;
   outcome: string;
+  status: string;
+  homeScore: number | null;
+  awayScore: number | null;
 };
 
 function datePartsInBangkok(value: Date) {
@@ -99,6 +107,19 @@ export function getBangkokDayRange(now: Date) {
   };
 }
 
+export function getBangkokTwoDayRange(now: Date) {
+  const range = getBangkokDayRange(now);
+  return { startIso: range.startIso, endIso: new Date(new Date(range.endIso).getTime() + 24 * 60 * 60 * 1000).toISOString() };
+}
+
+export function getBangkokDayLabel(value: Date, now: Date): string {
+  const valueParts = datePartsInBangkok(value);
+  const nowParts = datePartsInBangkok(now);
+  const valueDay = Date.UTC(valueParts.year, valueParts.month - 1, valueParts.day);
+  const nowDay = Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day);
+  return valueDay === nowDay ? "วันนี้" : "พรุ่งนี้";
+}
+
 function formatKickoff(value: string) {
   return new Intl.DateTimeFormat("th-TH", {
     timeZone: BANGKOK_TIME_ZONE,
@@ -109,10 +130,28 @@ function formatKickoff(value: string) {
 }
 
 function statusLabel(row: TodayFixtureRowInput) {
+  const hasScore = typeof row.homeScore === "number" && typeof row.awayScore === "number";
+  if (hasScore) return `${row.homeScore} - ${row.awayScore}${row.status === "live" ? " · LIVE" : row.status === "finished" ? " · จบแล้ว" : ""}`;
   if (row.status === "live") return "LIVE";
-  if (row.status === "finished") return `${row.homeScore ?? 0} - ${row.awayScore ?? 0}`;
   if (row.status === "postponed") return "เลื่อนแข่ง";
   return "เริ่มแข่ง";
+}
+
+export function selectCompleteParticipantIds(
+  participantIds: string[],
+  fixtureIds: string[],
+  predictions: Array<{ userId: string; fixtureId: string }>,
+): string[] {
+  if (fixtureIds.length === 0) return [];
+  const required = new Set(fixtureIds);
+  const byUser = new Map<string, Set<string>>();
+  for (const prediction of predictions) {
+    if (!required.has(prediction.fixtureId)) continue;
+    const fixtureSet = byUser.get(prediction.userId) ?? new Set<string>();
+    fixtureSet.add(prediction.fixtureId);
+    byUser.set(prediction.userId, fixtureSet);
+  }
+  return participantIds.filter((userId) => byUser.get(userId)?.size === required.size);
 }
 
 export function mapStandingsRows(gameweek: number, rows: StandingsRowInput[]): StandingsData {
@@ -132,6 +171,7 @@ export function mapStandingsRows(gameweek: number, rows: StandingsRowInput[]): S
 
 export function mapTodayFixtureRows(rows: TodayFixtureRowInput[]): TodayFixturesData["fixtures"] {
   return rows.map((row) => ({
+    dayLabel: row.dayLabel ?? "วันนี้",
     kickoffLabel: formatKickoff(row.kickoffAt),
     statusLabel: statusLabel(row),
     homeTeam: row.homeTeam,
@@ -152,7 +192,15 @@ export function mapUserPredictionRows(input: {
     avatarUrl: input.avatarUrl ?? "",
     fixtures: sortedRows.flatMap((row) => {
       if (row.outcome !== "home" && row.outcome !== "draw" && row.outcome !== "away") return [];
-      return [{ kickoffAt: row.kickoffAt, homeTeam: row.homeTeam, awayTeam: row.awayTeam, choice: row.outcome }];
+      return [{
+        kickoffAt: row.kickoffAt,
+        homeTeam: row.homeTeam,
+        awayTeam: row.awayTeam,
+        choice: row.outcome,
+        status: row.status ?? "scheduled",
+        homeScore: row.homeScore ?? null,
+        awayScore: row.awayScore ?? null,
+      }];
     }),
   };
 }

@@ -104,7 +104,13 @@ export function normalizeFplFixture(fixture: FplFixturePayload): NormalizedFplFi
     awayExternalTeamId: fixture.team_a,
     homeScore: fixture.team_h_score,
     awayScore: fixture.team_a_score,
-    status: fixture.postponed ? "postponed" : fixture.finished ? "finished" : fixture.started ? "live" : "scheduled",
+    status: fixture.postponed
+      ? "postponed"
+      : fixture.finished || fixture.finished_provisional
+        ? "finished"
+        : fixture.started
+          ? "live"
+          : "scheduled",
   };
 }
 

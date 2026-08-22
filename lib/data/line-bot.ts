@@ -2,7 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
-import { selectActiveGameweek } from "./line-bot-core";
+import { getBangkokDayLabel, getBangkokTwoDayRange, selectActiveGameweek, selectCompleteParticipantIds } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -21,6 +21,7 @@ export type StandingsData = {
 export type TodayFixturesData = {
   dateLabel: string;
   fixtures: Array<{
+    dayLabel: string;
     kickoffLabel: string;
     statusLabel: string;
     homeTeam: FlexTeam;
@@ -37,6 +38,9 @@ export type UserPredictionData = {
     awayTeam: FlexTeam;
     choice: PredictionChoice;
     kickoffAt: string;
+    status: string;
+    homeScore: number | null;
+    awayScore: number | null;
   }>;
 };
 
@@ -50,9 +54,10 @@ type StandingsRowInput = {
 type TodayFixtureRowInput = {
   id: string;
   kickoffAt: string;
-  status: string;
-  homeScore: number | null;
-  awayScore: number | null;
+  dayLabel?: string;
+  status?: string;
+  homeScore?: number | null;
+  awayScore?: number | null;
   homeTeam: FlexTeam;
   awayTeam: FlexTeam;
 };
@@ -62,6 +67,9 @@ type UserPredictionRowInput = {
   homeTeam: FlexTeam;
   awayTeam: FlexTeam;
   outcome: string;
+  status: string;
+  homeScore: number | null;
+  awayScore: number | null;
 };
 
 function datePartsInBangkok(value: Date) {
@@ -101,8 +109,9 @@ function formatKickoff(value: string) {
 }
 
 function statusLabel(row: TodayFixtureRowInput) {
+  const hasScore = typeof row.homeScore === "number" && typeof row.awayScore === "number";
+  if (hasScore) return `${row.homeScore} - ${row.awayScore}${row.status === "live" ? " · LIVE" : row.status === "finished" ? " · จบแล้ว" : ""}`;
   if (row.status === "live") return "LIVE";
-  if (row.status === "finished") return `${row.homeScore ?? 0} - ${row.awayScore ?? 0}`;
   if (row.status === "postponed") return "เลื่อนแข่ง";
   return "เริ่มแข่ง";
 }
@@ -124,6 +133,7 @@ export function mapStandingsRows(gameweek: number, rows: StandingsRowInput[]): S
 
 export function mapTodayFixtureRows(rows: TodayFixtureRowInput[]): TodayFixturesData["fixtures"] {
   return rows.map((row) => ({
+    dayLabel: row.dayLabel ?? "วันนี้",
     kickoffLabel: formatKickoff(row.kickoffAt),
     statusLabel: statusLabel(row),
     homeTeam: row.homeTeam,
@@ -143,7 +153,15 @@ export function mapUserPredictionRows(input: {
     avatarUrl: input.avatarUrl ?? "",
     fixtures: input.rows.flatMap((row) => {
       if (row.outcome !== "home" && row.outcome !== "draw" && row.outcome !== "away") return [];
-      return [{ kickoffAt: row.kickoffAt, homeTeam: row.homeTeam, awayTeam: row.awayTeam, choice: row.outcome }];
+      return [{
+        kickoffAt: row.kickoffAt,
+        homeTeam: row.homeTeam,
+        awayTeam: row.awayTeam,
+        choice: row.outcome,
+        status: row.status ?? "scheduled",
+        homeScore: row.homeScore ?? null,
+        awayScore: row.awayScore ?? null,
+      }];
     }),
   };
 }
@@ -182,24 +200,36 @@ export function createLineBotDataReader(): LineBotDataReader {
   return {
     async getCurrentStandings() {
       const { admin, gameweek } = await activeContext();
-      const [{ data: participants, error: participantError }, { data: scores, error: scoreError }, { data: users, error: userError }] = await Promise.all([
+      const [{ data: participants, error: participantError }, { data: scores, error: scoreError }, { data: users, error: userError }, { data: fixtures, error: fixtureError }] = await Promise.all([
         admin.from("gameweek_participants").select("user_id").eq("gameweek_id", gameweek.id).eq("status", "active"),
         admin.from("gameweek_scores").select("user_id,points").eq("gameweek_id", gameweek.id),
         admin.from("app_users").select("id,display_name,avatar_url,status").eq("status", "active"),
+        admin.from("fixtures").select("id").eq("gameweek_id", gameweek.id),
       ]);
-      if (participantError || scoreError || userError) throw new Error("Standings are unavailable");
+      if (participantError || scoreError || userError || fixtureError) throw new Error("Standings are unavailable");
 
-      const participantIds = new Set((participants ?? []).map((row) => row.user_id));
+      const fixtureIds = (fixtures ?? []).map((fixture) => fixture.id);
+      const { data: predictions, error: predictionError } = fixtureIds.length
+        ? await admin.from("predictions").select("user_id,fixture_id").in("fixture_id", fixtureIds).eq("status", "active")
+        : { data: [], error: null };
+      if (predictionError) throw new Error("Standings are unavailable");
+
+      const participantIds = selectCompleteParticipantIds(
+        (participants ?? []).map((row) => row.user_id),
+        fixtureIds,
+        (predictions ?? []).map((row) => ({ userId: row.user_id, fixtureId: row.fixture_id })),
+      );
+      const participantIdSet = new Set(participantIds);
       const points = new Map((scores ?? []).map((row) => [row.user_id, row.points]));
       const rows = (users ?? [])
-        .filter((user) => participantIds.has(user.id))
+        .filter((user) => participantIdSet.has(user.id))
         .map((user) => ({ userId: user.id, displayName: user.display_name, avatarUrl: user.avatar_url, points: points.get(user.id) ?? 0 }));
       return mapStandingsRows(gameweek.number, rows);
     },
 
     async getTodayFixtures(now) {
       const { admin, season } = await activeContext();
-      const range = getBangkokDayRange(now);
+      const range = getBangkokTwoDayRange(now);
       const [{ data: fixtures, error: fixtureError }, { data: teams, error: teamError }] = await Promise.all([
         admin.from("fixtures").select("id,kickoff_at,status,home_score,away_score,home_team_id,away_team_id").eq("season_id", season.id).gte("kickoff_at", range.startIso).lt("kickoff_at", range.endIso).order("kickoff_at"),
         admin.from("teams").select("id,name,logo_url"),
@@ -211,9 +241,9 @@ export function createLineBotDataReader(): LineBotDataReader {
         const homeTeam = teamsById.get(fixture.home_team_id);
         const awayTeam = teamsById.get(fixture.away_team_id);
         if (!homeTeam || !awayTeam) return [];
-        return [{ id: fixture.id, kickoffAt: fixture.kickoff_at, status: fixture.status, homeScore: fixture.home_score, awayScore: fixture.away_score, homeTeam, awayTeam }];
+        return [{ id: fixture.id, kickoffAt: fixture.kickoff_at, dayLabel: getBangkokDayLabel(new Date(fixture.kickoff_at), now), status: fixture.status, homeScore: fixture.home_score, awayScore: fixture.away_score, homeTeam, awayTeam }];
       });
-      return { dateLabel: range.dateLabel, fixtures: mapTodayFixtureRows(rows) };
+      return { dateLabel: "วันนี้และพรุ่งนี้", fixtures: mapTodayFixtureRows(rows) };
     },
 
     async getUserPredictions(lineUserId) {
@@ -223,7 +253,7 @@ export function createLineBotDataReader(): LineBotDataReader {
       if (!user) return null;
 
       const [{ data: fixtures, error: fixtureError }, { data: predictions, error: predictionError }, { data: teams, error: teamError }] = await Promise.all([
-        admin.from("fixtures").select("id,external_fixture_id,kickoff_at,status,home_team_id,away_team_id").eq("season_id", season.id).eq("gameweek_id", gameweek.id).order("kickoff_at").order("external_fixture_id"),
+        admin.from("fixtures").select("id,external_fixture_id,kickoff_at,status,home_score,away_score,home_team_id,away_team_id").eq("season_id", season.id).eq("gameweek_id", gameweek.id).order("kickoff_at").order("external_fixture_id"),
         admin.from("predictions").select("fixture_id,outcome,status").eq("user_id", user.id).eq("status", "active"),
         admin.from("teams").select("id,name,logo_url"),
       ]);
@@ -236,7 +266,7 @@ export function createLineBotDataReader(): LineBotDataReader {
         const awayTeam = teamsById.get(fixture.away_team_id);
         const outcome = predictionsByFixture.get(fixture.id);
         if (!homeTeam || !awayTeam || !outcome) return [];
-        return [{ externalFixtureId: fixture.external_fixture_id, kickoffAt: fixture.kickoff_at, homeTeam, awayTeam, outcome }];
+        return [{ externalFixtureId: fixture.external_fixture_id, kickoffAt: fixture.kickoff_at, homeTeam, awayTeam, outcome, status: fixture.status, homeScore: fixture.home_score, awayScore: fixture.away_score }];
       });
       return mapUserPredictionRows({ gameweek: gameweek.number, displayName: user.display_name, avatarUrl: user.avatar_url, rows });
     },

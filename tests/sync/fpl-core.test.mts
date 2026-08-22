@@ -21,6 +21,7 @@ test("normalizes scheduled, live, finished, and postponed fixtures", () => {
   assert.equal(normalizeFplFixture(baseFixture).status, "scheduled");
   assert.equal(normalizeFplFixture({ ...baseFixture, started: true }).status, "live");
   assert.equal(normalizeFplFixture({ ...baseFixture, finished: true, team_h_score: 2, team_a_score: 1 }).status, "finished");
+  assert.equal(normalizeFplFixture({ ...baseFixture, started: true, finished_provisional: true, team_h_score: 3, team_a_score: 0 }).status, "finished");
   assert.equal(normalizeFplFixture({ ...baseFixture, postponed: true }).status, "postponed");
 });
 

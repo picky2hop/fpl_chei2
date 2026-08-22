@@ -4,6 +4,8 @@ import {
   applyPrediction,
   canEditPrediction,
   getCompleteLeaderboardEntries,
+  getEditablePredictionIds,
+  getEditablePredictions,
   getFixturePredictors,
   getFixturePredictionDetails,
   getPredictionPercentages,
@@ -33,6 +35,17 @@ describe("prediction helpers", () => {
   it("only reports complete when every fixture has a choice", () => {
     assert.equal(isPredictionComplete(["a", "b"], { a: "draw" }), false);
     assert.equal(isPredictionComplete(["a", "b"], { a: "draw", b: "home" }), true);
+  });
+
+  it("saves only still-editable fixtures when another fixture is already locked", () => {
+    const now = new Date("2026-08-22T12:00:00.000Z");
+    const fixtures = [
+      { id: "started", status: "live" as const, kickoffAt: "2026-08-22T11:00:00.000Z" },
+      { id: "future", status: "scheduled" as const, kickoffAt: "2026-08-22T13:00:00.000Z" },
+    ];
+
+    assert.deepEqual(getEditablePredictionIds(fixtures, now), ["future"]);
+    assert.deepEqual(getEditablePredictions(fixtures, { started: "home", future: "away" }, now), { future: "away" });
   });
 
   it("keeps only players who predicted every fixture in the selected gameweek", () => {

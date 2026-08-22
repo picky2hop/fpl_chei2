@@ -160,3 +160,15 @@ Decisions ที่ล็อกแล้ว:
 - [Phase 2 Production Status](phase-2-production-status.md)
 - [Phase 2 deployment runbook](phase-2-deployment-runbook.md)
 - [Phase 3A pre-season hardening](phase-3a-preseason-hardening.md)
+
+## 2026-08-22 — Prediction/LINE follow-up (local, pending review)
+
+การแก้ไขรอบนี้ทำใน local repository แล้ว แต่ยังไม่ commit, push, deploy หรือ apply migration ไป production:
+
+- `finished_provisional` จาก FPL ถูกปฏิบัติเป็นสถานะจบการแข่งขันสำหรับการแสดงผล, การล็อกคำทาย และการคำนวณคะแนนหลัง sync; raw payload ยังเก็บไว้เพื่อ audit
+- หน้าทายผลบันทึกเฉพาะคู่ที่ยังไม่เริ่มแข่ง และคงคำทายเดิมของคู่ที่เริ่มแล้ว พร้อมแสดงข้อความเตือนและเปิด share prompt หลังบันทึกสำเร็จ
+- หน้าผลแข่งและ Flex share แสดง score ล่าสุดเมื่อมี score จาก source รวมถึงคู่ที่กำลังแข่ง
+- LINE `ขอตาราง` จำกัดผู้เล่นที่มีคำทายครบทุกคู่ใน current GW; `บอลวันนี้` รวมวันนี้และพรุ่งนี้ไว้ใน Flex bubble เดียว; `ผลทาย` แสดง score ล่าสุด
+- เพิ่มปุ่มสลับจากแอปทายผลไปแอป Fantasy
+
+Migration ที่เตรียมไว้คือ `supabase/migrations/20260822100000_provisional_finished_scoring.sql` และยังต้อง review/apply ใน production ก่อนสถานะ `finished_provisional` จะเปลี่ยนเป็น `finished` ในฐานข้อมูลจริง

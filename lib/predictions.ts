@@ -3,6 +3,7 @@ export type PredictionChoice = "home" | "draw" | "away";
 export type PredictionMap = Record<string, PredictionChoice>;
 
 export type PredictionEditableFixture = {
+  id: string;
   status: "scheduled" | "upcoming" | "live" | "finished" | "postponed";
   kickoffAt: string;
 };
@@ -33,6 +34,19 @@ export function canEditPrediction(fixture: PredictionEditableFixture, now: Date)
   return (fixture.status === "scheduled" || fixture.status === "upcoming")
     && Number.isFinite(kickoffAt.getTime())
     && now.getTime() < kickoffAt.getTime();
+}
+
+export function getEditablePredictionIds(fixtures: PredictionEditableFixture[], now: Date): string[] {
+  return fixtures.filter((fixture) => canEditPrediction(fixture, now)).map((fixture) => fixture.id);
+}
+
+export function getEditablePredictions(
+  fixtures: PredictionEditableFixture[],
+  predictions: PredictionMap,
+  now: Date,
+): PredictionMap {
+  const editableIds = new Set(getEditablePredictionIds(fixtures, now));
+  return Object.fromEntries(Object.entries(predictions).filter(([fixtureId]) => editableIds.has(fixtureId)));
 }
 
 export function getFixtureScoreText(fixture: { homeScore?: number; awayScore?: number }): string | null {

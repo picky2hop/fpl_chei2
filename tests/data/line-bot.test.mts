@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   getBangkokDayRange,
+  getBangkokTwoDayRange,
   selectActiveGameweek,
   mapStandingsRows,
   mapTodayFixtureRows,
   mapUserPredictionRows,
+  selectCompleteParticipantIds,
 } from "../../lib/data/line-bot-core.ts";
 
 test("selects the current gameweek and falls back when FPL has no current flag", () => {
@@ -32,6 +34,13 @@ test("calculates a Bangkok calendar day as UTC boundaries", () => {
     startIso: "2026-07-31T17:00:00.000Z",
     endIso: "2026-08-01T17:00:00.000Z",
     dateLabel: "1 ส.ค. 2569",
+  });
+});
+
+test("calculates a two-day Bangkok fixture window", () => {
+  assert.deepEqual(getBangkokTwoDayRange(new Date("2026-08-01T00:00:00.000Z")), {
+    startIso: "2026-07-31T17:00:00.000Z",
+    endIso: "2026-08-02T17:00:00.000Z",
   });
 });
 
@@ -73,6 +82,39 @@ test("maps today fixtures with home name/logo and away logo/name data", () => {
   assert.equal(result[0]?.statusLabel, "เริ่มแข่ง");
 });
 
+test("maps latest score for live and finished fixtures", () => {
+  const result = mapTodayFixtureRows([{
+    id: "fixture-1",
+    kickoffAt: "2026-08-01T12:30:00.000Z",
+    dayLabel: "วันนี้",
+    status: "live",
+    homeScore: 3,
+    awayScore: 0,
+    homeTeam: { name: "Arsenal", logoUrl: "" },
+    awayTeam: { name: "Chelsea", logoUrl: "" },
+  }]);
+
+  assert.equal(result[0]?.dayLabel, "วันนี้");
+  assert.equal(result[0]?.statusLabel, "3 - 0 · LIVE");
+});
+
+test("keeps only participants with a prediction for every current gameweek fixture", () => {
+  assert.deepEqual(
+    selectCompleteParticipantIds(
+      ["u1", "u2", "u3"],
+      ["f1", "f2"],
+      [
+        { userId: "u1", fixtureId: "f1" },
+        { userId: "u1", fixtureId: "f2" },
+        { userId: "u2", fixtureId: "f1" },
+        { userId: "u3", fixtureId: "f1" },
+        { userId: "u3", fixtureId: "f2" },
+      ],
+    ),
+    ["u1", "u3"],
+  );
+});
+
 test("maps a user's active predictions to the current gameweek", () => {
   const result = mapUserPredictionRows({
     gameweek: 28,
@@ -84,6 +126,9 @@ test("maps a user's active predictions to the current gameweek", () => {
       homeTeam: { name: "Arsenal", logoUrl: "https://example.test/arsenal.png" },
       awayTeam: { name: "Chelsea", logoUrl: "https://example.test/chelsea.png" },
       outcome: "away",
+      status: "live",
+      homeScore: 1,
+      awayScore: 0,
     }],
   });
 
@@ -96,6 +141,9 @@ test("maps a user's active predictions to the current gameweek", () => {
       homeTeam: { name: "Arsenal", logoUrl: "https://example.test/arsenal.png" },
       awayTeam: { name: "Chelsea", logoUrl: "https://example.test/chelsea.png" },
       choice: "away",
+      status: "live",
+      homeScore: 1,
+      awayScore: 0,
     }],
   });
 });

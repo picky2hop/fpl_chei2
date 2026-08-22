@@ -25,3 +25,11 @@ test("landing copy does not advertise preview mode", async () => {
 
   assert.equal(source.includes("Preview mode"), false);
 });
+
+test("prediction app preserves editable picks and exposes the fantasy switch", async () => {
+  const source = await readFile(new URL("../app/components/prediction-app-final.tsx", import.meta.url), "utf8");
+
+  assert.equal(source.includes("getEditablePredictions"), true);
+  assert.equal(source.includes("href=\"/fantasy\""), true);
+  assert.equal(source.includes("setIsSharePromptOpen(true)"), true);
+});

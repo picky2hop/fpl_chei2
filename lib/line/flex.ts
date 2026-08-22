@@ -17,6 +17,9 @@ export type PredictionFlexInput = {
     choice: PredictionChoice;
     kickoffAt?: string;
     dateLabel?: string;
+    status?: "upcoming" | "live" | "finished" | "postponed";
+    homeScore?: number | null;
+    awayScore?: number | null;
   }>;
 };
 
@@ -25,8 +28,8 @@ export type FixturePredictionFlexInput = {
   dateLabel: string;
   kickoffAt?: string;
   status: "upcoming" | "live" | "finished" | "postponed";
-  homeScore?: number;
-  awayScore?: number;
+  homeScore?: number | null;
+  awayScore?: number | null;
   homeTeam: FlexTeam;
   awayTeam: FlexTeam;
   predictionPercentages: Record<PredictionChoice, number>;
@@ -52,6 +55,7 @@ export type StandingsFlexInput = {
 export type TodayFixturesFlexInput = {
   dateLabel: string;
   fixtures: Array<{
+    dayLabel?: string;
     kickoffLabel: string;
     statusLabel: string;
     homeTeam: FlexTeam;
@@ -316,6 +320,8 @@ function predictionPercentageBar(choice: PredictionChoice, percentage: number) {
 }
 
 function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
+  const hasScore = typeof fixture.homeScore === "number" && typeof fixture.awayScore === "number";
+  const scoreLabel = hasScore ? `${fixture.homeScore} - ${fixture.awayScore}` : "VS";
   return {
     type: "box",
     layout: "horizontal",
@@ -332,7 +338,7 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
         flex: 0,
         justifyContent: "center",
         alignItems: "center",
-        contents: [{ ...text("VS", "xxs", "bold", MUTED_TEXT), align: "center" }],
+        contents: [{ ...text(scoreLabel, "xxs", "bold", hasScore ? PRIMARY_TEXT : MUTED_TEXT), align: "center" }],
       },
       teamSide(fixture.awayTeam, "away", fixture.choice === "away", true),
       predictionChoicePill(fixture.choice),
@@ -355,7 +361,7 @@ function fixtureTeam(team: FlexTeam) {
 }
 
 function fixtureMatchHeader(input: FixturePredictionFlexInput) {
-  const scoreLabel = input.status === "finished" && input.homeScore !== undefined && input.awayScore !== undefined
+  const scoreLabel = typeof input.homeScore === "number" && typeof input.awayScore === "number"
     ? input.homeScore + " - " + input.awayScore
     : input.status === "postponed"
       ? "เลื่อนแข่ง"
@@ -644,15 +650,24 @@ function todayFixture(fixture: TodayFixturesFlexInput["fixtures"][number]) {
 }
 
 export function buildTodayFixturesFlex(input: TodayFixturesFlexInput): FlexMessage {
-  const pages = chunks(input.fixtures, 5);
-  const bubbles = pages.map((page, index) => bubble([
-    header("บอลวันนี้", index === 0 ? input.dateLabel : `หน้า ${index + 1}`),
-    ...(page.length ? page.map(todayFixture) : [text("วันนี้ไม่มีการแข่งขัน", "sm", "regular", MUTED_TEXT)]),
-  ]));
+  const groups = [...new Set(input.fixtures.map((fixture) => fixture.dayLabel ?? "วันนี้"))].map((dayLabel) => ({
+    dayLabel,
+    fixtures: input.fixtures.filter((fixture) => (fixture.dayLabel ?? "วันนี้") === dayLabel),
+  }));
 
   return {
     type: "flex",
     altText: `FPL Chei Chei · บอลวันนี้ ${input.dateLabel}`,
-    contents: container(bubbles),
+    contents: bubble([
+      header("บอลวันนี้", input.dateLabel),
+      ...(groups.length
+        ? groups.map((group) => ({
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [text(group.dayLabel, "sm", "bold", ACCENT), ...group.fixtures.map(todayFixture)],
+        }))
+        : [text("วันนี้และพรุ่งนี้ไม่มีการแข่งขัน", "sm", "regular", MUTED_TEXT)]),
+    ]),
   };
 }

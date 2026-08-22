@@ -265,6 +265,41 @@ test("today fixtures Flex shows time and ordered team logos", () => {
   assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
 });
 
+test("today fixtures Flex uses one long bubble and includes latest scores", () => {
+  const message = buildTodayFixturesFlex({
+    dateLabel: "วันนี้และพรุ่งนี้",
+    fixtures: Array.from({ length: 6 }, (_, index) => ({
+      dayLabel: index < 3 ? "วันนี้" : "พรุ่งนี้",
+      kickoffLabel: "19:30",
+      statusLabel: index === 0 ? "3 - 0 · LIVE" : "เริ่มแข่ง",
+      homeTeam: { name: `Home ${index + 1}`, logoUrl: "https://example.test/home.png" },
+      awayTeam: { name: `Away ${index + 1}`, logoUrl: "https://example.test/away.png" },
+    })),
+  });
+
+  assert.equal(message.contents.type, "bubble");
+  assert.match(JSON.stringify(message), /วันนี้และพรุ่งนี้/);
+  assert.match(JSON.stringify(message), /3 - 0 · LIVE/);
+  for (let index = 1; index <= 6; index += 1) assert.match(JSON.stringify(message), new RegExp(`Home ${index}`));
+});
+
+test("prediction result Flex shows the latest score for a live fixture", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    gameweek: 1,
+    fixtures: [{
+      homeTeam: { name: "Arsenal" },
+      awayTeam: { name: "Chelsea" },
+      choice: "home",
+      status: "live",
+      homeScore: 2,
+      awayScore: 1,
+    }],
+  });
+
+  assert.match(JSON.stringify(message), /2 - 1/);
+});
+
 test("fixture prediction Flex mirrors the app detail and groups predictors", () => {
   const message = buildFixturePredictionFlex({
     gameweek: 1,
