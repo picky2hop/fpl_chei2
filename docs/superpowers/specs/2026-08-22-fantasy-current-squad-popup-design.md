@@ -16,6 +16,8 @@
 - คะแนนรายนักเตะใช้ `event_points` จาก FPL bootstrap ล่าสุด; คะแนนที่แสดงคือคะแนนดิบของนักเตะ และแสดงป้าย Captain/VC แยกต่างหาก
 - รูปนักเตะใช้ค่า `photo` จาก FPL bootstrap เช่น `154561.jpg` เป็น photo key สำหรับ URL มาตรฐาน และมี fallback เมื่อรูปโหลดไม่ได้; ห้ามใช้ FPL player ID เป็นชื่อไฟล์รูป
 - สีของแถวผู้เล่นแยก GK, DEF, MID, FWD และตัวสำรองอย่างชัดเจน
+- Popup ทีมจัดผู้เล่นเป็น 5 แถวแนวนอนตามลำดับ GK, DEF, MID, FWD และตัวสำรอง
+- คะแนน Captain ใน Popup แสดงทั้งคะแนนดิบและคะแนนหลังคูณ 2 เช่น `6 × 2 = 12`
 
 ## Architecture
 
@@ -66,6 +68,8 @@
 - แถวผู้เล่นใช้สีพื้น/เส้นขอบตามตำแหน่ง: GK, DEF, MID, FWD และใช้โทนแยกสำหรับตัวสำรอง
 - สถิตินักเตะและผู้เล่นใน Popup แสดงรูปนักเตะจาก FPL พร้อม fallback เป็นตัวอักษรย่อเมื่อรูปใช้ไม่ได้
 - ขนาดรูปนักเตะเพิ่มเป็น 2 เท่าจากขนาดเดิมใน Popup และหน้าสถิตินักเตะ
+- หน้าสถิติมีการ์ดกัปตันยอดนิยม/รองกัปตันยอดนิยม พร้อมเปอร์เซ็นต์การเลือกและหมายเหตุว่าเป็นการเลือกของ GW ปัจจุบันหลังเริ่ม GW/ปิดรับการจัดทีม; หากยังไม่มี GW ปัจจุบันให้ใช้ GW ล่าสุดที่จบแล้ว
+- หน้าสถิติมีตัวกรอง 2 ชั้น: หมวดหมู่สถิติ (เลือกติดทีม, ฟอร์ม, ย้ายเข้า, ย้ายออก) และตำแหน่ง (ทั้งหมด, GK, DEF, MID, FWD)
 
 ## Admin feedback modal
 
@@ -86,4 +90,6 @@
 - Admin success and error actions expose an accessible feedback modal instead of inline status text
 - Archive confirmation does not call the archive endpoint until the user confirms
 - Position colors and player-image fallback are deterministic and render for both stats and squad rows
+- Squad layout preserves the five position rows and captain display multiplies raw points by two
+- Player stats expose category/position filters and render global captain/vice-captain selections with the GW note
 - Existing Fantasy and prediction tests remain green
