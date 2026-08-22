@@ -32,7 +32,7 @@ test("menu Flex exposes three red command actions without configuration values",
   if (message.type !== "flex") return;
 
   const serialized = JSON.stringify(message);
-  const commands = ["ขอตาราง", "บอลวันนี้", "ผลทาย"];
+  const commands = ["ขอตาราง", "บอลวันนี้", "ผลทายของฉัน"];
   for (const command of commands) {
     assert.match(serialized, new RegExp(`"type":"message","label":"${command}","text":"${command}"`));
   }

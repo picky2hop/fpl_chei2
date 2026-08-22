@@ -20,6 +20,7 @@ export type TodayFixturesData = {
   fixtures: Array<{
     dayLabel: string;
     kickoffLabel: string;
+    scoreLabel?: string;
     statusLabel: string;
     homeTeam: FlexTeam;
     awayTeam: FlexTeam;
@@ -112,6 +113,30 @@ export function getBangkokTwoDayRange(now: Date) {
   return { startIso: range.startIso, endIso: new Date(new Date(range.endIso).getTime() + 24 * 60 * 60 * 1000).toISOString() };
 }
 
+const thaiWeekdayShort = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+const thaiWeekdayFull = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+const thaiMonthShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+const thaiMonthFull = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+function bangkokWeekday(value: Date) {
+  const parts = datePartsInBangkok(value);
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+}
+
+export function formatBangkokShortDate(value: Date): string {
+  const parts = datePartsInBangkok(value);
+  return `${thaiWeekdayShort[bangkokWeekday(value)]} ${parts.day} ${thaiMonthShort[parts.month - 1]} ${String(parts.year + 543).slice(-2)}`;
+}
+
+export function formatBangkokFullDate(value: Date): string {
+  const parts = datePartsInBangkok(value);
+  return `วัน${thaiWeekdayFull[bangkokWeekday(value)]}ที่ ${parts.day} ${thaiMonthFull[parts.month - 1]} ${parts.year + 543}`;
+}
+
+export function formatBangkokDateRangeLabel(now: Date): string {
+  return [formatBangkokShortDate(now), formatBangkokShortDate(new Date(now.getTime() + 24 * 60 * 60 * 1000))].join(" · ");
+}
+
 export function getBangkokDayLabel(value: Date, now: Date): string {
   const valueParts = datePartsInBangkok(value);
   const nowParts = datePartsInBangkok(now);
@@ -131,10 +156,16 @@ function formatKickoff(value: string) {
 
 function statusLabel(row: TodayFixtureRowInput) {
   const hasScore = typeof row.homeScore === "number" && typeof row.awayScore === "number";
-  if (hasScore) return `${row.homeScore} - ${row.awayScore}${row.status === "live" ? " · LIVE" : row.status === "finished" ? " · จบแล้ว" : ""}`;
-  if (row.status === "live") return "LIVE";
+  if (row.status === "live") return "Live";
+  if (row.status === "finished") return "จบแล้ว";
   if (row.status === "postponed") return "เลื่อนแข่ง";
+  if (hasScore) return "อัปเดตสกอร์";
   return "เริ่มแข่ง";
+}
+
+function scoreLabel(row: TodayFixtureRowInput) {
+  if (typeof row.homeScore !== "number" || typeof row.awayScore !== "number") return undefined;
+  return `${row.homeScore} - ${row.awayScore}`;
 }
 
 export function selectCompleteParticipantIds(
@@ -173,6 +204,7 @@ export function mapTodayFixtureRows(rows: TodayFixtureRowInput[]): TodayFixtures
   return rows.map((row) => ({
     dayLabel: row.dayLabel ?? "วันนี้",
     kickoffLabel: formatKickoff(row.kickoffAt),
+    scoreLabel: scoreLabel(row),
     statusLabel: statusLabel(row),
     homeTeam: row.homeTeam,
     awayTeam: row.awayTeam,

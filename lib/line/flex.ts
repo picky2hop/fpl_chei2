@@ -57,6 +57,7 @@ export type TodayFixturesFlexInput = {
   fixtures: Array<{
     dayLabel?: string;
     kickoffLabel: string;
+    scoreLabel?: string;
     statusLabel: string;
     homeTeam: FlexTeam;
     awayTeam: FlexTeam;
@@ -322,6 +323,14 @@ function predictionPercentageBar(choice: PredictionChoice, percentage: number) {
 function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
   const hasScore = typeof fixture.homeScore === "number" && typeof fixture.awayScore === "number";
   const scoreLabel = hasScore ? `${fixture.homeScore} - ${fixture.awayScore}` : "VS";
+  const statusLabel = fixture.status === "finished"
+    ? "จบแล้ว"
+    : fixture.status === "live"
+      ? "Live"
+      : fixture.status === "postponed"
+        ? "เลื่อนแข่ง"
+        : undefined;
+  const statusColor = fixture.status === "live" ? "#FF647C" : MUTED_TEXT;
   return {
     type: "box",
     layout: "horizontal",
@@ -338,7 +347,10 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
         flex: 0,
         justifyContent: "center",
         alignItems: "center",
-        contents: [{ ...text(scoreLabel, "xxs", "bold", hasScore ? PRIMARY_TEXT : MUTED_TEXT), align: "center" }],
+         contents: [
+           { ...text(scoreLabel, "xs", "bold", hasScore ? PRIMARY_TEXT : MUTED_TEXT), align: "center" },
+           ...(statusLabel ? [{ ...text(statusLabel, "xxs", "regular", statusColor), align: "center" }] : []),
+         ],
       },
       teamSide(fixture.awayTeam, "away", fixture.choice === "away", true),
       predictionChoicePill(fixture.choice),
@@ -370,6 +382,14 @@ function fixtureMatchHeader(input: FixturePredictionFlexInput) {
         : "VS";
   const dateLabel = formatPredictionDateLabel(input.kickoffAt, input.dateLabel);
   const timeLabel = formatPredictionTimeLabel(input.kickoffAt);
+  const statusLabel = input.status === "finished"
+    ? "จบแล้ว"
+    : input.status === "live"
+      ? "Live"
+      : input.status === "postponed"
+        ? "เลื่อนแข่ง"
+        : undefined;
+  const statusColor = input.status === "live" ? "#FF647C" : MUTED_TEXT;
 
   return {
     type: "box",
@@ -393,7 +413,10 @@ function fixtureMatchHeader(input: FixturePredictionFlexInput) {
             flex: 0,
             justifyContent: "center",
             alignItems: "center",
-            contents: [{ ...text(scoreLabel, "md", "bold"), align: "center" }],
+             contents: [
+               { ...text(scoreLabel, "md", "bold"), align: "center" },
+               ...(statusLabel ? [{ ...text(statusLabel, "xxs", "regular", statusColor), align: "center" }] : []),
+             ],
           },
           fixtureTeam(input.awayTeam),
         ],
@@ -452,7 +475,7 @@ function fixturePredictionGroup(
         alignItems: "center",
         contents: [
           predictionChoicePill(choice),
-          text(percentage + "%", "sm", "bold", MUTED_TEXT),
+           { ...text(percentage + "%", "sm", "bold", MUTED_TEXT), align: "end" },
         ],
       },
       predictionPercentageBar(choice, percentage),
@@ -642,7 +665,11 @@ function todayFixture(fixture: TodayFixturesFlexInput["fixtures"][number]) {
         layout: "vertical",
         width: "48px",
         alignItems: "center",
-        contents: [text(fixture.kickoffLabel, "xs", "bold", ACCENT), text(fixture.statusLabel, "xxs", "regular", MUTED_TEXT)],
+         contents: [
+           text(fixture.kickoffLabel, "xxs", "bold", ACCENT),
+           ...(fixture.scoreLabel ? [{ ...text(fixture.scoreLabel, "xs", "bold", PRIMARY_TEXT), align: "center" }] : []),
+           text(fixture.statusLabel, "xxs", "regular", fixture.statusLabel === "Live" ? "#FF647C" : MUTED_TEXT),
+         ],
       },
       teamSide(fixture.awayTeam, "away"),
     ],

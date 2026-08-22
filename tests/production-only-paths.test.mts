@@ -32,4 +32,7 @@ test("prediction app preserves editable picks and exposes the fantasy switch", a
   assert.equal(source.includes("getEditablePredictions"), true);
   assert.equal(source.includes("href=\"/fantasy\""), true);
   assert.equal(source.includes("setIsSharePromptOpen(true)"), true);
+  assert.equal(source.includes("Preview / LIFF"), false);
+  assert.equal(source.includes("href=\"/\""), true);
+  assert.equal(source.includes(">หน้าหลัก</Link>"), true);
 });

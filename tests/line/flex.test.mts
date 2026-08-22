@@ -267,19 +267,23 @@ test("today fixtures Flex shows time and ordered team logos", () => {
 
 test("today fixtures Flex uses one long bubble and includes latest scores", () => {
   const message = buildTodayFixturesFlex({
-    dateLabel: "วันนี้และพรุ่งนี้",
+    dateLabel: "ส. 1 ส.ค. 69 · อา. 2 ส.ค. 69",
     fixtures: Array.from({ length: 6 }, (_, index) => ({
-      dayLabel: index < 3 ? "วันนี้" : "พรุ่งนี้",
+      dayLabel: index < 3 ? "วันเสาร์ที่ 1 สิงหาคม 2569" : "วันอาทิตย์ที่ 2 สิงหาคม 2569",
       kickoffLabel: "19:30",
-      statusLabel: index === 0 ? "3 - 0 · LIVE" : "เริ่มแข่ง",
+      scoreLabel: index === 0 ? "3 - 0" : undefined,
+      statusLabel: index === 0 ? "Live" : "เริ่มแข่ง",
       homeTeam: { name: `Home ${index + 1}`, logoUrl: "https://example.test/home.png" },
       awayTeam: { name: `Away ${index + 1}`, logoUrl: "https://example.test/away.png" },
     })),
   });
 
   assert.equal(message.contents.type, "bubble");
-  assert.match(JSON.stringify(message), /วันนี้และพรุ่งนี้/);
-  assert.match(JSON.stringify(message), /3 - 0 · LIVE/);
+  assert.match(JSON.stringify(message), /ส\. 1 ส\.ค\. 69 · อา\. 2 ส\.ค\. 69/);
+  assert.match(JSON.stringify(message), /วันเสาร์ที่ 1 สิงหาคม 2569/);
+  assert.match(JSON.stringify(message), /วันอาทิตย์ที่ 2 สิงหาคม 2569/);
+  assert.match(JSON.stringify(message), /"text":"3 - 0","size":"xs","weight":"bold","color":"#FFFFFF"/);
+  assert.match(JSON.stringify(message), /"text":"Live","size":"xxs","weight":"regular","color":"#FF647C"/);
   for (let index = 1; index <= 6; index += 1) assert.match(JSON.stringify(message), new RegExp(`Home ${index}`));
 });
 
@@ -298,6 +302,24 @@ test("prediction result Flex shows the latest score for a live fixture", () => {
   });
 
   assert.match(JSON.stringify(message), /2 - 1/);
+  assert.match(JSON.stringify(message), /"text":"Live","size":"xxs","weight":"regular","color":"#FF647C"/);
+});
+
+test("prediction result Flex labels finished fixtures below the latest score", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    gameweek: 1,
+    fixtures: [{
+      homeTeam: { name: "Arsenal" },
+      awayTeam: { name: "Chelsea" },
+      choice: "home",
+      status: "finished",
+      homeScore: 2,
+      awayScore: 0,
+    }],
+  });
+
+  assert.match(JSON.stringify(message), /"text":"จบแล้ว","size":"xxs","weight":"regular"/);
 });
 
 test("fixture prediction Flex mirrors the app detail and groups predictors", () => {
@@ -391,7 +413,36 @@ test("fixture prediction Flex renders percentage bars with bounded widths", () =
   assert.match(serialized, /"width":"75%"/);
   assert.match(serialized, /"text":"25%"/);
   assert.match(serialized, /"text":"75%"/);
+  assert.match(serialized, /"text":"75%"[^}]*"align":"end"/);
   assert.doesNotThrow(() => validateFlexMessage(message));
+});
+
+test("fixture prediction Flex shows finished and live labels below the score", () => {
+  const finished = buildFixturePredictionFlex({
+    gameweek: 1,
+    dateLabel: "เสาร์ 22 ส.ค.",
+    status: "finished",
+    homeScore: 2,
+    awayScore: 1,
+    homeTeam: { name: "Arsenal" },
+    awayTeam: { name: "Chelsea" },
+    predictionPercentages: { home: 100, draw: 0, away: 0 },
+    predictors: [],
+  });
+  const live = buildFixturePredictionFlex({
+    gameweek: 1,
+    dateLabel: "เสาร์ 22 ส.ค.",
+    status: "live",
+    homeScore: 1,
+    awayScore: 0,
+    homeTeam: { name: "Arsenal" },
+    awayTeam: { name: "Chelsea" },
+    predictionPercentages: { home: 100, draw: 0, away: 0 },
+    predictors: [],
+  });
+
+  assert.match(JSON.stringify(finished), /"text":"จบแล้ว","size":"xxs","weight":"regular"/);
+  assert.match(JSON.stringify(live), /"text":"Live","size":"xxs","weight":"regular","color":"#FF647C"/);
 });
 
 test("fixture prediction Flex clamps invalid percentage bar widths", () => {

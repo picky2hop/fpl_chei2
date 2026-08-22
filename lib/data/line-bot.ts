@@ -2,7 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
-import { getBangkokDayLabel, getBangkokTwoDayRange, selectActiveGameweek, selectCompleteParticipantIds } from "./line-bot-core";
+import { formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, selectActiveGameweek, selectCompleteParticipantIds } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -23,6 +23,7 @@ export type TodayFixturesData = {
   fixtures: Array<{
     dayLabel: string;
     kickoffLabel: string;
+    scoreLabel?: string;
     statusLabel: string;
     homeTeam: FlexTeam;
     awayTeam: FlexTeam;
@@ -110,10 +111,16 @@ function formatKickoff(value: string) {
 
 function statusLabel(row: TodayFixtureRowInput) {
   const hasScore = typeof row.homeScore === "number" && typeof row.awayScore === "number";
-  if (hasScore) return `${row.homeScore} - ${row.awayScore}${row.status === "live" ? " · LIVE" : row.status === "finished" ? " · จบแล้ว" : ""}`;
-  if (row.status === "live") return "LIVE";
+  if (row.status === "live") return "Live";
+  if (row.status === "finished") return "จบแล้ว";
   if (row.status === "postponed") return "เลื่อนแข่ง";
+  if (hasScore) return "อัปเดตสกอร์";
   return "เริ่มแข่ง";
+}
+
+function scoreLabel(row: TodayFixtureRowInput) {
+  if (typeof row.homeScore !== "number" || typeof row.awayScore !== "number") return undefined;
+  return `${row.homeScore} - ${row.awayScore}`;
 }
 
 export function mapStandingsRows(gameweek: number, rows: StandingsRowInput[]): StandingsData {
@@ -135,6 +142,7 @@ export function mapTodayFixtureRows(rows: TodayFixtureRowInput[]): TodayFixtures
   return rows.map((row) => ({
     dayLabel: row.dayLabel ?? "วันนี้",
     kickoffLabel: formatKickoff(row.kickoffAt),
+    scoreLabel: scoreLabel(row),
     statusLabel: statusLabel(row),
     homeTeam: row.homeTeam,
     awayTeam: row.awayTeam,
@@ -241,9 +249,9 @@ export function createLineBotDataReader(): LineBotDataReader {
         const homeTeam = teamsById.get(fixture.home_team_id);
         const awayTeam = teamsById.get(fixture.away_team_id);
         if (!homeTeam || !awayTeam) return [];
-        return [{ id: fixture.id, kickoffAt: fixture.kickoff_at, dayLabel: getBangkokDayLabel(new Date(fixture.kickoff_at), now), status: fixture.status, homeScore: fixture.home_score, awayScore: fixture.away_score, homeTeam, awayTeam }];
+        return [{ id: fixture.id, kickoffAt: fixture.kickoff_at, dayLabel: formatBangkokFullDate(new Date(fixture.kickoff_at)), status: fixture.status, homeScore: fixture.home_score, awayScore: fixture.away_score, homeTeam, awayTeam }];
       });
-      return { dateLabel: "วันนี้และพรุ่งนี้", fixtures: mapTodayFixtureRows(rows) };
+      return { dateLabel: formatBangkokDateRangeLabel(now), fixtures: mapTodayFixtureRows(rows) };
     },
 
     async getUserPredictions(lineUserId) {

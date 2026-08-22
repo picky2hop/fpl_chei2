@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {
   getBangkokDayRange,
   getBangkokTwoDayRange,
+  formatBangkokShortDate,
+  formatBangkokFullDate,
+  formatBangkokDateRangeLabel,
   selectActiveGameweek,
   mapStandingsRows,
   mapTodayFixtureRows,
@@ -42,6 +45,14 @@ test("calculates a two-day Bangkok fixture window", () => {
     startIso: "2026-07-31T17:00:00.000Z",
     endIso: "2026-08-02T17:00:00.000Z",
   });
+});
+
+test("formats the two-day fixture header and full day headings in Bangkok time", () => {
+  const now = new Date("2026-08-01T00:00:00.000Z");
+
+  assert.equal(formatBangkokShortDate(now), "ส. 1 ส.ค. 69");
+  assert.equal(formatBangkokFullDate(now), "วันเสาร์ที่ 1 สิงหาคม 2569");
+  assert.equal(formatBangkokDateRangeLabel(now), "ส. 1 ส.ค. 69 · อา. 2 ส.ค. 69");
 });
 
 test("maps standings rows with rank, avatar, and deterministic points order", () => {
@@ -95,7 +106,8 @@ test("maps latest score for live and finished fixtures", () => {
   }]);
 
   assert.equal(result[0]?.dayLabel, "วันนี้");
-  assert.equal(result[0]?.statusLabel, "3 - 0 · LIVE");
+  assert.equal(result[0]?.scoreLabel, "3 - 0");
+  assert.equal(result[0]?.statusLabel, "Live");
 });
 
 test("keeps only participants with a prediction for every current gameweek fixture", () => {
