@@ -17,6 +17,7 @@ export type FantasySquadPlayer = {
   multiplier: number;
   isCaptain: boolean;
   isViceCaptain: boolean;
+  photoUrl?: string;
   points: number | null;
 };
 
@@ -48,6 +49,7 @@ export type FplPlayerSnapshot = {
   transfersInEvent: number;
   transfersOutEvent: number;
   form: number;
+  eventPoints?: number;
   is_global_captain?: boolean;
   is_global_vice_captain?: boolean;
 };

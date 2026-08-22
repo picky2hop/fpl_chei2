@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import FantasyAdminPanel from "./fantasy-admin-panel";
+import { AdminFeedbackModal } from "./admin-feedback-modal";
+import { feedbackFromAction, type AdminFeedback } from "@/lib/admin/feedback";
 
 type ParticipantOptions = {
   users: Array<{ id: string; displayName: string; status: string }>;
@@ -10,7 +12,7 @@ type ParticipantOptions = {
 
 export default function AdminPanel() {
   const [state, setState] = useState<"idle" | "running" | "done" | "error">("idle");
-  const [message, setMessage] = useState("");
+  const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [options, setOptions] = useState<ParticipantOptions | null>(null);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedGameweekId, setSelectedGameweekId] = useState("");
@@ -22,28 +24,28 @@ export default function AdminPanel() {
       setOptions(value);
       setSelectedUserId(value.users[0]?.id ?? "");
       setSelectedGameweekId(value.gameweeks[0]?.id ?? "");
-    }).catch((error: unknown) => setMessage(error instanceof Error ? error.message : "โหลดข้อมูลไม่สำเร็จ"));
+    }).catch((error: unknown) => setFeedback(feedbackFromAction({ ok: false, successMessage: "โหลดข้อมูลสำเร็จ", errorMessage: error instanceof Error ? error.message : "โหลดข้อมูลไม่สำเร็จ" })));
   }, []);
 
   async function runSync() {
     setState("running");
-    setMessage("");
+    setFeedback(null);
     try {
       const response = await fetch("/api/sync", { method: "POST" });
       const body = await response.json() as { fixturesUpserted?: number; error?: string };
       if (!response.ok) throw new Error(body.error ?? "Sync failed");
       setState("done");
-      setMessage(`อัปเดต fixtures ${body.fixturesUpserted ?? 0} รายการแล้ว`);
+      setFeedback(feedbackFromAction({ ok: true, successMessage: `อัปเดต fixtures ${body.fixturesUpserted ?? 0} รายการแล้ว` }));
     } catch (error) {
       setState("error");
-      setMessage(error instanceof Error ? error.message : "Sync failed");
+      setFeedback(feedbackFromAction({ ok: false, successMessage: "ซิงก์สำเร็จแล้ว", errorMessage: error instanceof Error ? error.message : "Sync failed" }));
     }
   }
 
   async function updateParticipation(status: "active" | "excluded") {
     if (!selectedUserId || !selectedGameweekId) return;
     setState("running");
-    setMessage("");
+    setFeedback(null);
     try {
       const response = await fetch("/api/admin/participants", {
         method: "POST",
@@ -52,10 +54,10 @@ export default function AdminPanel() {
       });
       if (!response.ok) throw new Error("อัปเดตสถานะผู้เล่นไม่สำเร็จ");
       setState("done");
-      setMessage(status === "excluded" ? "Exclude ผู้เล่นใน gameweek นี้แล้ว" : "คืนสถานะผู้เล่นใน gameweek นี้แล้ว");
+      setFeedback(feedbackFromAction({ ok: true, successMessage: status === "excluded" ? "Exclude ผู้เล่นใน gameweek นี้แล้ว" : "คืนสถานะผู้เล่นใน gameweek นี้แล้ว" }));
     } catch (error) {
       setState("error");
-      setMessage(error instanceof Error ? error.message : "อัปเดตไม่สำเร็จ");
+      setFeedback(feedbackFromAction({ ok: false, successMessage: "อัปเดตสำเร็จแล้ว", errorMessage: error instanceof Error ? error.message : "อัปเดตไม่สำเร็จ" }));
     }
   }
 
@@ -70,7 +72,6 @@ export default function AdminPanel() {
           <button type="button" onClick={() => void runSync()} disabled={state === "running"} className="mt-5 rounded-2xl bg-[#d9ff58] px-5 py-3 text-sm font-black text-[#071525] disabled:cursor-wait disabled:opacity-50">
             {state === "running" ? "กำลังซิงก์…" : "Manual sync"}
           </button>
-          {message && <p className={`mt-4 text-sm ${state === "error" ? "text-[#ff8698]" : "text-[#b7f5de]"}`}>{message}</p>}
         </section>
         <section className="mt-4 rounded-3xl border border-white/10 bg-[#10253a] p-5">
           <h2 className="text-lg font-black">จัดการ participation ราย GW</h2>
@@ -82,6 +83,7 @@ export default function AdminPanel() {
           </div>
         </section>
         <FantasyAdminPanel />
+        <AdminFeedbackModal feedback={feedback} onClose={() => setFeedback(null)} />
       </div>
     </main>
   );

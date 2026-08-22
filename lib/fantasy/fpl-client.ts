@@ -1,5 +1,6 @@
 import { getServerEnv } from "../env.ts";
 import { normalizeEntryCurrentSquad } from "./normalizers.ts";
+import { buildFplPlayerPhotoUrl } from "./player-image.ts";
 import type { FplLeagueMember, FplLeagueSummary } from "./league-types.ts";
 import type {
   FantasyFplProviderWithPicks,
@@ -125,7 +126,8 @@ function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, ga
       multiplier: numberValue(row.multiplier ?? 0, "pick multiplier"),
       isCaptain: row.is_captain === true,
       isViceCaptain: row.is_vice_captain === true,
-      points: row.points == null ? null : numberValue(row.points, "pick points"),
+      photoUrl: buildFplPlayerPhotoUrl(player.playerId),
+      points: player.eventPoints ?? null,
     } satisfies FantasySquadPlayer;
   });
   return normalizeEntryCurrentSquad({ gameweekNumber, picks });
@@ -176,6 +178,7 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
       transfersInEvent: numberValue(player.transfers_in_event, "transfers_in_event"),
       transfersOutEvent: numberValue(player.transfers_out_event, "transfers_out_event"),
       form: numberValue(player.form, "form"),
+      eventPoints: numberValue(player.event_points, "event_points"),
     } satisfies FplPlayerSnapshot;
   });
   const selectedEvent = current ?? events.find((event) => numberValue(event.id, "event id") === currentGameweek);

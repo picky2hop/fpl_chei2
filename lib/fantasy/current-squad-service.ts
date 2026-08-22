@@ -23,6 +23,17 @@ export type CurrentSquadResult = {
   sourceSyncedAt: string;
 };
 
+function squadFromStored(stored: StoredCurrentSquad): FantasyEntryCurrentSquad {
+  return {
+    gameweekNumber: stored.gameweekNumber,
+    formation: stored.formation,
+    captainPlayerId: stored.captainPlayerId,
+    viceCaptainPlayerId: stored.viceCaptainPlayerId,
+    starters: stored.starters,
+    bench: stored.bench,
+  };
+}
+
 export async function loadCurrentSquad(input: {
   seasonId: string;
   entryId: number;
@@ -37,24 +48,22 @@ export async function loadCurrentSquad(input: {
     entryId: input.entryId,
   });
 
-  if (stored?.gameweekId === input.gameweekId && stored.gameweekNumber === input.gameweekNumber) {
-    const squad: FantasyEntryCurrentSquad = {
-      gameweekNumber: stored.gameweekNumber,
-      formation: stored.formation,
-      captainPlayerId: stored.captainPlayerId,
-      viceCaptainPlayerId: stored.viceCaptainPlayerId,
-      starters: stored.starters,
-      bench: stored.bench,
-    };
-    return {
-      entryId: input.entryId,
-      squad,
-      cached: true,
-      sourceSyncedAt: stored.sourceSyncedAt,
-    };
+  const storedIsCurrent = stored?.gameweekId === input.gameweekId && stored.gameweekNumber === input.gameweekNumber;
+  let squad: FantasyEntryCurrentSquad;
+  try {
+    squad = await input.provider.getEntryPicks(input.entryId, input.gameweekNumber);
+  } catch (error) {
+    if (storedIsCurrent && stored) {
+      return {
+        entryId: input.entryId,
+        squad: squadFromStored(stored),
+        cached: true,
+        sourceSyncedAt: stored.sourceSyncedAt,
+      };
+    }
+    throw error;
   }
 
-  const squad = await input.provider.getEntryPicks(input.entryId, input.gameweekNumber);
   await input.repository.upsertCurrentSquad({
     seasonId: input.seasonId,
     entryId: input.entryId,

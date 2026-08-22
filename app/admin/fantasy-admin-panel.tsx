@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminFeedbackModal } from "./admin-feedback-modal";
+import { feedbackFromAction, type AdminFeedback } from "@/lib/admin/feedback";
 
 type League = { id: string; fpl_league_id: number; official_name: string; status: "active" | "archived" };
 type EntryOption = { fpl_entry_id: number; fpl_team_name: string; fpl_manager_name: string; leagues: Array<{ id: string; official_name: string }> };
@@ -18,7 +20,7 @@ export default function FantasyAdminPanel() {
   const [champions, setChampions] = useState<number[]>([]);
   const [woodenSpoons, setWoodenSpoons] = useState<number[]>([]);
   const [state, setState] = useState<"idle" | "running" | "done" | "error">("idle");
-  const [message, setMessage] = useState("");
+  const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
 
   function applyData(value: AdminData) {
     setData(value);
@@ -34,21 +36,21 @@ export default function FantasyAdminPanel() {
     return await response.json() as AdminData;
   }
 
-  useEffect(() => { void load().then(applyData).catch((error: unknown) => setMessage(error instanceof Error ? error.message : "โหลดข้อมูลไม่สำเร็จ")); }, []);
+  useEffect(() => { void load().then(applyData).catch((error: unknown) => setFeedback(feedbackFromAction({ ok: false, successMessage: "โหลดข้อมูลสำเร็จ", errorMessage: error instanceof Error ? error.message : "โหลดข้อมูลไม่สำเร็จ" }))); }, []);
 
   async function action(request: Promise<Response>, success: string) {
     setState("running");
-    setMessage("");
+    setFeedback(null);
     try {
       const response = await request;
       const value = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(value.error ?? "ดำเนินการไม่สำเร็จ");
       setState("done");
-      setMessage(success);
+      setFeedback(feedbackFromAction({ ok: true, successMessage: success }));
       applyData(await load());
     } catch (error) {
       setState("error");
-      setMessage(error instanceof Error ? error.message : "ดำเนินการไม่สำเร็จ");
+      setFeedback(feedbackFromAction({ ok: false, successMessage: success, errorMessage: error instanceof Error ? error.message : "ดำเนินการไม่สำเร็จ" }));
     }
   }
 
@@ -67,6 +69,6 @@ export default function FantasyAdminPanel() {
 
     <div className="mt-5 rounded-2xl border border-white/10 bg-[#071525]/50 p-4"><h3 className="text-sm font-black">Awards รายลีก / ราย GW</h3><label className="mt-3 block text-xs font-bold text-white/60">ลีก<select value={awardLeagueId} onChange={(event) => { setAwardLeagueId(event.target.value); setChampions([]); setWoodenSpoons([]); }} className="mt-1 w-full rounded-xl border border-white/10 bg-[#071525] px-3 py-3 text-sm font-bold text-white">{data?.leagues.map((league) => <option key={league.id} value={league.id}>{league.official_name} · {league.status}</option>)}</select></label><select value={gameweekId} onChange={(event) => setGameweekId(event.target.value)} className="mt-3 w-full rounded-xl border border-white/10 bg-[#071525] px-3 py-3 text-sm font-bold text-white">{data?.gameweeks.map((gameweek) => <option key={gameweek.id} value={gameweek.id}>GW {gameweek.number} · {gameweek.name ?? ""}</option>)}</select><div className="mt-3 grid gap-3 sm:grid-cols-2"><div><p className="text-xs font-black text-[#d9ff58]">Champion</p>{awardEntries.map((entry) => <label key={`c-${entry.fpl_entry_id}`} className="mt-2 flex items-center gap-2 text-xs font-bold text-white/70"><input type="checkbox" checked={champions.includes(entry.fpl_entry_id)} onChange={() => toggle(setChampions, champions, entry.fpl_entry_id)} />{entry.fpl_team_name} · {entry.fpl_entry_id}</label>)}</div><div><p className="text-xs font-black text-[#ff8698]">Wooden spoon</p>{awardEntries.map((entry) => <label key={`w-${entry.fpl_entry_id}`} className="mt-2 flex items-center gap-2 text-xs font-bold text-white/70"><input type="checkbox" checked={woodenSpoons.includes(entry.fpl_entry_id)} onChange={() => toggle(setWoodenSpoons, woodenSpoons, entry.fpl_entry_id)} />{entry.fpl_team_name} · {entry.fpl_entry_id}</label>)}</div></div><button type="button" onClick={() => void action(fetch("/api/admin/fantasy/awards", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ leagueId: awardLeagueId, gameweekId, championEntryIds: champions, woodenSpoonEntryIds: woodenSpoons }) }), "บันทึก awards แล้ว")} disabled={!awardLeagueId || !gameweekId || state === "running"} className="mt-4 rounded-xl border border-[#d9ff58]/30 bg-[#d9ff58]/10 px-4 py-3 text-xs font-black text-[#d9ff58] disabled:opacity-40">บันทึก Awards</button></div>
 
-    {message && <p role="status" className={`mt-4 text-sm ${state === "error" ? "text-[#ff8698]" : "text-[#b7f5de]"}`}>{message}</p>}
+    <AdminFeedbackModal feedback={feedback} onClose={() => setFeedback(null)} />
   </section>;
 }
