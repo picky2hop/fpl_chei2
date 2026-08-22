@@ -175,15 +175,23 @@ export function buildFantasyPlayerStatsShareFlex(input: {
   positionLabel: string;
   rows: FantasyPlayerStatsShareRow[];
 }): FlexMessage {
-  return {
-    type: "flex",
-    altText: `FPL Chei Chei · สถิตินักเตะ GW ${input.gameweek} · ${input.categoryLabel}`,
-    contents: bubble([
+  const pages = chunks(input.rows.slice(0, 10), 8);
+  const safePages = pages.length ? pages : [[]];
+  const bubbles = safePages.map((page) =>
+    bubble([
       text("สถิตินักเตะ Fantasy", "lg", "bold", ACCENT),
       text(`GW ${input.gameweek} · ${input.categoryLabel}`, "sm", "bold"),
       text(`ตำแหน่ง: ${input.positionLabel}`, "xs", "regular", MUTED_TEXT),
-      ...(input.rows.length ? input.rows.slice(0, 10).map(playerStatsRow) : [text("ยังไม่มีข้อมูลตามหมวดหมู่ที่เลือก", "sm", "regular", MUTED_TEXT)]),
+      ...(page.length
+        ? page.map(playerStatsRow)
+        : [text("ยังไม่มีข้อมูลตามหมวดหมู่ที่เลือก", "sm", "regular", MUTED_TEXT)]),
     ]),
+  );
+
+  return {
+    type: "flex",
+    altText: `FPL Chei Chei · สถิตินักเตะ GW ${input.gameweek} · ${input.categoryLabel}`,
+    contents: container(bubbles),
   };
 }
 
@@ -201,7 +209,6 @@ function squadPlayer(player: FantasySquadPlayer) {
     type: "box",
     layout: "vertical",
     flex: 1,
-    minWidth: "58px",
     spacing: "xs",
     alignItems: "center",
     contents: [

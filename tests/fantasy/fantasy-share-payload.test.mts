@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { validateFlexMessage } from "../../lib/line/flex.ts";
 import { buildFantasyLeaderboardShareFlex, buildFantasyPlayerStatsShareFlex, buildFantasySquadShareFlex } from "../../lib/fantasy/fantasy-share-payload.ts";
 
 function player(input: Partial<{
@@ -87,6 +88,24 @@ test("builds filtered player-stat share with category and position", () => {
   assert.match(serialized, /Bournemouth/);
 });
 
+test("splits a long player-stat share into Flex-safe bubbles", () => {
+  const message = buildFantasyPlayerStatsShareFlex({
+    gameweek: 3,
+    categoryLabel: "ฟอร์มสูงสุด",
+    positionLabel: "ทั้งหมด",
+    rows: Array.from({ length: 10 }, (_, index) => ({
+      rank: index + 1,
+      playerName: `Player ${index + 1}`,
+      clubName: "Club",
+      metricValue: 10 - index,
+      photoUrl: "https://example.com/player.png",
+    })),
+  });
+
+  validateFlexMessage(message);
+  assert.equal((message.contents as { type: string }).type, "carousel");
+});
+
 test("builds five squad rows and doubles captain display points", () => {
   const message = buildFantasySquadShareFlex({
     managerName: "Picky",
@@ -102,4 +121,16 @@ test("builds five squad rows and doubles captain display points", () => {
   assert.match(serialized, /6 × 2 = 12/);
   assert.match(serialized, /Picky/);
   assert.doesNotMatch(serialized, /entryId|FPL Entry/i);
+});
+
+test("uses LINE-supported sizing properties in the squad share", () => {
+  const message = buildFantasySquadShareFlex({
+    managerName: "Picky",
+    managerAvatarUrl: null,
+    teamName: "Chei FC",
+    squad: fixtureSquad(),
+  });
+
+  validateFlexMessage(message);
+  assert.doesNotMatch(JSON.stringify(message), /minWidth/);
 });
