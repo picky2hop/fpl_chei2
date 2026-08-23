@@ -87,6 +87,24 @@ test("fantasy leaderboard share removes the branding header and keeps the team l
   assert.match(JSON.stringify(row), /#D9FF58/i);
 });
 
+test("fantasy leaderboard rows keep rank, profile and points fixed while the name fills the middle", () => {
+  const message = buildFantasyLeaderboardShareFlex({
+    leagueName: "เชยเชย Cup",
+    gameweek: 3,
+    period: "gameweek",
+    rows: [{ rank: 1, managerName: "Picky", teamName: "Chei FC", points: 26, avatarUrl: "https://example.com/avatar.png" }],
+  });
+  const contents = message.contents as Record<string, unknown>;
+  const body = contents.body as Record<string, unknown>;
+  const row = (body.contents as Array<Record<string, unknown>>)[3];
+  const rowContents = row.contents as Array<Record<string, unknown>>;
+
+  assert.equal(rowContents[0].flex, 0);
+  assert.equal(rowContents[1].flex, 0);
+  assert.equal(rowContents[2].flex, 1);
+  assert.equal(rowContents[3].flex, 0);
+});
+
 test("labels season and preserves rank, manager, team and points", () => {
   const message = buildFantasyLeaderboardShareFlex({
     leagueName: "เชยเชย Cup",
@@ -129,6 +147,24 @@ test("fantasy player-stat share removes the branding header and uses a full-widt
   assert.equal(contents.size, "giga");
   assert.equal("header" in contents, false);
   assert.doesNotMatch(JSON.stringify(contents), /FPL CHEI CHEI/);
+});
+
+test("fantasy player-stat rows keep rank, photo and metric fixed while the name fills the middle", () => {
+  const message = buildFantasyPlayerStatsShareFlex({
+    gameweek: 3,
+    categoryLabel: "ฟอร์มสูงสุด",
+    positionLabel: "กองกลาง",
+    rows: [{ rank: 1, playerName: "Semenyo", clubName: "Bournemouth", metricValue: 8, photoUrl: "https://example.com/semenyo.png" }],
+  });
+  const contents = message.contents as Record<string, unknown>;
+  const body = contents.body as Record<string, unknown>;
+  const row = (body.contents as Array<Record<string, unknown>>)[3];
+  const rowContents = row.contents as Array<Record<string, unknown>>;
+
+  assert.equal(rowContents[0].flex, 0);
+  assert.equal(rowContents[1].flex, 0);
+  assert.equal(rowContents[2].flex, 1);
+  assert.equal(rowContents[3].flex, 0);
 });
 
 test("splits a long player-stat share into Flex-safe bubbles", () => {

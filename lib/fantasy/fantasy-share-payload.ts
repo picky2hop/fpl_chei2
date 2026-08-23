@@ -48,6 +48,7 @@ function imageOrFallback(url: string | null | undefined, fallback: string, size 
       size,
       aspectMode: "cover",
       aspectRatio: "1:1",
+      flex: 0,
     };
   }
   return {
@@ -116,7 +117,7 @@ function leaderboardRow(row: FantasyLeaderboardShareRow) {
     backgroundColor: row.rank === 1 ? "#233A2D" : CARD_BACKGROUND,
     alignItems: "center",
     contents: [
-      text(String(row.rank), "sm", "bold", row.rank === 1 ? ACCENT : MUTED_TEXT),
+      { ...text(String(row.rank), "sm", "bold", row.rank === 1 ? ACCENT : MUTED_TEXT), flex: 0 },
       profileImageOrFallback(row.avatarUrl, row.managerName, "34px"),
       {
         type: "box",
@@ -127,7 +128,7 @@ function leaderboardRow(row: FantasyLeaderboardShareRow) {
           text(`ทีม : ${row.teamName}`, "xs", "bold", ACCENT),
         ],
       },
-      text(`${row.points} คะแนน`, "sm", "bold", row.rank === 1 ? ACCENT : PRIMARY_TEXT),
+      { ...text(`${row.points} คะแนน`, "sm", "bold", row.rank === 1 ? ACCENT : PRIMARY_TEXT), flex: 0 },
     ],
   };
 }
@@ -165,7 +166,7 @@ function playerStatsRow(row: FantasyPlayerStatsShareRow) {
     backgroundColor: CARD_BACKGROUND,
     alignItems: "center",
     contents: [
-      text(String(row.rank), "sm", "bold", MUTED_TEXT),
+      { ...text(String(row.rank), "sm", "bold", MUTED_TEXT), flex: 0 },
       imageOrFallback(row.photoUrl, row.playerName, "34px"),
       {
         type: "box",
@@ -173,7 +174,7 @@ function playerStatsRow(row: FantasyPlayerStatsShareRow) {
         flex: 1,
         contents: [text(row.playerName, "sm", "bold"), text(row.clubName, "xs", "regular", MUTED_TEXT)],
       },
-      text(String(row.metricValue), "sm", "bold", ACCENT),
+      { ...text(String(row.metricValue), "sm", "bold", ACCENT), flex: 0 },
     ],
   };
 }
