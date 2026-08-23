@@ -83,6 +83,42 @@ test("syncs all active leagues, deduplicates shared Entries, and fetches each hi
   assert.equal(result.membershipsUpserted, 4);
 });
 
+test("uses live league standings points for the current gameweek", async () => {
+  const base = dependencies();
+  const scores: Array<{ gameweek_id: string; fpl_entry_id: number; points: number; event_transfers: number; event_transfers_cost: number }> = [];
+  const originalMembers = base.dependencies.provider.getLeagueMembers;
+  base.dependencies.provider = {
+    ...base.dependencies.provider,
+    getLeagueMembers: async (leagueId) => (await originalMembers(leagueId)).map((member) => ({
+      ...member,
+      eventTotal: member.entryId === 10 ? 18 : member.entryId === 20 ? 22 : 27,
+      eventTransfers: member.entryId === 10 ? 2 : 1,
+      eventTransfersCost: member.entryId === 20 ? 4 : 0,
+    })),
+  };
+  base.dependencies.repository = {
+    ...base.dependencies.repository,
+    applyLeagueSync: async (input) => {
+      scores.push(...input.scores.map((score) => ({
+        gameweek_id: score.gameweek_id,
+        fpl_entry_id: score.fpl_entry_id,
+        points: score.points,
+        event_transfers: score.event_transfers,
+        event_transfers_cost: score.event_transfers_cost,
+      })));
+      return { jobRunId: input.jobRunId, leaguesUpserted: 2, membershipsUpserted: 4, scoresUpserted: input.scores.length, playersUpserted: 1 };
+    },
+  };
+
+  await runFantasyLeagueSync(base.dependencies);
+
+  assert.deepEqual(scores.filter((score) => score.gameweek_id === "gw-2"), [
+    { gameweek_id: "gw-2", fpl_entry_id: 10, points: 18, event_transfers: 2, event_transfers_cost: 0 },
+    { gameweek_id: "gw-2", fpl_entry_id: 20, points: 22, event_transfers: 1, event_transfers_cost: 4 },
+    { gameweek_id: "gw-2", fpl_entry_id: 30, points: 27, event_transfers: 1, event_transfers_cost: 0 },
+  ]);
+});
+
 test("does not apply a partial snapshot when a league request fails", async () => {
   const base = dependencies();
   const originalMembers = base.dependencies.provider.getLeagueMembers;

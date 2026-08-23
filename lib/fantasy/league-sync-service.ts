@@ -60,15 +60,43 @@ function scoreHistoryRows(input: {
   gameweekIds: Map<number, string>;
   members: ReturnType<typeof deduplicateLeagueMembers>;
   histories: Map<number, FplEntryHistoryEvent[]>;
+  currentGameweekNumber: number;
   syncedAt: string;
 }) {
-  return buildEntryGameweekScoreRows({
+  const historyRows = buildEntryGameweekScoreRows({
     seasonId: input.seasonId,
     gameweekIdByNumber: input.gameweekIds,
     historyByEntry: input.histories,
     membersByEntry: new Map(input.members.map((member) => [member.entryId, { teamName: member.teamName, managerName: member.managerName }])),
     syncedAt: input.syncedAt,
   });
+  const currentGameweekId = input.gameweekIds.get(input.currentGameweekNumber);
+  if (!currentGameweekId) return historyRows;
+
+  const historyCurrentRows = new Map(
+    historyRows
+      .filter((row) => row.gameweek_id === currentGameweekId)
+      .map((row) => [row.fpl_entry_id, row]),
+  );
+  const liveCurrentRows = input.members
+    .filter((member) => member.eventTotal !== undefined)
+    .map((member) => ({
+      season_id: input.seasonId,
+      gameweek_id: currentGameweekId,
+      fpl_entry_id: member.entryId,
+      fpl_team_name: member.teamName,
+      fpl_manager_name: member.managerName,
+      points: member.eventTotal!,
+      event_transfers: member.eventTransfers ?? historyCurrentRows.get(member.entryId)?.event_transfers ?? 0,
+      event_transfers_cost: member.eventTransfersCost ?? historyCurrentRows.get(member.entryId)?.event_transfers_cost ?? 0,
+      points_on_bench: historyCurrentRows.get(member.entryId)?.points_on_bench ?? 0,
+      source_synced_at: input.syncedAt,
+    }));
+  const liveEntryIds = new Set(liveCurrentRows.map((row) => row.fpl_entry_id));
+  return [
+    ...historyRows.filter((row) => row.gameweek_id !== currentGameweekId || !liveEntryIds.has(row.fpl_entry_id)),
+    ...liveCurrentRows,
+  ];
 }
 
 export async function runFantasyLeagueSync(dependencies: FantasyLeagueSyncDependencies): Promise<FantasyLeagueSyncResult> {
@@ -108,7 +136,7 @@ export async function runFantasyLeagueSync(dependencies: FantasyLeagueSyncDepend
     }));
     const histories = new Map(historyResults.map((result) => [result.entryId, result.history]));
     const gameweekIds = new Map(dependencies.gameweeks.map((gameweek) => [gameweek.number, gameweek.id]));
-    const scores = scoreHistoryRows({ seasonId: dependencies.seasonId, gameweekIds, members, histories, syncedAt });
+    const scores = scoreHistoryRows({ seasonId: dependencies.seasonId, gameweekIds, members, histories, currentGameweekNumber: bootstrap.currentGameweek, syncedAt });
     const players: FantasyPlayerStatInsert[] = normalizePlayerSnapshot({
       seasonId: dependencies.seasonId,
       gameweekId: currentGameweek.id,

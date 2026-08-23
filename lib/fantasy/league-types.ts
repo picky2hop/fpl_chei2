@@ -8,6 +8,10 @@ export type FplLeagueMember = {
   teamName: string;
   managerName: string;
   rank: number | null;
+  eventTotal?: number;
+  seasonTotal?: number;
+  eventTransfers?: number;
+  eventTransfersCost?: number;
 };
 
 export type LeagueMemberSource = {
@@ -19,6 +23,10 @@ export type DeduplicatedLeagueMember = {
   entryId: number;
   teamName: string;
   managerName: string;
+  eventTotal?: number;
+  seasonTotal?: number;
+  eventTransfers?: number;
+  eventTransfersCost?: number;
   leagues: Array<{ leagueId: string; rank: number | null }>;
 };
 

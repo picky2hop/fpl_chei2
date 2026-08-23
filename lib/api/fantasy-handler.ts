@@ -34,7 +34,7 @@ export function createFantasyHandler(dependencies: FantasyHandlerDependencies) {
     if (!mode) return Response.json({ error: "Invalid Fantasy mode" }, { status: 400 });
 
     try {
-      return Response.json(await dependencies.getDashboard({ userId: user.id, leagueId, gameweekNumber, mode }));
+      return Response.json(await dependencies.getDashboard({ userId: user.id, leagueId, gameweekNumber, mode }), { headers: { "cache-control": "no-store" } });
     } catch {
       return Response.json({ error: "Unable to load Fantasy" }, { status: 500 });
     }

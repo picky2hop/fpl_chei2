@@ -67,6 +67,10 @@ function leagueMembersPage(value: unknown): { meta: FplLeagueSummary; members: F
       teamName,
       managerName,
       rank: row.rank == null ? null : numberValue(row.rank, "league member rank"),
+      ...(row.event_total == null ? {} : { eventTotal: numberValue(row.event_total, "league member event total") }),
+      ...(row.total == null ? {} : { seasonTotal: numberValue(row.total, "league member season total") }),
+      ...(row.event_transfers == null ? {} : { eventTransfers: numberValue(row.event_transfers, "league member event transfers") }),
+      ...(row.event_transfers_cost == null ? {} : { eventTransfersCost: numberValue(row.event_transfers_cost, "league member event transfers cost") }),
     } satisfies FplLeagueMember;
   });
   return { meta, members, hasNext: standings.has_next === true };
@@ -79,6 +83,7 @@ async function fetchJson(path: string, options: Required<Pick<FetchFantasyFplOpt
     const response = await options.fetchImpl(`${options.baseUrl}/api/${path}`, {
       headers: { accept: "application/json", "user-agent": "fpl-chei-chei-fantasy" },
       signal: controller.signal,
+      cache: "no-store",
     });
     if (!response.ok) throw new FantasyFplError(`FANTASY_FPL_HTTP_${response.status}`, "FPL source request failed");
     try {

@@ -14,6 +14,7 @@ test("Fantasy API returns the requested historical gameweek for authenticated us
 
   const response = await handler(new Request("https://example.test/api/fantasy?leagueId=league-1&gameweek=1"));
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(requested, { userId: "user-1", leagueId: "league-1", gameweekNumber: 1, mode: "gameweek" });
 });
 

@@ -24,10 +24,18 @@ export function deduplicateLeagueMembers(sources: LeagueMemberSource[]): Dedupli
           entryId: member.entryId,
           teamName: member.teamName.trim(),
           managerName: member.managerName.trim(),
+          ...(member.eventTotal === undefined ? {} : { eventTotal: member.eventTotal }),
+          ...(member.seasonTotal === undefined ? {} : { seasonTotal: member.seasonTotal }),
+          ...(member.eventTransfers === undefined ? {} : { eventTransfers: member.eventTransfers }),
+          ...(member.eventTransfersCost === undefined ? {} : { eventTransfersCost: member.eventTransfersCost }),
           leagues: [{ leagueId: source.leagueId, rank: member.rank }],
         });
         continue;
       }
+      if (existing.eventTotal === undefined && member.eventTotal !== undefined) existing.eventTotal = member.eventTotal;
+      if (existing.seasonTotal === undefined && member.seasonTotal !== undefined) existing.seasonTotal = member.seasonTotal;
+      if (existing.eventTransfers === undefined && member.eventTransfers !== undefined) existing.eventTransfers = member.eventTransfers;
+      if (existing.eventTransfersCost === undefined && member.eventTransfersCost !== undefined) existing.eventTransfersCost = member.eventTransfersCost;
       if (!existing.leagues.some((league) => league.leagueId === source.leagueId)) {
         existing.leagues.push({ leagueId: source.leagueId, rank: member.rank });
       }
