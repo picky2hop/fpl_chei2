@@ -53,6 +53,15 @@ function imageComponents(value: unknown): Array<Record<string, unknown>> {
   ];
 }
 
+function firstShareRow(message: unknown): Record<string, unknown> {
+  const contents = (message as { contents: Record<string, unknown> }).contents;
+  const body = contents.body as Record<string, unknown>;
+  const bodyContents = body.contents as Array<Record<string, unknown>>;
+  const candidate = bodyContents[3];
+  const candidateContents = candidate.contents as Array<Record<string, unknown>>;
+  return candidateContents[0]?.type === "box" && candidateContents[0]?.layout === "horizontal" ? candidateContents[0] : candidate;
+}
+
 test("builds a fantasy GW leaderboard without exposing entry ids", () => {
   const message = buildFantasyLeaderboardShareFlex({
     leagueName: "เชยเชย Cup",
@@ -94,15 +103,55 @@ test("fantasy leaderboard rows keep rank, profile and points fixed while the nam
     period: "gameweek",
     rows: [{ rank: 1, managerName: "Picky", teamName: "Chei FC", points: 26, avatarUrl: "https://example.com/avatar.png" }],
   });
-  const contents = message.contents as Record<string, unknown>;
-  const body = contents.body as Record<string, unknown>;
-  const row = (body.contents as Array<Record<string, unknown>>)[3];
-  const rowContents = row.contents as Array<Record<string, unknown>>;
+  const rowContents = firstShareRow(message).contents as Array<Record<string, unknown>>;
 
   assert.equal(rowContents[0].flex, 0);
+  assert.equal(rowContents[1].width, "12px");
   assert.equal(rowContents[1].flex, 0);
-  assert.equal(rowContents[2].flex, 1);
+  assert.equal(rowContents[2].flex, 0);
+  assert.equal(rowContents[3].width, "12px");
   assert.equal(rowContents[3].flex, 0);
+  assert.equal(rowContents[4].flex, 1);
+  assert.equal(rowContents[5].flex, 0);
+});
+
+test("keeps a fitting fantasy leaderboard in one bubble with a nested rows container", () => {
+  const message = buildFantasyLeaderboardShareFlex({
+    leagueName: "เชยเชย Cup",
+    gameweek: 3,
+    period: "gameweek",
+    rows: [
+      { rank: 1, managerName: "Picky", teamName: "Chei FC", points: 26, avatarUrl: null },
+      { rank: 2, managerName: "Nim", teamName: "Nim FC", points: 24, avatarUrl: null },
+    ],
+  });
+  const contents = message.contents as Record<string, unknown>;
+  const body = contents.body as Record<string, unknown>;
+  const rowsContainer = (body.contents as Array<Record<string, unknown>>)[3];
+
+  assert.equal(contents.type, "bubble");
+  assert.equal(rowsContainer.type, "box");
+  assert.equal(rowsContainer.layout, "vertical");
+  assert.match(JSON.stringify(message), /Picky/);
+  assert.match(JSON.stringify(message), /Nim/);
+});
+
+test("falls back to a valid carousel when all leaderboard rows do not fit one bubble", () => {
+  const rows = Array.from({ length: 13 }, (_, index) => ({
+    rank: index + 1,
+    managerName: `Manager ${index + 1}`,
+    teamName: `Team ${index + 1}`,
+    points: 30 - index,
+    avatarUrl: null,
+  }));
+  const message = buildFantasyLeaderboardShareFlex({ leagueName: "เชยเชย Cup", gameweek: 3, period: "gameweek", rows });
+  const contents = message.contents as Record<string, unknown>;
+  const bubbles = Array.isArray(contents.contents) ? contents.contents as Array<Record<string, unknown>> : [];
+
+  validateFlexMessage(message);
+  assert.equal(contents.type, "carousel");
+  assert.ok(bubbles.every((item) => ((item.body as Record<string, unknown>).contents as Array<Record<string, unknown>>)[3]?.layout === "vertical"));
+  for (const row of rows) assert.match(JSON.stringify(message), new RegExp(row.managerName));
 });
 
 test("labels season and preserves rank, manager, team and points", () => {
@@ -125,7 +174,7 @@ test("builds filtered player-stat share with category and position", () => {
     gameweek: 3,
     categoryLabel: "ฟอร์มสูงสุด",
     positionLabel: "กองกลาง",
-    rows: [{ rank: 1, playerName: "Semenyo", clubName: "Bournemouth", metricValue: 8, photoUrl: "https://example.com/semenyo.png" }],
+    rows: [{ rank: 1, position: "MID", playerName: "Semenyo", clubName: "Bournemouth", metricValue: 8, photoUrl: "https://example.com/semenyo.png" }],
   });
   const serialized = JSON.stringify(message);
 
@@ -140,7 +189,7 @@ test("fantasy player-stat share removes the branding header and uses a full-widt
     gameweek: 3,
     categoryLabel: "ฟอร์มสูงสุด",
     positionLabel: "กองกลาง",
-    rows: [{ rank: 1, playerName: "Semenyo", clubName: "Bournemouth", metricValue: 8, photoUrl: "https://example.com/semenyo.png" }],
+    rows: [{ rank: 1, position: "MID", playerName: "Semenyo", clubName: "Bournemouth", metricValue: 8, photoUrl: "https://example.com/semenyo.png" }],
   });
   const contents = message.contents as Record<string, unknown>;
 
@@ -154,35 +203,62 @@ test("fantasy player-stat rows keep rank, photo and metric fixed while the name 
     gameweek: 3,
     categoryLabel: "ฟอร์มสูงสุด",
     positionLabel: "กองกลาง",
-    rows: [{ rank: 1, playerName: "Semenyo", clubName: "Bournemouth", metricValue: 8, photoUrl: "https://example.com/semenyo.png" }],
+    rows: [{ rank: 1, position: "MID", playerName: "Semenyo", clubName: "Bournemouth", metricValue: 8, photoUrl: "https://example.com/semenyo.png" }],
   });
-  const contents = message.contents as Record<string, unknown>;
-  const body = contents.body as Record<string, unknown>;
-  const row = (body.contents as Array<Record<string, unknown>>)[3];
-  const rowContents = row.contents as Array<Record<string, unknown>>;
+  const rowContents = firstShareRow(message).contents as Array<Record<string, unknown>>;
 
   assert.equal(rowContents[0].flex, 0);
+  assert.equal(rowContents[1].width, "12px");
   assert.equal(rowContents[1].flex, 0);
-  assert.equal(rowContents[2].flex, 1);
+  assert.equal(rowContents[2].flex, 0);
+  assert.equal(rowContents[3].width, "12px");
   assert.equal(rowContents[3].flex, 0);
+  assert.equal(rowContents[4].flex, 1);
+  assert.equal(rowContents[5].flex, 0);
 });
 
-test("splits a long player-stat share into Flex-safe bubbles", () => {
+test("shares all player positions as four ordered bubbles", () => {
   const message = buildFantasyPlayerStatsShareFlex({
     gameweek: 3,
     categoryLabel: "ฟอร์มสูงสุด",
     positionLabel: "ทั้งหมด",
-    rows: Array.from({ length: 10 }, (_, index) => ({
+    rows: [
+      { rank: 1, position: "GK", playerName: "Goalkeeper", clubName: "Club", metricValue: 4 },
+      { rank: 1, position: "FWD", playerName: "Forward", clubName: "Club", metricValue: 10 },
+      { rank: 1, position: "DEF", playerName: "Defender", clubName: "Club", metricValue: 6 },
+      { rank: 1, position: "MID", playerName: "Midfielder", clubName: "Club", metricValue: 8 },
+    ],
+  });
+
+  validateFlexMessage(message);
+  const contents = message.contents as Record<string, unknown>;
+  const bubbles = Array.isArray(contents.contents) ? contents.contents as Array<Record<string, unknown>> : [];
+  const labels = bubbles.map((item) => {
+    const body = item.body as Record<string, unknown>;
+    const positionText = ((body.contents as Array<Record<string, unknown>>)[2] ?? {}).text;
+    return positionText;
+  });
+
+  assert.equal(contents.type, "carousel");
+  assert.deepEqual(labels, ["ตำแหน่ง: กองหน้า", "ตำแหน่ง: กองกลาง", "ตำแหน่ง: กองหลัง", "ตำแหน่ง: GK"]);
+});
+
+test("shares one selected player position as one bubble", () => {
+  const message = buildFantasyPlayerStatsShareFlex({
+    gameweek: 3,
+    categoryLabel: "ฟอร์มสูงสุด",
+    positionLabel: "กองกลาง",
+    rows: Array.from({ length: 9 }, (_, index) => ({
       rank: index + 1,
-      playerName: `Player ${index + 1}`,
+      position: "MID" as const,
+      playerName: `Midfielder ${index + 1}`,
       clubName: "Club",
       metricValue: 10 - index,
-      photoUrl: "https://example.com/player.png",
     })),
   });
 
   validateFlexMessage(message);
-  assert.equal((message.contents as { type: string }).type, "carousel");
+  assert.equal((message.contents as { type: string }).type, "bubble");
 });
 
 test("builds five squad rows and doubles captain display points", () => {

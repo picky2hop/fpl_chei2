@@ -98,6 +98,7 @@ function PlayerStats({ data }: { data: FantasyLeagueDashboardResponse }) {
       positionLabel: positions.find((item) => item.key === position)?.label ?? position,
       rows: visible.map(({ player, rank }) => ({
         rank,
+        position: player.position,
         playerName: player.playerName,
         clubName: player.clubName,
         metricValue: player.metricValue,

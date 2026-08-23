@@ -1,4 +1,4 @@
-import type { FlexMessage } from "../line/flex.ts";
+import { validateFlexMessage, type FlexMessage } from "../line/flex.ts";
 import { playerDisplayPoints } from "./player-presentation.ts";
 import { squadRows } from "./squad-layout.ts";
 import type { FantasyEntryCurrentSquad, FantasySquadPlayer } from "./types.ts";
@@ -19,6 +19,7 @@ type FantasyLeaderboardShareRow = {
 
 type FantasyPlayerStatsShareRow = {
   rank: number;
+  position: "GK" | "DEF" | "MID" | "FWD";
   playerName: string;
   clubName: string;
   metricValue: number;
@@ -107,18 +108,31 @@ function chunks<T>(items: T[], size: number): T[][] {
   return result;
 }
 
+function fixedSpacer() {
+  return {
+    type: "box",
+    layout: "vertical",
+    width: "12px",
+    height: "1px",
+    flex: 0,
+    contents: [{ type: "filler" }],
+  };
+}
+
 function leaderboardRow(row: FantasyLeaderboardShareRow) {
   return {
     type: "box",
     layout: "horizontal",
-    spacing: "sm",
+    spacing: "xs",
     paddingAll: "9px",
     cornerRadius: "md",
     backgroundColor: row.rank === 1 ? "#233A2D" : CARD_BACKGROUND,
     alignItems: "center",
     contents: [
       { ...text(String(row.rank), "sm", "bold", row.rank === 1 ? ACCENT : MUTED_TEXT), flex: 0 },
+      fixedSpacer(),
       profileImageOrFallback(row.avatarUrl, row.managerName, "34px"),
+      fixedSpacer(),
       {
         type: "box",
         layout: "vertical",
@@ -133,6 +147,28 @@ function leaderboardRow(row: FantasyLeaderboardShareRow) {
   };
 }
 
+function leaderboardRows(rows: FantasyLeaderboardShareRow[]) {
+  return {
+    type: "box",
+    layout: "vertical",
+    spacing: "sm",
+    contents: rows.length ? rows.map(leaderboardRow) : [text("ยังไม่มีสมาชิกในอันดับ", "sm", "regular", MUTED_TEXT)],
+  };
+}
+
+function leaderboardBubble(title: string, rows: FantasyLeaderboardShareRow[], pageLabel?: string) {
+  return bubble([
+    text("ตารางคะแนน Fantasy", "lg", "bold", ACCENT),
+    text(title, "sm", "bold"),
+    text(pageLabel ?? "อันดับ · ผู้จัดการ · ทีม · คะแนน", "xs", "regular", MUTED_TEXT),
+    leaderboardRows(rows),
+  ]);
+}
+
+function flexMessage(altText: string, contents: Record<string, unknown>): FlexMessage {
+  return { type: "flex", altText, contents };
+}
+
 export function buildFantasyLeaderboardShareFlex(input: {
   leagueName: string;
   gameweek: number;
@@ -141,33 +177,38 @@ export function buildFantasyLeaderboardShareFlex(input: {
 }): FlexMessage {
   const periodLabel = input.period === "gameweek" ? `GW ${input.gameweek}` : `ทั้งฤดูกาล · ถึง GW ${input.gameweek}`;
   const title = `${input.leagueName} · ${periodLabel}`;
-  const pages = chunks(input.rows, 8);
-  const bubbles = pages.map((page, index) => bubble([
-    text("ตารางคะแนน Fantasy", "lg", "bold", ACCENT),
-    text(title, "sm", "bold"),
-    text(index === 0 ? "อันดับ · ผู้จัดการ · ทีม · คะแนน" : `หน้าที่ ${index + 1}`, "xs", "regular", MUTED_TEXT),
-    ...(page.length ? page.map(leaderboardRow) : [text("ยังไม่มีสมาชิกในอันดับ", "sm", "regular", MUTED_TEXT)]),
-  ]));
+  const altText = `FPL Chei Chei · ${title}`;
+  const singleBubbleMessage = flexMessage(altText, leaderboardBubble(title, input.rows));
 
-  return {
-    type: "flex",
-    altText: `FPL Chei Chei · ${title}`,
-    contents: container(bubbles.length ? bubbles : [bubble([text("ยังไม่มีสมาชิกในอันดับ", "sm", "regular", MUTED_TEXT)])]),
-  };
+  try {
+    validateFlexMessage(singleBubbleMessage);
+    return singleBubbleMessage;
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code !== "FLEX_MESSAGE_INVALID" && code !== "FLEX_MESSAGE_TOO_LARGE") throw error;
+  }
+
+  const pages = chunks(input.rows, 8);
+  const bubbles = pages.length
+    ? pages.map((page, index) => leaderboardBubble(title, page, index === 0 ? undefined : `หน้าที่ ${index + 1}`))
+    : [leaderboardBubble(title, [])];
+  return flexMessage(altText, container(bubbles));
 }
 
 function playerStatsRow(row: FantasyPlayerStatsShareRow) {
   return {
     type: "box",
     layout: "horizontal",
-    spacing: "sm",
+    spacing: "xs",
     paddingAll: "8px",
     cornerRadius: "md",
     backgroundColor: CARD_BACKGROUND,
     alignItems: "center",
     contents: [
       { ...text(String(row.rank), "sm", "bold", MUTED_TEXT), flex: 0 },
+      fixedSpacer(),
       imageOrFallback(row.photoUrl, row.playerName, "34px"),
+      fixedSpacer(),
       {
         type: "box",
         layout: "vertical",
@@ -179,30 +220,49 @@ function playerStatsRow(row: FantasyPlayerStatsShareRow) {
   };
 }
 
+const playerStatPositions: Array<{ key: FantasyPlayerStatsShareRow["position"]; label: string }> = [
+  { key: "FWD", label: "กองหน้า" },
+  { key: "MID", label: "กองกลาง" },
+  { key: "DEF", label: "กองหลัง" },
+  { key: "GK", label: "GK" },
+];
+
+function playerStatsBubble(input: { gameweek: number; categoryLabel: string; positionLabel: string; rows: FantasyPlayerStatsShareRow[] }) {
+  return bubble([
+    text("สถิตินักเตะ Fantasy", "lg", "bold", ACCENT),
+    text(`GW ${input.gameweek} · ${input.categoryLabel}`, "sm", "bold"),
+    text(`ตำแหน่ง: ${input.positionLabel}`, "xs", "regular", MUTED_TEXT),
+    {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      contents: input.rows.length
+        ? input.rows.slice(0, 10).map(playerStatsRow)
+        : [text("ยังไม่มีข้อมูลตามหมวดหมู่ที่เลือก", "sm", "regular", MUTED_TEXT)],
+    },
+  ]);
+}
+
 export function buildFantasyPlayerStatsShareFlex(input: {
   gameweek: number;
   categoryLabel: string;
   positionLabel: string;
   rows: FantasyPlayerStatsShareRow[];
 }): FlexMessage {
-  const pages = chunks(input.rows.slice(0, 10), 8);
-  const safePages = pages.length ? pages : [[]];
-  const bubbles = safePages.map((page) =>
-    bubble([
-      text("สถิตินักเตะ Fantasy", "lg", "bold", ACCENT),
-      text(`GW ${input.gameweek} · ${input.categoryLabel}`, "sm", "bold"),
-      text(`ตำแหน่ง: ${input.positionLabel}`, "xs", "regular", MUTED_TEXT),
-      ...(page.length
-        ? page.map(playerStatsRow)
-        : [text("ยังไม่มีข้อมูลตามหมวดหมู่ที่เลือก", "sm", "regular", MUTED_TEXT)]),
-    ]),
-  );
+  const altText = `FPL Chei Chei · สถิตินักเตะ GW ${input.gameweek} · ${input.categoryLabel}`;
+  if (input.positionLabel !== "ทั้งหมด") {
+    return flexMessage(altText, playerStatsBubble({ ...input, rows: input.rows.slice(0, 10) }));
+  }
 
-  return {
-    type: "flex",
-    altText: `FPL Chei Chei · สถิตินักเตะ GW ${input.gameweek} · ${input.categoryLabel}`,
-    contents: container(bubbles),
-  };
+  const bubbles = playerStatPositions.map(({ key, label }) =>
+    playerStatsBubble({
+      gameweek: input.gameweek,
+      categoryLabel: input.categoryLabel,
+      positionLabel: label,
+      rows: input.rows.filter((row) => row.position === key).slice(0, 10),
+    }),
+  );
+  return flexMessage(altText, container(bubbles));
 }
 
 const squadRowLabels: Record<"GK" | "DEF" | "MID" | "FWD" | "BENCH", string> = {
