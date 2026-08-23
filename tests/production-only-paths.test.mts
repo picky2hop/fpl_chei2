@@ -35,4 +35,6 @@ test("prediction app preserves editable picks and exposes the fantasy switch", a
   assert.equal(source.includes("Preview / LIFF"), false);
   assert.equal(source.includes("href=\"/\""), true);
   assert.equal(source.includes(">หน้าหลัก</Link>"), true);
+  assert.equal(source.includes('String(entry.rank).padStart(2, "0")'), false);
+  assert.equal(source.includes("bg-[#d9ff58] text-[#071525]"), true);
 });

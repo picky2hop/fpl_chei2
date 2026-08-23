@@ -621,26 +621,30 @@ function standingsRow(row: StandingsFlexInput["rows"][number]) {
   return {
     type: "box",
     layout: "horizontal",
-    spacing: "sm",
-    paddingAll: "8px",
+    spacing: "xs",
+    paddingAll: "9px",
     cornerRadius: "md",
     backgroundColor: row.rank === 1 ? "#233A2D" : CARD_BACKGROUND,
     alignItems: "center",
     contents: [
-      text(String(row.rank).padStart(2, "0"), "sm", "bold", row.rank === 1 ? ACCENT : MUTED_TEXT),
-      imageOrFallback(row.avatarUrl, row.displayName, "36px"),
+      { ...text(String(row.rank), "sm", "bold", row.rank === 1 ? ACCENT : MUTED_TEXT), flex: 0 },
+      { type: "box", layout: "vertical", width: "12px", height: "1px", flex: 0, contents: [{ type: "filler" }] },
+      { ...imageOrFallback(row.avatarUrl, row.displayName, "34px"), flex: 0 },
+      { type: "box", layout: "vertical", width: "12px", height: "1px", flex: 0, contents: [{ type: "filler" }] },
       { ...text(row.displayName, "sm", "bold"), flex: 1 },
-      text(`${row.points} คะแนน`, "sm", "bold", row.rank === 1 ? ACCENT : PRIMARY_TEXT),
+      { ...text(`${row.points} คะแนน`, "sm", "bold", row.rank === 1 ? ACCENT : PRIMARY_TEXT), flex: 0 },
     ],
   };
 }
 
 export function buildStandingsFlex(input: StandingsFlexInput): FlexMessage {
-  const title = input.period === "gameweek" ? `ตารางคะแนน GW${input.gameweek ?? ""}` : "ตารางคะแนนทั้งฤดูกาล";
+  const title = input.period === "gameweek" ? `ตารางคะแนน GW ${input.gameweek ?? ""}` : "ตารางคะแนนทั้งฤดูกาล";
   const updatedAtLabel = input.updatedAtLabel ?? formatBangkokDateTime(new Date());
   const pages = chunks(input.rows, 8);
   const bubbles = pages.map((page, index) => bubble([
-    header(title, index === 0 ? "เกมทายผลพรีเมียร์ลีก" : `หน้า ${index + 1}`),
+    text("เกมทายผลพรีเมียร์ลีก", "lg", "bold", ACCENT),
+    text(title, "sm", "bold"),
+    text(index === 0 ? "อันดับ · ผู้เล่น · คะแนน" : `หน้าที่ ${index + 1}`, "xs", "regular", MUTED_TEXT),
     ...(page.length ? page.map(standingsRow) : [text("ยังไม่มีคะแนน", "sm", "regular", MUTED_TEXT)]),
     text(`อัปเดต ${updatedAtLabel}`, "xs", "regular", MUTED_TEXT),
   ]));

@@ -89,11 +89,33 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   assert.match(serialized, /Chei/);
   assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
   assert.match(serialized, /เกมทายผลพรีเมียร์ลีก/);
+  assert.match(serialized, /"text":"เกมทายผลพรีเมียร์ลีก","size":"lg","weight":"bold","color":"#D9FF58"/);
+  assert.match(serialized, /"text":"ตารางคะแนน GW 1"/);
+  assert.match(serialized, /"text":"1"/);
+  assert.match(serialized, /"text":"2"/);
+  assert.doesNotMatch(serialized, /"text":"0[12]"/);
   assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
   assert.match(serialized, /"text":"เปิดแอป FPL Chei Chei"/);
   assert.match(serialized, /"color":"#071525"/);
   assert.match(serialized, /"cornerRadius":"xxl"/);
   assert.match(serialized, /อัปเดต 1 Aug 2026 18:46/);
+
+  const bubble = message.contents as Record<string, unknown>;
+  const body = bubble.body as Record<string, unknown>;
+  const bodyContents = body.contents as Array<Record<string, unknown>>;
+  const firstRow = bodyContents[3] as Record<string, unknown>;
+  const rowContents = firstRow.contents as Array<Record<string, unknown>>;
+  assert.equal(rowContents[0]?.text, "1");
+  assert.equal(rowContents[0]?.flex, 0);
+  assert.equal(rowContents[1]?.width, "12px");
+  assert.equal(rowContents[1]?.flex, 0);
+  assert.equal(rowContents[2]?.flex, 0);
+  assert.equal(rowContents[3]?.width, "12px");
+  assert.equal(rowContents[3]?.flex, 0);
+  assert.equal(rowContents[4]?.text, "Picky");
+  assert.equal(rowContents[4]?.flex, 1);
+  assert.equal(rowContents[5]?.text, "6 คะแนน");
+  assert.equal(rowContents[5]?.flex, 0);
 });
 
 test("prediction Flex is a single app-style bubble with all picks and choice highlights", () => {
