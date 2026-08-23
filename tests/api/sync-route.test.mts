@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createSyncHandler } from "../../lib/api/sync-handler.ts";
+import { SyncFailure } from "../../lib/sync/sync-errors.ts";
 
 test("sync API keeps provider and database failure details private", async () => {
   const handler = createSyncHandler({
@@ -19,6 +20,23 @@ test("sync API keeps provider and database failure details private", async () =>
   assert.deepEqual(await response.json(), { error: "Sync failed" });
 });
 
+test("sync API returns a safe reason for typed provider failures", async () => {
+  const handler = createSyncHandler({
+    hasSchedulerToken: () => true,
+    requireAdmin: async () => ({ id: "admin-1" }),
+    sync: async () => {
+      throw new SyncFailure("FPL_TIMEOUT", "raw provider secret");
+    },
+  });
+
+  const response = await handler(new Request("https://example.test/api/sync", { method: "POST" }));
+  const body = await response.json() as { error?: string; reason?: string };
+
+  assert.equal(response.status, 502);
+  assert.deepEqual(body, { error: "Sync failed", reason: "FPL API ใช้เวลานานเกินกำหนด" });
+  assert.doesNotMatch(JSON.stringify(body), /raw provider secret|password/);
+});
+
 test("scheduler authentication selects scheduled mode without requiring an admin session", async () => {
   const modes: string[] = [];
   const handler = createSyncHandler({
@@ -34,7 +52,7 @@ test("scheduler authentication selects scheduled mode without requiring an admin
         gameweeksUpserted: 38,
         fixturesUpserted: 380,
         movedFixtureIds: [],
-        affectedGameweekIds: [],
+        affectedGameweekIds: ["gw-1", "gw-2"],
       };
     },
   });
@@ -43,4 +61,7 @@ test("scheduler authentication selects scheduled mode without requiring an admin
 
   assert.equal(response.status, 200);
   assert.deepEqual(modes, ["scheduled"]);
+  const body = await response.json() as { message?: string };
+  assert.match(body.message ?? "", /fixtures 380/);
+  assert.match(body.message ?? "", /2 GW/);
 });

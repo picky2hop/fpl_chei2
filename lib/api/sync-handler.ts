@@ -1,4 +1,5 @@
 import type { SyncMode, SyncResult } from "../sync/sync-runner.ts";
+import { safeSyncFailureReason, SyncFailure } from "../sync/sync-errors.ts";
 
 export type SyncHandlerDependencies = {
   hasSchedulerToken: (request: Request) => boolean;
@@ -35,8 +36,15 @@ export function createSyncHandler(dependencies: SyncHandlerDependencies) {
     }
 
     try {
-      return Response.json(await dependencies.sync(mode));
-    } catch {
+      const result = await dependencies.sync(mode);
+      return Response.json({
+        ...result,
+        message: `ซิงก์สำเร็จ: อัปเดต fixtures ${result.fixturesUpserted} รายการ และคำนวณใหม่ ${result.affectedGameweekIds.length} GW`,
+      });
+    } catch (error) {
+      if (error instanceof SyncFailure) {
+        return Response.json({ error: "Sync failed", reason: safeSyncFailureReason(error) }, { status: 502 });
+      }
       return Response.json({ error: "Sync failed" }, { status: 502 });
     }
   };

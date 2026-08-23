@@ -1,4 +1,5 @@
 import { buildEntryGameweekScoreRows, buildEntryScoreRequestIds, buildMembershipSnapshotRows, deduplicateLeagueMembers } from "./league-normalizers.ts";
+import { FantasyFplError } from "./fpl-client.ts";
 import type { FantasyLeagueRepository } from "./repository.ts";
 import type { FantasyFplProvider, FantasyPlayerStatInsert, FplEntryHistoryEvent } from "./types.ts";
 import type { FantasyLeagueMembershipInsert, FantasyLeagueSyncLeague, FantasyLeagueSyncWriteResult, LeagueMemberSource } from "./league-types.ts";
@@ -40,6 +41,30 @@ export type FantasyLeagueSyncResult = {
 };
 
 const staleMessage = "ยังไม่สามารถอัปเดตข้อมูล Fantasy ล่าสุดได้";
+
+type FantasySyncStage = "bootstrap" | "leagues" | "history" | "write";
+
+function fantasyFailureReason(error: unknown, stage: FantasySyncStage): string {
+  const code = error instanceof FantasyFplError ? error.code : null;
+  const detail = code === "FANTASY_FPL_HTTP_403"
+    ? "FPL API ปฏิเสธการเข้าถึง"
+    : code === "FANTASY_FPL_HTTP_502"
+      ? "FPL API ไม่พร้อมให้บริการ"
+      : code === "FANTASY_FPL_TIMEOUT"
+        ? "FPL API ใช้เวลานานเกินกำหนด"
+        : code === "FANTASY_FPL_UNAVAILABLE"
+          ? "ไม่สามารถเชื่อมต่อ FPL API ได้"
+          : code === "FANTASY_FPL_INVALID_DATA" || code === "FANTASY_FPL_INVALID_JSON"
+            ? "ข้อมูล FPL ไม่ถูกต้อง"
+            : code === "FANTASY_FPL_NO_GAMEWEEK"
+              ? "ไม่พบ Gameweek ปัจจุบันจาก FPL"
+              : "ระบบไม่สามารถดำเนินการต่อได้";
+
+  if (stage === "bootstrap") return `โหลดข้อมูลหลัก FPL ไม่สำเร็จ: ${detail}`;
+  if (stage === "leagues") return `โหลดข้อมูลลีกหรือสมาชิกจาก FPL ไม่สำเร็จ: ${detail}`;
+  if (stage === "history") return `โหลดคะแนน Entry จาก FPL ไม่สำเร็จ: ${detail}`;
+  return "บันทึกข้อมูล Fantasy ลงฐานข้อมูลไม่สำเร็จ";
+}
 
 async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = [];
@@ -103,6 +128,7 @@ export async function runFantasyLeagueSync(dependencies: FantasyLeagueSyncDepend
   const startedAt = dependencies.now().toISOString();
   const job = await dependencies.createJob({ jobType: "fantasy_sync", seasonId: dependencies.seasonId, startedAt });
   const baseResult = { jobRunId: job.id, leaguesUpserted: 0, membershipsUpserted: 0, scoresUpserted: 0, playersUpserted: 0, stale: true, message: staleMessage };
+  let stage: FantasySyncStage = "bootstrap";
 
   try {
     const [bootstrap, leagues] = await Promise.all([
@@ -114,6 +140,7 @@ export async function runFantasyLeagueSync(dependencies: FantasyLeagueSyncDepend
     if (leagues.length === 0) throw new Error("Fantasy has no active leagues");
 
     const syncedAt = dependencies.now().toISOString();
+    stage = "leagues";
     const fetchedLeagues = await mapWithConcurrency(leagues, 4, async (league) => {
       const [summary, members] = await Promise.all([
         dependencies.provider.getLeague(league.fpl_league_id),
@@ -130,6 +157,7 @@ export async function runFantasyLeagueSync(dependencies: FantasyLeagueSyncDepend
     });
     const members = deduplicateLeagueMembers(sources);
     const entryIds = buildEntryScoreRequestIds(membershipRows);
+    stage = "history";
     const historyResults = await mapWithConcurrency(entryIds, 4, async (entryId) => ({
       entryId,
       history: await dependencies.provider.getEntryHistory(entryId),
@@ -151,6 +179,7 @@ export async function runFantasyLeagueSync(dependencies: FantasyLeagueSyncDepend
       status: league.status,
       archived_at: league.archived_at,
     }));
+    stage = "write";
     const writeResult: FantasyLeagueSyncWriteResult = await dependencies.repository.applyLeagueSync({
       jobRunId: job.id,
       syncedAt,
@@ -159,11 +188,17 @@ export async function runFantasyLeagueSync(dependencies: FantasyLeagueSyncDepend
       scores,
       players,
     });
-    const result: FantasyLeagueSyncResult = { ...writeResult, currentGameweek: bootstrap.currentGameweek, stale: false, message: null };
+    const result: FantasyLeagueSyncResult = {
+      ...writeResult,
+      currentGameweek: bootstrap.currentGameweek,
+      stale: false,
+      message: `ซิงก์สำเร็จ: ลีก ${writeResult.leaguesUpserted}, สมาชิก ${writeResult.membershipsUpserted}, คะแนน ${writeResult.scoresUpserted}, นักเตะ ${writeResult.playersUpserted}`,
+    };
     await dependencies.finishJob({ id: job.id, status: "succeeded", finishedAt: dependencies.now().toISOString(), details: result });
     return result;
-  } catch {
-    await dependencies.finishJob({ id: job.id, status: "failed", finishedAt: dependencies.now().toISOString(), errorMessage: staleMessage });
-    return { ...baseResult, currentGameweek: null };
+  } catch (error) {
+    const reason = fantasyFailureReason(error, stage);
+    await dependencies.finishJob({ id: job.id, status: "failed", finishedAt: dependencies.now().toISOString(), errorMessage: reason });
+    return { ...baseResult, currentGameweek: null, message: reason };
   }
 }

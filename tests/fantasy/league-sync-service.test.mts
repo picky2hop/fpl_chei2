@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { FantasyFplError } from "../../lib/fantasy/fpl-client.ts";
 import { runFantasyLeagueSync, type FantasyLeagueSyncDependencies } from "../../lib/fantasy/league-sync-service.ts";
 import type { FantasyLeagueRepository } from "../../lib/fantasy/repository.ts";
 import type { FantasyFplProvider } from "../../lib/fantasy/types.ts";
@@ -81,6 +82,10 @@ test("syncs all active leagues, deduplicates shared Entries, and fetches each hi
   assert.equal(result.currentGameweek, 2);
   assert.equal(result.stale, false);
   assert.equal(result.membershipsUpserted, 4);
+  assert.match(result.message ?? "", /ลีก 2/);
+  assert.match(result.message ?? "", /สมาชิก 4/);
+  assert.match(result.message ?? "", /คะแนน 3/);
+  assert.match(result.message ?? "", /นักเตะ 1/);
 });
 
 test("uses live league standings points for the current gameweek", async () => {
@@ -138,6 +143,23 @@ test("does not apply a partial snapshot when a league request fails", async () =
   assert.equal(result.membershipsUpserted, 0);
 });
 
+test("reports a safe league-stage reason when FPL league data fails", async () => {
+  const base = dependencies();
+  const originalMembers = base.dependencies.provider.getLeagueMembers;
+  base.dependencies.provider = {
+    ...base.dependencies.provider,
+    getLeagueMembers: async (leagueId) => {
+      if (leagueId === 819502) throw new FantasyFplError("FANTASY_FPL_HTTP_502", "raw provider response");
+      return originalMembers(leagueId);
+    },
+  };
+
+  const result = await runFantasyLeagueSync(base.dependencies);
+
+  assert.equal(result.message, "โหลดข้อมูลลีกหรือสมาชิกจาก FPL ไม่สำเร็จ: FPL API ไม่พร้อมให้บริการ");
+  assert.doesNotMatch(result.message ?? "", /raw provider response/);
+});
+
 test("does not apply a partial snapshot when an Entry history request fails", async () => {
   const base = dependencies();
   base.dependencies.provider = {
@@ -153,4 +175,20 @@ test("does not apply a partial snapshot when an Entry history request fails", as
   assert.equal(base.calls.apply, 0);
   assert.deepEqual(base.calls.finish, ["failed"]);
   assert.equal(result.stale, true);
+});
+
+test("reports a safe history-stage reason when an Entry request times out", async () => {
+  const base = dependencies();
+  base.dependencies.provider = {
+    ...base.dependencies.provider,
+    getEntryHistory: async (entryId) => {
+      if (entryId === 20) throw new FantasyFplError("FANTASY_FPL_TIMEOUT", "raw history response");
+      return [{ event: 1, points: entryId, event_transfers: 0, event_transfers_cost: 0, points_on_bench: 0 }];
+    },
+  };
+
+  const result = await runFantasyLeagueSync(base.dependencies);
+
+  assert.equal(result.message, "โหลดคะแนน Entry จาก FPL ไม่สำเร็จ: FPL API ใช้เวลานานเกินกำหนด");
+  assert.doesNotMatch(result.message ?? "", /raw history response/);
 });

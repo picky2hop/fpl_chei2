@@ -32,13 +32,13 @@ export default function AdminPanel() {
     setFeedback(null);
     try {
       const response = await fetch("/api/sync", { method: "POST" });
-      const body = await response.json() as { fixturesUpserted?: number; error?: string };
-      if (!response.ok) throw new Error(body.error ?? "Sync failed");
+      const body = await response.json() as { fixturesUpserted?: number; message?: string; reason?: string; error?: string };
+      if (!response.ok) throw new Error(body.reason ?? body.error ?? "ซิงก์ข้อมูลไม่สำเร็จ");
       setState("done");
-      setFeedback(feedbackFromAction({ ok: true, successMessage: `อัปเดต fixtures ${body.fixturesUpserted ?? 0} รายการแล้ว` }));
+      setFeedback(feedbackFromAction({ ok: true, successMessage: body.message ?? `อัปเดต fixtures ${body.fixturesUpserted ?? 0} รายการแล้ว` }));
     } catch (error) {
       setState("error");
-      setFeedback(feedbackFromAction({ ok: false, successMessage: "ซิงก์สำเร็จแล้ว", errorMessage: error instanceof Error ? error.message : "Sync failed" }));
+      setFeedback(feedbackFromAction({ ok: false, successMessage: "ซิงก์สำเร็จแล้ว", errorMessage: error instanceof Error ? error.message : "ซิงก์ข้อมูลไม่สำเร็จ" }));
     }
   }
 
