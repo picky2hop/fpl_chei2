@@ -68,6 +68,25 @@ test("builds a fantasy GW leaderboard without exposing entry ids", () => {
   assert.doesNotMatch(serialized, /entryId|FPL\s+\d/i);
 });
 
+test("fantasy leaderboard share removes the branding header and keeps the team label lemon", () => {
+  const message = buildFantasyLeaderboardShareFlex({
+    leagueName: "เชยเชย Cup",
+    gameweek: 3,
+    period: "gameweek",
+    rows: [{ rank: 1, managerName: "Picky", teamName: "Chei FC", points: 26, avatarUrl: "https://example.com/avatar.png" }],
+  });
+  const contents = message.contents as Record<string, unknown>;
+  const body = (contents.body ?? {}) as Record<string, unknown>;
+  const row = ((body.contents as Array<Record<string, unknown>>)[3] ?? {}) as Record<string, unknown>;
+
+  assert.equal(contents.size, "giga");
+  assert.equal("header" in contents, false);
+  assert.doesNotMatch(JSON.stringify(contents), /FPL CHEI CHEI/);
+  assert.match(JSON.stringify(contents), /ทีม : Chei FC/);
+  assert.doesNotMatch(JSON.stringify(contents), /ชื่อทีม :/);
+  assert.match(JSON.stringify(row), /#D9FF58/i);
+});
+
 test("labels season and preserves rank, manager, team and points", () => {
   const message = buildFantasyLeaderboardShareFlex({
     leagueName: "เชยเชย Cup",
@@ -96,6 +115,20 @@ test("builds filtered player-stat share with category and position", () => {
   assert.match(serialized, /กองกลาง/);
   assert.match(serialized, /Semenyo/);
   assert.match(serialized, /Bournemouth/);
+});
+
+test("fantasy player-stat share removes the branding header and uses a full-width bubble", () => {
+  const message = buildFantasyPlayerStatsShareFlex({
+    gameweek: 3,
+    categoryLabel: "ฟอร์มสูงสุด",
+    positionLabel: "กองกลาง",
+    rows: [{ rank: 1, playerName: "Semenyo", clubName: "Bournemouth", metricValue: 8, photoUrl: "https://example.com/semenyo.png" }],
+  });
+  const contents = message.contents as Record<string, unknown>;
+
+  assert.equal(contents.size, "giga");
+  assert.equal("header" in contents, false);
+  assert.doesNotMatch(JSON.stringify(contents), /FPL CHEI CHEI/);
 });
 
 test("splits a long player-stat share into Flex-safe bubbles", () => {
@@ -131,6 +164,23 @@ test("builds five squad rows and doubles captain display points", () => {
   assert.match(serialized, /6 × 2 = 12/);
   assert.match(serialized, /Picky/);
   assert.doesNotMatch(serialized, /entryId|FPL Entry/i);
+});
+
+test("fantasy squad share shows the current team total in the profile row", () => {
+  const message = buildFantasySquadShareFlex({
+    managerName: "Picky",
+    managerAvatarUrl: "https://example.com/avatar.png",
+    teamName: "Chei FC",
+    squad: fixtureSquad(),
+  });
+  const contents = message.contents as Record<string, unknown>;
+  const body = (contents.body ?? {}) as Record<string, unknown>;
+  const profileRow = ((body.contents as Array<Record<string, unknown>>)[0] ?? {}) as Record<string, unknown>;
+
+  assert.equal(contents.size, "giga");
+  assert.equal("header" in contents, false);
+  assert.match(JSON.stringify(profileRow), /คะแนนรวม.*24/);
+  assert.match(JSON.stringify(profileRow), /cornerRadius.*xxl/);
 });
 
 test("uses LINE-supported sizing properties in the squad share", () => {

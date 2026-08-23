@@ -6,7 +6,6 @@ import type { FantasyEntryCurrentSquad, FantasySquadPlayer } from "./types.ts";
 const BACKGROUND = "#071525";
 const CARD_BACKGROUND = "#10253A";
 const ACCENT = "#D9FF58";
-const GREEN = "#7CFF8A";
 const PRIMARY_TEXT = "#FFFFFF";
 const MUTED_TEXT = "#8CA6BD";
 
@@ -64,17 +63,28 @@ function imageOrFallback(url: string | null | undefined, fallback: string, size 
   };
 }
 
+function profileImageOrFallback(url: string | null | undefined, fallback: string, size = "42px") {
+  const imageUrl = safeImageUrl(url);
+  return {
+    type: "box",
+    layout: "vertical",
+    width: size,
+    height: size,
+    flex: 0,
+    cornerRadius: "xxl",
+    backgroundColor: "#29435D",
+    justifyContent: "center",
+    alignItems: "center",
+    contents: imageUrl
+      ? [{ type: "image", url: imageUrl, size: "full", aspectMode: "cover", aspectRatio: "1:1", flex: 0 }]
+      : [text(initials(fallback), "xs", "bold", PRIMARY_TEXT)],
+  };
+}
+
 function bubble(contents: Record<string, unknown>[]): Record<string, unknown> {
   return {
     type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      paddingAll: "16px",
-      backgroundColor: BACKGROUND,
-      contents: [text("FPL CHEI CHEI", "xs", "bold", MUTED_TEXT)],
-    },
+    size: "giga",
     body: {
       type: "box",
       layout: "vertical",
@@ -107,14 +117,14 @@ function leaderboardRow(row: FantasyLeaderboardShareRow) {
     alignItems: "center",
     contents: [
       text(String(row.rank), "sm", "bold", row.rank === 1 ? ACCENT : MUTED_TEXT),
-      imageOrFallback(row.avatarUrl, row.managerName, "34px"),
+      profileImageOrFallback(row.avatarUrl, row.managerName, "34px"),
       {
         type: "box",
         layout: "vertical",
         flex: 1,
         contents: [
           text(row.managerName, "sm", "bold"),
-          text(`ชื่อทีม : ${row.teamName}`, "xs", "bold", GREEN),
+          text(`ทีม : ${row.teamName}`, "xs", "bold", ACCENT),
         ],
       },
       text(`${row.points} คะแนน`, "sm", "bold", row.rank === 1 ? ACCENT : PRIMARY_TEXT),
@@ -238,6 +248,12 @@ function squadRow(row: ReturnType<typeof squadRows>[number]) {
   };
 }
 
+function squadTotalPoints(squad: FantasyEntryCurrentSquad): number | null {
+  const points = squad.starters.map((player) => playerDisplayPoints(player).total);
+  const knownPoints = points.filter((value): value is number => value !== null);
+  return knownPoints.length === points.length ? knownPoints.reduce((total, value) => total + value, 0) : null;
+}
+
 export function buildFantasySquadShareFlex(input: {
   managerName: string;
   managerAvatarUrl?: string | null;
@@ -245,6 +261,7 @@ export function buildFantasySquadShareFlex(input: {
   squad: FantasyEntryCurrentSquad;
 }): FlexMessage {
   const rows = squadRows(input.squad);
+  const totalPoints = squadTotalPoints(input.squad);
   return {
     type: "flex",
     altText: `FPL Chei Chei · ทีม ${input.teamName} · GW ${input.squad.gameweekNumber}`,
@@ -255,15 +272,25 @@ export function buildFantasySquadShareFlex(input: {
         spacing: "sm",
         alignItems: "center",
         contents: [
-          imageOrFallback(input.managerAvatarUrl, input.managerName, "42px"),
+          profileImageOrFallback(input.managerAvatarUrl, input.managerName, "42px"),
           {
             type: "box",
             layout: "vertical",
             flex: 1,
             contents: [
               text(input.managerName, "md", "bold"),
-              text(`ชื่อทีม : ${input.teamName}`, "sm", "bold", GREEN),
+              text(`ทีม : ${input.teamName}`, "sm", "bold", ACCENT),
               text(`ทีม GW ${input.squad.gameweekNumber} · แผน ${input.squad.formation}`, "xs", "regular", MUTED_TEXT),
+            ],
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            flex: 0,
+            alignItems: "flex-end",
+            contents: [
+              text("คะแนนรวม", "xs", "bold", MUTED_TEXT),
+              text(totalPoints === null ? "—" : String(totalPoints), "lg", "bold", ACCENT),
             ],
           },
         ],
