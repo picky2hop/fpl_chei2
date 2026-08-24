@@ -163,6 +163,7 @@ function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, ga
       playerName: player.name,
       position: player.position,
       clubName: player.clubName,
+      clubShortName: player.clubShortName,
       multiplier: numberValue(row.multiplier ?? 0, "pick multiplier"),
       isCaptain: row.is_captain === true,
       isViceCaptain: row.is_vice_captain === true,
@@ -183,7 +184,7 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
   const root = objectValue(value, "bootstrap");
   const teams = new Map(arrayValue(root.teams, "teams").map((item) => {
     const team = objectValue(item, "team");
-    return [numberValue(team.id, "team id"), String(team.name ?? "")] as const;
+    return [numberValue(team.id, "team id"), { name: String(team.name ?? ""), shortName: String(team.short_name ?? "").trim() || undefined }] as const;
   }));
   const positions = new Map(arrayValue(root.element_types, "element types").map((item) => {
     const position = objectValue(item, "element type");
@@ -215,15 +216,16 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
     const clubId = numberValue(player.team, "player team");
     const positionId = numberValue(player.element_type, "player position");
     const position = positionFor(positions.get(positionId));
-    const clubName = teams.get(clubId);
-    if (!clubName) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", `Unknown FPL club for player ${playerId}`);
+    const club = teams.get(clubId);
+    if (!club?.name) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", `Unknown FPL club for player ${playerId}`);
     return {
       playerId,
       photoKey: photoKeyFromFplPhoto(player.photo),
       name: String(player.web_name ?? `${player.first_name ?? ""} ${player.second_name ?? ""}`).trim(),
       position,
       clubId,
-      clubName,
+      clubName: club.name,
+      clubShortName: club.shortName,
       status: String(player.status ?? ""),
       selectedByPercent: numberValue(player.selected_by_percent, "selected_by_percent"),
       transfersInEvent: numberValue(player.transfers_in_event, "transfers_in_event"),

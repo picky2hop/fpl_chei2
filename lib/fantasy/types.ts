@@ -14,6 +14,7 @@ export type FantasySquadPlayer = {
   playerName: string;
   position: "GK" | "DEF" | "MID" | "FWD";
   clubName: string;
+  clubShortName?: string;
   multiplier: number;
   isCaptain: boolean;
   isViceCaptain: boolean;
@@ -45,6 +46,7 @@ export type FplPlayerSnapshot = {
   position: "GK" | "DEF" | "MID" | "FWD";
   clubId: number;
   clubName: string;
+  clubShortName?: string;
   status: string;
   selectedByPercent: number;
   transfersInEvent: number;

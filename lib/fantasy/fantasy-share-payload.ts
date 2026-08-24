@@ -1,5 +1,5 @@
 import { validateFlexMessage, type FlexMessage } from "../line/flex.ts";
-import { playerDisplayPoints } from "./player-presentation.ts";
+import { fantasyPlayersTotalPoints, fantasySquadTotalPoints, formatFantasyShareTimestamp, playerDisplayPoints } from "./player-presentation.ts";
 import { squadRows } from "./squad-layout.ts";
 import type { FantasyEntryCurrentSquad, FantasySquadPlayer } from "./types.ts";
 
@@ -83,7 +83,7 @@ function profileImageOrFallback(url: string | null | undefined, fallback: string
   };
 }
 
-function bubble(contents: Record<string, unknown>[]): Record<string, unknown> {
+function bubble(contents: Record<string, unknown>[], sharedAt: string): Record<string, unknown> {
   return {
     type: "bubble",
     size: "giga",
@@ -93,7 +93,7 @@ function bubble(contents: Record<string, unknown>[]): Record<string, unknown> {
       spacing: "sm",
       paddingAll: "14px",
       backgroundColor: BACKGROUND,
-      contents,
+      contents: [...contents, text(sharedAt, "xxs", "regular", MUTED_TEXT)],
     },
   };
 }
@@ -156,13 +156,13 @@ function leaderboardRows(rows: FantasyLeaderboardShareRow[]) {
   };
 }
 
-function leaderboardBubble(title: string, rows: FantasyLeaderboardShareRow[], pageLabel?: string) {
+function leaderboardBubble(title: string, rows: FantasyLeaderboardShareRow[], pageLabel: string | undefined, sharedAt: string) {
   return bubble([
     text("ตารางคะแนน Fantasy", "lg", "bold", ACCENT),
     text(title, "sm", "bold"),
     text(pageLabel ?? "อันดับ · ผู้จัดการ · ทีม · คะแนน", "xs", "regular", MUTED_TEXT),
     leaderboardRows(rows),
-  ]);
+  ], sharedAt);
 }
 
 function flexMessage(altText: string, contents: Record<string, unknown>): FlexMessage {
@@ -174,11 +174,13 @@ export function buildFantasyLeaderboardShareFlex(input: {
   gameweek: number;
   period: "gameweek" | "season";
   rows: FantasyLeaderboardShareRow[];
+  sharedAt?: string;
 }): FlexMessage {
   const periodLabel = input.period === "gameweek" ? `GW ${input.gameweek}` : `ทั้งฤดูกาล · ถึง GW ${input.gameweek}`;
   const title = `${input.leagueName} · ${periodLabel}`;
   const altText = `FPL Chei Chei · ${title}`;
-  const singleBubbleMessage = flexMessage(altText, leaderboardBubble(title, input.rows));
+  const sharedAt = input.sharedAt ?? formatFantasyShareTimestamp();
+  const singleBubbleMessage = flexMessage(altText, leaderboardBubble(title, input.rows, undefined, sharedAt));
 
   try {
     validateFlexMessage(singleBubbleMessage);
@@ -190,8 +192,8 @@ export function buildFantasyLeaderboardShareFlex(input: {
 
   const pages = chunks(input.rows, 8);
   const bubbles = pages.length
-    ? pages.map((page, index) => leaderboardBubble(title, page, index === 0 ? undefined : `หน้าที่ ${index + 1}`))
-    : [leaderboardBubble(title, [])];
+    ? pages.map((page, index) => leaderboardBubble(title, page, index === 0 ? undefined : `หน้าที่ ${index + 1}`, sharedAt))
+    : [leaderboardBubble(title, [], undefined, sharedAt)];
   return flexMessage(altText, container(bubbles));
 }
 
@@ -227,7 +229,7 @@ const playerStatPositions: Array<{ key: FantasyPlayerStatsShareRow["position"]; 
   { key: "GK", label: "GK" },
 ];
 
-function playerStatsBubble(input: { gameweek: number; categoryLabel: string; positionLabel: string; rows: FantasyPlayerStatsShareRow[] }) {
+function playerStatsBubble(input: { gameweek: number; categoryLabel: string; positionLabel: string; rows: FantasyPlayerStatsShareRow[]; sharedAt: string }) {
   return bubble([
     text("สถิตินักเตะ Fantasy", "lg", "bold", ACCENT),
     text(`GW ${input.gameweek} · ${input.categoryLabel}`, "sm", "bold"),
@@ -240,7 +242,7 @@ function playerStatsBubble(input: { gameweek: number; categoryLabel: string; pos
         ? input.rows.slice(0, 10).map(playerStatsRow)
         : [text("ยังไม่มีข้อมูลตามหมวดหมู่ที่เลือก", "sm", "regular", MUTED_TEXT)],
     },
-  ]);
+  ], input.sharedAt);
 }
 
 export function buildFantasyPlayerStatsShareFlex(input: {
@@ -248,10 +250,12 @@ export function buildFantasyPlayerStatsShareFlex(input: {
   categoryLabel: string;
   positionLabel: string;
   rows: FantasyPlayerStatsShareRow[];
+  sharedAt?: string;
 }): FlexMessage {
   const altText = `FPL Chei Chei · สถิตินักเตะ GW ${input.gameweek} · ${input.categoryLabel}`;
+  const sharedAt = input.sharedAt ?? formatFantasyShareTimestamp();
   if (input.positionLabel !== "ทั้งหมด") {
-    return flexMessage(altText, playerStatsBubble({ ...input, rows: input.rows.slice(0, 10) }));
+    return flexMessage(altText, playerStatsBubble({ ...input, rows: input.rows.slice(0, 10), sharedAt }));
   }
 
   const bubbles = playerStatPositions.map(({ key, label }) =>
@@ -260,6 +264,7 @@ export function buildFantasyPlayerStatsShareFlex(input: {
       categoryLabel: input.categoryLabel,
       positionLabel: label,
       rows: input.rows.filter((row) => row.position === key).slice(0, 10),
+      sharedAt,
     }),
   );
   return flexMessage(altText, container(bubbles));
@@ -285,6 +290,7 @@ function squadPlayer(player: FantasySquadPlayer, highlightPlayerIds: ReadonlySet
     contents: [
       imageOrFallback(player.photoUrl, player.playerName, "42px"),
       text(player.playerName, "xs", "bold"),
+      text(player.clubShortName ?? player.clubName, "xxs", "regular", MUTED_TEXT),
       text(points.label, "xs", "bold", player.isCaptain ? ACCENT : PRIMARY_TEXT),
       ...(highlighted ? [text("Player of the Week", "xxs", "bold", ACCENT)] : []),
     ],
@@ -312,21 +318,17 @@ function squadRow(row: ReturnType<typeof squadRows>[number], highlightPlayerIds:
   };
 }
 
-function squadTotalPoints(squad: FantasyEntryCurrentSquad): number | null {
-  const points = squad.starters.map((player) => playerDisplayPoints(player).total);
-  const knownPoints = points.filter((value): value is number => value !== null);
-  return knownPoints.length === points.length ? knownPoints.reduce((total, value) => total + value, 0) : null;
-}
-
 export function buildFantasySquadShareFlex(input: {
   managerName: string;
   managerAvatarUrl?: string | null;
   teamName: string;
   squad: FantasyEntryCurrentSquad;
   highlightPlayerIds?: ReadonlySet<number> | readonly number[];
+  sharedAt?: string;
 }): FlexMessage {
   const rows = squadRows(input.squad);
-  const totalPoints = squadTotalPoints(input.squad);
+  const totalPoints = fantasySquadTotalPoints(input.squad);
+  const sharedAt = input.sharedAt ?? formatFantasyShareTimestamp();
   const highlightPlayerIds = input.highlightPlayerIds instanceof Set ? input.highlightPlayerIds : new Set(input.highlightPlayerIds ?? []);
   return {
     type: "flex",
@@ -362,7 +364,7 @@ export function buildFantasySquadShareFlex(input: {
         ],
       },
       ...rows.map((row) => squadRow(row, highlightPlayerIds)),
-    ]),
+    ], sharedAt),
   };
 }
 
@@ -390,8 +392,11 @@ export function buildFantasyTeamOfWeekShareFlex(input: {
   gameweek: number;
   players: FantasySquadPlayer[];
   highlightPlayerIds?: ReadonlySet<number> | readonly number[];
+  sharedAt?: string;
 }): FlexMessage {
   const highlightPlayerIds = input.highlightPlayerIds instanceof Set ? input.highlightPlayerIds : new Set(input.highlightPlayerIds ?? []);
+  const sharedAt = input.sharedAt ?? formatFantasyShareTimestamp();
+  const totalPoints = fantasyPlayersTotalPoints(input.players);
   const positionRows: Array<{ key: FantasySquadPlayer["position"]; label: string }> = [
     { key: "GK", label: "GK" },
     { key: "DEF", label: "กองหลัง" },
@@ -401,8 +406,14 @@ export function buildFantasyTeamOfWeekShareFlex(input: {
   return flexMessage(`FPL Official · Team of the Week GW ${input.gameweek}`, bubble([
     text("Team of the Week", "lg", "bold", ACCENT),
     text(`FPL Official · GW ${input.gameweek}`, "sm", "bold"),
+    {
+      type: "box",
+      layout: "horizontal",
+      justifyContent: "flex-end",
+      contents: [text(`คะแนนรวม ${totalPoints === null ? "—" : totalPoints}`, "md", "bold", ACCENT)],
+    },
     ...positionRows.map((row) => teamOfWeekRow(row.label, input.players.filter((player) => player.position === row.key), highlightPlayerIds)),
-  ]));
+  ], sharedAt));
 }
 
 export function buildFantasyLeaderboardTopBottomShareFlex(input: {
@@ -411,11 +422,13 @@ export function buildFantasyLeaderboardTopBottomShareFlex(input: {
   period: "gameweek" | "season";
   topRows: FantasyLeaderboardShareRow[];
   bottomRows: FantasyLeaderboardShareRow[];
+  sharedAt?: string;
 }): FlexMessage {
   const periodLabel = input.period === "gameweek" ? `GW ${input.gameweek}` : `ทั้งฤดูกาล · ถึง GW ${input.gameweek}`;
   const title = `${input.leagueName} · ${periodLabel}`;
+  const sharedAt = input.sharedAt ?? formatFantasyShareTimestamp();
   return flexMessage(`FPL Chei Chei · ${title} · Top/Bottom`, container([
-    leaderboardBubble(`${title} · Top 5`, input.topRows),
-    leaderboardBubble(`${title} · Bottom 5`, input.bottomRows),
+    leaderboardBubble(`${title} · Top 5`, input.topRows, undefined, sharedAt),
+    leaderboardBubble(`${title} · Bottom 5`, input.bottomRows, undefined, sharedAt),
   ]));
 }

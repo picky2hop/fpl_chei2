@@ -7,7 +7,7 @@ const bootstrap = {
     { id: 1, is_current: false, finished: true, most_captained: 2, most_vice_captained: 3 },
     { id: 2, is_current: true, finished: false, most_captained: 4, most_vice_captained: 5 },
   ],
-  teams: [{ id: 1, name: "Home" }, { id: 2, name: "Away" }],
+  teams: [{ id: 1, name: "Home", short_name: "HOM" }, { id: 2, name: "Away", short_name: "AWY" }],
   element_types: [
     { id: 1, singular_name_short: "GKP" },
     { id: 2, singular_name_short: "DEF" },
@@ -52,6 +52,7 @@ test("fetches and normalizes entry summary, history, and bootstrap data", async 
   assert.deepEqual(await provider.getEntryHistory(123), history.current);
   assert.equal((await provider.getBootstrap()).currentGameweek, 2);
   assert.equal((await provider.getBootstrap()).players[0].position, "MID");
+  assert.equal((await provider.getBootstrap()).players[0].clubShortName, "HOM");
   assert.equal((await provider.getBootstrap()).mostCaptainedPlayerId, 4);
 });
 

@@ -73,3 +73,17 @@ test("shares Top/Bottom and Team of the Week through the existing picker", async
   assert.equal((await shareFantasyLeaderboardTopBottom(api({ status: "success" }), topBottomInput)).state, "shared");
   assert.equal((await shareFantasyTeamOfWeek(api({ status: "success" }), teamOfWeekInput)).state, "shared");
 });
+
+test("adds a Bangkok share timestamp when a Team of the Week share is sent", async () => {
+  let sentMessages: unknown = null;
+  const result = await shareFantasyTeamOfWeek({
+    isApiAvailable: () => true,
+    shareTargetPicker: async (messages) => {
+      sentMessages = messages;
+      return { status: "success" };
+    },
+  }, teamOfWeekInput);
+
+  assert.equal(result.state, "shared");
+  assert.match(JSON.stringify(sentMessages), /แชร์เมื่อ \d{2}\/\d{2}\/\d{4} \d{2}:\d{2} น\./);
+});

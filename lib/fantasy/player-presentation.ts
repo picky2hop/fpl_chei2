@@ -1,4 +1,4 @@
-import type { FantasySquadPlayer } from "./types.ts";
+import type { FantasyEntryCurrentSquad, FantasySquadPlayer } from "./types.ts";
 
 type Position = FantasySquadPlayer["position"];
 
@@ -34,6 +34,31 @@ export function playerDisplayPoints(player: Pick<FantasySquadPlayer, "points" | 
     total,
     label: total === null ? "—" : player.isCaptain ? `${player.points} × 2 = ${total}` : String(total),
   };
+}
+
+export function fantasyPlayersTotalPoints(players: FantasySquadPlayer[]): number | null {
+  const totals = players.map((player) => playerDisplayPoints(player).total);
+  return totals.every((value): value is number => value !== null)
+    ? totals.reduce((sum, value) => sum + value, 0)
+    : null;
+}
+
+export function fantasySquadTotalPoints(squad: FantasyEntryCurrentSquad): number | null {
+  return fantasyPlayersTotalPoints(squad.starters);
+}
+
+export function formatFantasyShareTimestamp(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `แชร์เมื่อ ${values.day}/${values.month}/${Number(values.year) + 543} ${values.hour}:${values.minute} น.`;
 }
 
 export function playerHighlight(playerId: number, highlightPlayerIds: ReadonlySet<number>): { label: string | null; className: string } {

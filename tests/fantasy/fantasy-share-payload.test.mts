@@ -9,6 +9,7 @@ function player(input: Partial<{
   playerName: string;
   position: "GK" | "DEF" | "MID" | "FWD";
   clubName: string;
+  clubShortName: string;
   isCaptain: boolean;
   isViceCaptain: boolean;
   points: number | null;
@@ -75,6 +76,18 @@ test("builds a fantasy GW leaderboard without exposing entry ids", () => {
   assert.match(serialized, /GW 3/);
   assert.match(serialized, /Chei FC/);
   assert.doesNotMatch(serialized, /entryId|FPL\s+\d/i);
+});
+
+test("adds the approved share timestamp to leaderboard Flex", () => {
+  const message = buildFantasyLeaderboardShareFlex({
+    leagueName: "เชยเชย Cup",
+    gameweek: 3,
+    period: "gameweek",
+    rows: [],
+    sharedAt: "แชร์เมื่อ 24/08/2569 21:45 น.",
+  });
+
+  assert.match(JSON.stringify(message), /แชร์เมื่อ 24\/08\/2569 21:45 น\./);
 });
 
 test("fantasy leaderboard share removes the branding header and keeps the team label lemon", () => {
@@ -228,6 +241,7 @@ test("shares all player positions as four ordered bubbles", () => {
       { rank: 1, position: "DEF", playerName: "Defender", clubName: "Club", metricValue: 6 },
       { rank: 1, position: "MID", playerName: "Midfielder", clubName: "Club", metricValue: 8 },
     ],
+    sharedAt: "แชร์เมื่อ 24/08/2569 21:45 น.",
   });
 
   validateFlexMessage(message);
@@ -241,6 +255,7 @@ test("shares all player positions as four ordered bubbles", () => {
 
   assert.equal(contents.type, "carousel");
   assert.deepEqual(labels, ["ตำแหน่ง: กองหน้า", "ตำแหน่ง: กองกลาง", "ตำแหน่ง: กองหลัง", "ตำแหน่ง: GK"]);
+  assert.equal(JSON.stringify(message).split("แชร์เมื่อ 24/08/2569 21:45 น.").length - 1, 4);
 });
 
 test("shares one selected player position as one bubble", () => {
@@ -276,6 +291,29 @@ test("builds five squad rows and doubles captain display points", () => {
   assert.match(serialized, /6 × 2 = 12/);
   assert.match(serialized, /Picky/);
   assert.doesNotMatch(serialized, /entryId|FPL Entry/i);
+});
+
+test("shows club short name, squad total, and Team of the Week total", () => {
+  const squad = fixtureSquad();
+  squad.starters[1].clubShortName = "ARS";
+  const squadMessage = buildFantasySquadShareFlex({
+    managerName: "Picky",
+    managerAvatarUrl: null,
+    teamName: "Chei FC",
+    squad,
+    sharedAt: "แชร์เมื่อ 24/08/2569 21:45 น.",
+  });
+  const teamMessage = buildFantasyTeamOfWeekShareFlex({
+    gameweek: 3,
+    players: [player({ playerId: 20, playerName: "Semenyo", position: "FWD", clubShortName: "BOU", points: 9 })],
+    sharedAt: "แชร์เมื่อ 24/08/2569 21:45 น.",
+  });
+
+  assert.match(JSON.stringify(squadMessage), /Semenyo.*ARS.*6/);
+  assert.match(JSON.stringify(squadMessage), /คะแนนรวม.*24/);
+  assert.match(JSON.stringify(teamMessage), /Semenyo.*BOU.*9/);
+  assert.match(JSON.stringify(teamMessage), /คะแนนรวม.*9/);
+  assert.match(JSON.stringify(teamMessage), /แชร์เมื่อ 24\/08\/2569 21:45 น\./);
 });
 
 test("fantasy squad share shows the current team total in the profile row", () => {
