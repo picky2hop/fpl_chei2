@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { validateFlexMessage } from "../../lib/line/flex.ts";
-import { buildFantasyLeaderboardShareFlex, buildFantasyPlayerStatsShareFlex, buildFantasySquadShareFlex } from "../../lib/fantasy/fantasy-share-payload.ts";
+import { buildFantasyLeaderboardShareFlex, buildFantasyLeaderboardTopBottomShareFlex, buildFantasyPlayerStatsShareFlex, buildFantasySquadShareFlex, buildFantasyTeamOfWeekShareFlex } from "../../lib/fantasy/fantasy-share-payload.ts";
 
 function player(input: Partial<{
   pickPosition: number;
@@ -318,4 +318,31 @@ test("does not put Box-only cornerRadius on leaderboard images", () => {
   validateFlexMessage(message);
   assert.ok(imageComponents(message).length > 0);
   assert.equal(imageComponents(message).some((image) => "cornerRadius" in image), false);
+});
+
+test("builds Top/Bottom share as exactly two bubbles", () => {
+  const message = buildFantasyLeaderboardTopBottomShareFlex({
+    leagueName: "เชยเชย Cup",
+    gameweek: 3,
+    period: "gameweek",
+    topRows: [{ rank: 1, managerName: "Top", teamName: "Top FC", points: 30, avatarUrl: null }],
+    bottomRows: [{ rank: 20, managerName: "Bottom", teamName: "Bottom FC", points: 1, avatarUrl: null }],
+  });
+  validateFlexMessage(message);
+  const contents = message.contents as { type: string; contents: unknown[] };
+  assert.equal(contents.type, "carousel");
+  assert.equal(contents.contents.length, 2);
+});
+
+test("marks Player of the Week in squad and Team of the Week shares", () => {
+  const squadMessage = buildFantasySquadShareFlex({
+    managerName: "Picky",
+    managerAvatarUrl: null,
+    teamName: "Chei FC",
+    squad: fixtureSquad(),
+    highlightPlayerIds: new Set([2]),
+  });
+  const teamMessage = buildFantasyTeamOfWeekShareFlex({ gameweek: 3, players: fixtureSquad().starters, highlightPlayerIds: new Set([2]) });
+  assert.match(JSON.stringify(squadMessage), /Player of the Week/);
+  assert.match(JSON.stringify(teamMessage), /Player of the Week/);
 });

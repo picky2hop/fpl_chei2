@@ -273,8 +273,9 @@ const squadRowLabels: Record<"GK" | "DEF" | "MID" | "FWD" | "BENCH", string> = {
   BENCH: "ตัวสำรอง",
 };
 
-function squadPlayer(player: FantasySquadPlayer) {
+function squadPlayer(player: FantasySquadPlayer, highlightPlayerIds: ReadonlySet<number> = new Set<number>()) {
   const points = playerDisplayPoints(player);
+  const highlighted = highlightPlayerIds.has(player.playerId);
   return {
     type: "box",
     layout: "vertical",
@@ -285,11 +286,13 @@ function squadPlayer(player: FantasySquadPlayer) {
       imageOrFallback(player.photoUrl, player.playerName, "42px"),
       text(player.playerName, "xs", "bold"),
       text(points.label, "xs", "bold", player.isCaptain ? ACCENT : PRIMARY_TEXT),
+      ...(highlighted ? [text("Player of the Week", "xxs", "bold", ACCENT)] : []),
     ],
+    ...(highlighted ? { borderColor: ACCENT, backgroundColor: "#20361F" } : {}),
   };
 }
 
-function squadRow(row: ReturnType<typeof squadRows>[number]) {
+function squadRow(row: ReturnType<typeof squadRows>[number], highlightPlayerIds: ReadonlySet<number> = new Set<number>()) {
   return {
     type: "box",
     layout: "vertical",
@@ -303,7 +306,7 @@ function squadRow(row: ReturnType<typeof squadRows>[number]) {
         type: "box",
         layout: "horizontal",
         spacing: "xs",
-        contents: row.players.length ? row.players.map(squadPlayer) : [text("ไม่มีข้อมูล", "xs", "regular", MUTED_TEXT)],
+        contents: row.players.length ? row.players.map((player) => squadPlayer(player, highlightPlayerIds)) : [text("ไม่มีข้อมูล", "xs", "regular", MUTED_TEXT)],
       },
     ],
   };
@@ -320,9 +323,11 @@ export function buildFantasySquadShareFlex(input: {
   managerAvatarUrl?: string | null;
   teamName: string;
   squad: FantasyEntryCurrentSquad;
+  highlightPlayerIds?: ReadonlySet<number> | readonly number[];
 }): FlexMessage {
   const rows = squadRows(input.squad);
   const totalPoints = squadTotalPoints(input.squad);
+  const highlightPlayerIds = input.highlightPlayerIds instanceof Set ? input.highlightPlayerIds : new Set(input.highlightPlayerIds ?? []);
   return {
     type: "flex",
     altText: `FPL Chei Chei · ทีม ${input.teamName} · GW ${input.squad.gameweekNumber}`,
@@ -356,7 +361,61 @@ export function buildFantasySquadShareFlex(input: {
           },
         ],
       },
-      ...rows.map(squadRow),
+      ...rows.map((row) => squadRow(row, highlightPlayerIds)),
     ]),
   };
+}
+
+function teamOfWeekRow(label: string, players: FantasySquadPlayer[], highlightPlayerIds: ReadonlySet<number>) {
+  return {
+    type: "box",
+    layout: "vertical",
+    spacing: "xs",
+    paddingAll: "8px",
+    cornerRadius: "md",
+    backgroundColor: CARD_BACKGROUND,
+    contents: [
+      text(label, "xs", "bold", ACCENT),
+      {
+        type: "box",
+        layout: "horizontal",
+        spacing: "xs",
+        contents: players.length ? players.map((player) => squadPlayer(player, highlightPlayerIds)) : [text("ไม่มีข้อมูล", "xs", "regular", MUTED_TEXT)],
+      },
+    ],
+  };
+}
+
+export function buildFantasyTeamOfWeekShareFlex(input: {
+  gameweek: number;
+  players: FantasySquadPlayer[];
+  highlightPlayerIds?: ReadonlySet<number> | readonly number[];
+}): FlexMessage {
+  const highlightPlayerIds = input.highlightPlayerIds instanceof Set ? input.highlightPlayerIds : new Set(input.highlightPlayerIds ?? []);
+  const positionRows: Array<{ key: FantasySquadPlayer["position"]; label: string }> = [
+    { key: "GK", label: "GK" },
+    { key: "DEF", label: "กองหลัง" },
+    { key: "MID", label: "กองกลาง" },
+    { key: "FWD", label: "กองหน้า" },
+  ];
+  return flexMessage(`FPL Official · Team of the Week GW ${input.gameweek}`, bubble([
+    text("Team of the Week", "lg", "bold", ACCENT),
+    text(`FPL Official · GW ${input.gameweek}`, "sm", "bold"),
+    ...positionRows.map((row) => teamOfWeekRow(row.label, input.players.filter((player) => player.position === row.key), highlightPlayerIds)),
+  ]));
+}
+
+export function buildFantasyLeaderboardTopBottomShareFlex(input: {
+  leagueName: string;
+  gameweek: number;
+  period: "gameweek" | "season";
+  topRows: FantasyLeaderboardShareRow[];
+  bottomRows: FantasyLeaderboardShareRow[];
+}): FlexMessage {
+  const periodLabel = input.period === "gameweek" ? `GW ${input.gameweek}` : `ทั้งฤดูกาล · ถึง GW ${input.gameweek}`;
+  const title = `${input.leagueName} · ${periodLabel}`;
+  return flexMessage(`FPL Chei Chei · ${title} · Top/Bottom`, container([
+    leaderboardBubble(`${title} · Top 5`, input.topRows),
+    leaderboardBubble(`${title} · Bottom 5`, input.bottomRows),
+  ]));
 }

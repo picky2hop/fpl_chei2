@@ -38,6 +38,7 @@ test("league dashboard includes unmapped members and keeps player stats global",
   assert.equal(result.leaderboard.gameweek[1].rank, 1);
   assert.deepEqual(result.playerStats.selected.MID.map((player) => player.playerId), [1]);
   assert.equal(result.awards.champions[0].entryId, 20);
+  assert.deepEqual(result.playerOfWeek, { state: "unavailable", message: "ยังไม่มีข้อมูล Player of the Week" });
 });
 
 test("season ranking sums scores through selected GW and archived leagues remain selectable", () => {

@@ -4,6 +4,8 @@ import { buildFplPlayerPhotoUrl, photoKeyFromFplPhoto } from "./player-image.ts"
 import type { FplLeagueMember, FplLeagueSummary } from "./league-types.ts";
 import type {
   FantasyFplProviderWithPicks,
+  FplDreamTeamSnapshot,
+  FplEventLivePlayer,
   FantasySquadPlayer,
   FplBootstrapSnapshot,
   FplEntryCurrentSquad,
@@ -42,6 +44,10 @@ function objectValue(value: unknown, label: string): Record<string, unknown> {
 function arrayValue(value: unknown, label: string): unknown[] {
   if (!Array.isArray(value)) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", `Invalid FPL ${label}`);
   return value;
+}
+
+function nullableNumberValue(value: unknown, field: string): number | null {
+  return value == null ? null : numberValue(value, field);
 }
 
 function leagueMeta(value: unknown): FplLeagueSummary {
@@ -114,6 +120,35 @@ function normalizeHistory(value: unknown): FplEntryHistoryEvent[] {
   });
 }
 
+function normalizeEventLive(value: unknown): FplEventLivePlayer[] {
+  const root = objectValue(value, "event live");
+  return arrayValue(root.elements, "event live elements").map((item) => {
+    const row = objectValue(item, "event live player");
+    const stats = objectValue(row.stats, "event live stats");
+    return {
+      playerId: numberValue(row.id, "event live player id"),
+      points: numberValue(stats.total_points, "event live total points"),
+    } satisfies FplEventLivePlayer;
+  });
+}
+
+function normalizeDreamTeam(value: unknown): FplDreamTeamSnapshot {
+  const root = objectValue(value, "dream team");
+  const topPlayer = root.top_player == null ? null : objectValue(root.top_player, "dream team top player");
+  return {
+    topPlayerId: topPlayer == null ? null : numberValue(topPlayer.id, "dream team top player id"),
+    topPoints: topPlayer == null ? null : numberValue(topPlayer.points, "dream team top player points"),
+    players: arrayValue(root.team, "dream team players").map((item) => {
+      const row = objectValue(item, "dream team player");
+      return {
+        playerId: numberValue(row.element, "dream team player id"),
+        points: numberValue(row.points, "dream team points"),
+        position: numberValue(row.position, "dream team position"),
+      };
+    }),
+  } satisfies FplDreamTeamSnapshot;
+}
+
 function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, gameweekNumber: number): FplEntryCurrentSquad {
   const root = objectValue(value, "entry picks");
   const playersById = new Map(bootstrap.players.map((player) => [player.playerId, player]));
@@ -155,6 +190,16 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
     return [numberValue(position.id, "element type id"), position.singular_name_short] as const;
   }));
   const events = arrayValue(root.events, "events").map((item) => objectValue(item, "event"));
+  const gameweeks = events.map((event) => {
+    const topInfo = event.top_element_info == null ? null : objectValue(event.top_element_info, "top element info");
+    return {
+      number: numberValue(event.id, "event id"),
+      isCurrent: event.is_current === true,
+      finished: event.finished === true,
+      topPlayerId: nullableNumberValue(event.top_element, "top element"),
+      topPoints: topInfo == null ? null : nullableNumberValue(topInfo.points, "top element points"),
+    } satisfies FplBootstrapSnapshot["gameweeks"][number];
+  });
   const current = events.find((event) => event.is_current === true);
   const finished = events.filter((event) => event.finished === true).map((event) => numberValue(event.id, "event id"));
   const latestFinishedGameweek = finished.length ? Math.max(...finished) : null;
@@ -191,6 +236,7 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
   return {
     currentGameweek,
     latestFinishedGameweek,
+    gameweeks,
     players,
     mostCaptainedPlayerId: selectedEvent?.most_captained == null ? null : numberValue(selectedEvent.most_captained, "most_captained"),
     mostViceCaptainedPlayerId: selectedEvent?.most_vice_captained == null ? null : numberValue(selectedEvent.most_vice_captained, "most_vice_captained"),
@@ -231,6 +277,12 @@ export function createFantasyFplProvider(input: FetchFantasyFplOptions = {}): Fa
     },
     async getBootstrap() {
       return normalizeBootstrap(await fetchJson("bootstrap-static/", options));
+    },
+    async getEventLive(gameweekNumber) {
+      return normalizeEventLive(await fetchJson(`event/${gameweekNumber}/live/`, options));
+    },
+    async getDreamTeam(gameweekNumber) {
+      return normalizeDreamTeam(await fetchJson(`dream-team/${gameweekNumber}/`, options));
     },
     async getLeague(leagueId) {
       const page = await getLeagueStandingsPage(leagueId, 1);

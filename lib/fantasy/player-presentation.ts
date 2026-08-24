@@ -35,3 +35,9 @@ export function playerDisplayPoints(player: Pick<FantasySquadPlayer, "points" | 
     label: total === null ? "—" : player.isCaptain ? `${player.points} × 2 = ${total}` : String(total),
   };
 }
+
+export function playerHighlight(playerId: number, highlightPlayerIds: ReadonlySet<number>): { label: string | null; className: string } {
+  return highlightPlayerIds.has(playerId)
+    ? { label: "Player of the Week", className: "border-[#d9ff58] bg-[#d9ff58]/10" }
+    : { label: null, className: "" };
+}

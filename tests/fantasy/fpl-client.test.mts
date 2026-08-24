@@ -147,3 +147,26 @@ test("uses the next scheduled GW when FPL has no current or finished GW", async 
   assert.equal(snapshot.currentGameweek, 1);
   assert.equal(snapshot.latestFinishedGameweek, null);
 });
+
+test("normalizes FPL event-live points and Dream Team players", async () => {
+  const provider = createFantasyFplProvider({
+    baseUrl: "https://fpl.test",
+    fetchImpl: async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/event/3/live/")) {
+        return Response.json({ elements: [{ id: 10, stats: { total_points: 18 } }] });
+      }
+      if (url.endsWith("/api/dream-team/3/")) {
+        return Response.json({ top_player: { id: 10, points: 18 }, team: [{ element: 10, points: 18, position: 1 }] });
+      }
+      return Response.json({ ...bootstrap, events: [{ id: 3, is_current: true, finished: false }] });
+    },
+  });
+
+  assert.deepEqual(await provider.getEventLive(3), [{ playerId: 10, points: 18 }]);
+  assert.deepEqual(await provider.getDreamTeam(3), {
+    topPlayerId: 10,
+    topPoints: 18,
+    players: [{ playerId: 10, points: 18, position: 1 }],
+  });
+});

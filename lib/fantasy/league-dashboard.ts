@@ -1,6 +1,7 @@
 import { rankPlayerStats, type FantasyPlayerStatGroups, type FantasyPlayerStatRow } from "./scoring.ts";
 import { buildLeagueLeaderboard, type EntryScoreRow, type LeagueLeaderboardRow, type LeagueMappingIdentity, type LeagueMembershipRow } from "./league-scoring.ts";
 import type { FantasyLeagueRecord } from "./league-types.ts";
+import type { FantasyPlayerOfWeek, FantasyWeeklyFeatureState } from "./types.ts";
 
 export type FantasyLeagueDashboardInput = {
   season: { id: string; name: string };
@@ -16,6 +17,7 @@ export type FantasyLeagueDashboardInput = {
   globalViceCaptainPlayerId: number | null;
   awards: Array<{ fpl_entry_id: number; award: "champion" | "wooden_spoon" }>;
   sync: { lastSyncedAt: string | null; stale: boolean; message: string | null };
+  playerOfWeek?: FantasyWeeklyFeatureState<FantasyPlayerOfWeek>;
 };
 
 export type FantasyLeagueDashboardResponse = {
@@ -31,6 +33,7 @@ export type FantasyLeagueDashboardResponse = {
     woodenSpoons: Array<{ entryId: number; award: "wooden_spoon" }>;
   };
   playerStats: FantasyPlayerStatGroups;
+  playerOfWeek: FantasyWeeklyFeatureState<FantasyPlayerOfWeek>;
 };
 
 function currentGameweek(gameweeks: FantasyLeagueDashboardInput["gameweeks"]): number {
@@ -85,5 +88,6 @@ export function buildFantasyLeagueDashboard(input: FantasyLeagueDashboardInput):
       globalCaptainPlayerId: input.globalCaptainPlayerId,
       globalViceCaptainPlayerId: input.globalViceCaptainPlayerId,
     }),
+    playerOfWeek: input.playerOfWeek ?? { state: "unavailable", message: "ยังไม่มีข้อมูล Player of the Week" },
   };
 }

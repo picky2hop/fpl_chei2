@@ -58,16 +58,60 @@ export type FplPlayerSnapshot = {
 export type FplBootstrapSnapshot = {
   currentGameweek: number;
   latestFinishedGameweek: number | null;
+  gameweeks: FplGameweekSummary[];
   players: FplPlayerSnapshot[];
   mostCaptainedPlayerId: number | null;
   mostViceCaptainedPlayerId: number | null;
 };
+
+export type FplGameweekSummary = {
+  number: number;
+  isCurrent: boolean;
+  finished: boolean;
+  topPlayerId: number | null;
+  topPoints: number | null;
+};
+
+export type FplEventLivePlayer = {
+  playerId: number;
+  points: number;
+};
+
+export type FplDreamTeamPlayer = {
+  playerId: number;
+  points: number;
+  position: number;
+};
+
+export type FplDreamTeamSnapshot = {
+  topPlayerId: number | null;
+  topPoints: number | null;
+  players: FplDreamTeamPlayer[];
+};
+
+export type FantasyPlayerOfWeek = {
+  gameweek: number;
+  topPoints: number;
+  players: FantasySquadPlayer[];
+};
+
+export type FantasyTeamOfWeek = {
+  gameweek: number;
+  source: "FPL Official";
+  players: FantasySquadPlayer[];
+};
+
+export type FantasyWeeklyFeatureState<T> =
+  | { state: "ready"; value: T }
+  | { state: "unavailable"; message: string };
 
 export type FantasyFplProvider = {
   getEntrySummary(entryId: number): Promise<FplEntrySummary>;
   getEntryHistory(entryId: number): Promise<FplEntryHistoryEvent[]>;
   getEntryPicks?(entryId: number, gameweekNumber: number): Promise<FplEntryCurrentSquad>;
   getBootstrap(): Promise<FplBootstrapSnapshot>;
+  getEventLive(gameweekNumber: number): Promise<FplEventLivePlayer[]>;
+  getDreamTeam(gameweekNumber: number): Promise<FplDreamTeamSnapshot>;
   getLeague(leagueId: number): Promise<FplLeagueSummary>;
   getLeagueMembers(leagueId: number): Promise<FplLeagueMember[]>;
 };

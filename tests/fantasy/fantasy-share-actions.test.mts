@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ShareTargetPickerApi } from "../../lib/line/share.ts";
-import { shareFantasyLeaderboard, shareFantasySquad } from "../../lib/fantasy/fantasy-share-actions.ts";
+import { shareFantasyLeaderboard, shareFantasyLeaderboardTopBottom, shareFantasySquad, shareFantasyTeamOfWeek } from "../../lib/fantasy/fantasy-share-actions.ts";
 
 const leaderboardInput = {
   leagueName: "เชยเชย Cup",
@@ -23,6 +23,16 @@ const squadInput = {
     bench: [],
   },
 };
+
+const topBottomInput = {
+  leagueName: "เชยเชย Cup",
+  gameweek: 3,
+  period: "gameweek" as const,
+  topRows: [],
+  bottomRows: [],
+};
+
+const teamOfWeekInput = { gameweek: 3, players: [] };
 
 function api(result: unknown, available = true): ShareTargetPickerApi {
   return {
@@ -57,4 +67,9 @@ test("maps a rejected picker promise to a safe error", async () => {
   assert.equal(result.state, "error");
   assert.match(result.message ?? "", /แชร์เข้า LINE ไม่สำเร็จ/);
   assert.doesNotMatch(result.message ?? "", /network details/);
+});
+
+test("shares Top/Bottom and Team of the Week through the existing picker", async () => {
+  assert.equal((await shareFantasyLeaderboardTopBottom(api({ status: "success" }), topBottomInput)).state, "shared");
+  assert.equal((await shareFantasyTeamOfWeek(api({ status: "success" }), teamOfWeekInput)).state, "shared");
 });

@@ -1,8 +1,10 @@
 import { formatShareErrorMessage, shareFlexMessage, type ShareTargetPickerApi } from "../line/share.ts";
 import {
   buildFantasyLeaderboardShareFlex,
+  buildFantasyLeaderboardTopBottomShareFlex,
   buildFantasyPlayerStatsShareFlex,
   buildFantasySquadShareFlex,
+  buildFantasyTeamOfWeekShareFlex,
 } from "./fantasy-share-payload.ts";
 
 export type FantasyShareStatus = {
@@ -10,7 +12,11 @@ export type FantasyShareStatus = {
   message?: string;
 };
 
-type FantasyShareInput = Parameters<typeof buildFantasyLeaderboardShareFlex>[0] | Parameters<typeof buildFantasyPlayerStatsShareFlex>[0] | Parameters<typeof buildFantasySquadShareFlex>[0];
+type FantasyShareInput = Parameters<typeof buildFantasyLeaderboardShareFlex>[0]
+  | Parameters<typeof buildFantasyLeaderboardTopBottomShareFlex>[0]
+  | Parameters<typeof buildFantasyPlayerStatsShareFlex>[0]
+  | Parameters<typeof buildFantasySquadShareFlex>[0]
+  | Parameters<typeof buildFantasyTeamOfWeekShareFlex>[0];
 
 async function shareFantasyMessage(api: ShareTargetPickerApi, message: Parameters<typeof shareFlexMessage>[1]): Promise<FantasyShareStatus> {
   try {
@@ -33,6 +39,14 @@ export function shareFantasyPlayerStats(api: ShareTargetPickerApi, input: Parame
 
 export function shareFantasySquad(api: ShareTargetPickerApi, input: Parameters<typeof buildFantasySquadShareFlex>[0]): Promise<FantasyShareStatus> {
   return shareFantasyMessage(api, buildFantasySquadShareFlex(input));
+}
+
+export function shareFantasyTeamOfWeek(api: ShareTargetPickerApi, input: Parameters<typeof buildFantasyTeamOfWeekShareFlex>[0]): Promise<FantasyShareStatus> {
+  return shareFantasyMessage(api, buildFantasyTeamOfWeekShareFlex(input));
+}
+
+export function shareFantasyLeaderboardTopBottom(api: ShareTargetPickerApi, input: Parameters<typeof buildFantasyLeaderboardTopBottomShareFlex>[0]): Promise<FantasyShareStatus> {
+  return shareFantasyMessage(api, buildFantasyLeaderboardTopBottomShareFlex(input));
 }
 
 export type { FantasyShareInput };

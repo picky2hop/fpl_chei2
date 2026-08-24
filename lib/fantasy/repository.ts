@@ -529,6 +529,7 @@ export function buildPlayerSnapshotRows(input: {
     snapshot: {
       currentGameweek: Number(input.gameweekId.replace(/\D/g, "")) || 1,
       latestFinishedGameweek: null,
+      gameweeks: [],
       players: input.players,
       mostCaptainedPlayerId: null,
       mostViceCaptainedPlayerId: null,
