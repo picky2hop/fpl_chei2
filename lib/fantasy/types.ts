@@ -18,6 +18,8 @@ export type FantasySquadPlayer = {
   multiplier: number;
   isCaptain: boolean;
   isViceCaptain: boolean;
+  wasCaptain?: boolean;
+  wasViceCaptain?: boolean;
   photoUrl?: string;
   points: number | null;
 };

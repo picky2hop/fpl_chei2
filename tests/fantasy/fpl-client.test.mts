@@ -106,6 +106,56 @@ test("fetches and normalizes the current Entry picks with player metadata", asyn
   assert.equal(squad.bench[0].playerId, 12);
 });
 
+test("normalizes the FPL effective captain when the original captain is benched", async () => {
+  const squadBootstrap = {
+    ...bootstrap,
+    events: [{ id: 1, is_current: true, finished: true, most_captained: 2, most_vice_captained: 3 }],
+    elements: Array.from({ length: 15 }, (_, index) => ({
+      id: index + 1,
+      web_name: `Player ${index + 1}`,
+      first_name: "FPL",
+      second_name: `Player ${index + 1}`,
+      element_type: index === 0 ? 1 : index < 4 ? 2 : index < 8 ? 3 : 4,
+      team: index % 2 ? 1 : 2,
+      status: "a",
+      selected_by_percent: "10",
+      transfers_in_event: 1,
+      transfers_out_event: 2,
+      form: "5",
+      event_points: index + 1,
+      photo: `${index + 1}00000.jpg`,
+    })),
+  };
+  const picks = {
+    picks: Array.from({ length: 15 }, (_, index) => ({
+      element: index + 1,
+      position: index + 1,
+      multiplier: index === 0 ? 2 : index >= 11 ? 0 : 1,
+      is_captain: index === 13,
+      is_vice_captain: index === 0,
+    })),
+  };
+  const provider = createFantasyFplProvider({
+    baseUrl: "https://fpl.test",
+    fetchImpl: async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/entry/123/event/1/picks/")) return Response.json(picks);
+      if (url.endsWith("/api/event/1/live/")) return Response.json({ elements: Array.from({ length: 15 }, (_, index) => ({ id: index + 1, stats: { total_points: index + 1 } })) });
+      if (url.endsWith("/api/bootstrap-static/")) return Response.json(squadBootstrap);
+      return Response.json({ id: 123, name: "Chei FC", player_first_name: "Chei", player_last_name: "Manager" });
+    },
+  });
+
+  const squad = await provider.getEntryPicks(123, 1);
+
+  assert.equal(squad.captainPlayerId, 1);
+  assert.equal(squad.viceCaptainPlayerId, 1);
+  assert.equal(squad.starters[0].isCaptain, true);
+  assert.equal(squad.starters[0].wasViceCaptain, true);
+  assert.equal(squad.bench[2].isCaptain, false);
+  assert.equal(squad.bench[2].wasCaptain, true);
+});
+
 test("rejects a non-success FPL response without exposing its body", async () => {
   const provider = createFantasyFplProvider({
     baseUrl: "https://fpl.test",

@@ -157,6 +157,10 @@ function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, ga
     const playerId = numberValue(row.element, "pick player id");
     const player = playersById.get(playerId);
     if (!player) throw new FantasyFplError("FANTASY_FPL_INVALID_DATA", "Entry pick player is missing from bootstrap");
+    const multiplier = numberValue(row.multiplier ?? 0, "pick multiplier");
+    const isStartingPick = numberValue(row.position ?? index + 1, "pick position") <= 11;
+    const wasCaptain = row.is_captain === true;
+    const wasViceCaptain = row.is_vice_captain === true;
     return {
       pickPosition: numberValue(row.position ?? index + 1, "pick position"),
       playerId,
@@ -164,9 +168,11 @@ function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, ga
       position: player.position,
       clubName: player.clubName,
       clubShortName: player.clubShortName,
-      multiplier: numberValue(row.multiplier ?? 0, "pick multiplier"),
-      isCaptain: row.is_captain === true,
-      isViceCaptain: row.is_vice_captain === true,
+      multiplier,
+      isCaptain: isStartingPick && multiplier > 1,
+      isViceCaptain: wasViceCaptain && !(isStartingPick && multiplier > 1),
+      wasCaptain,
+      wasViceCaptain,
       photoUrl: player.photoKey ? buildFplPlayerPhotoUrl(player.photoKey) : undefined,
       points: eventPointsByPlayer.get(playerId) ?? player.eventPoints ?? null,
     } satisfies FantasySquadPlayer;

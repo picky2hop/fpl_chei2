@@ -20,7 +20,7 @@ function dependencies(overrides: Partial<FantasyLeagueSyncDependencies> = {}) {
     playerName: `Player ${entryId}-${index + 1}`,
     position: index === 0 ? "GK" as const : index < 6 ? "DEF" as const : index < 10 ? "MID" as const : "FWD" as const,
     clubName: "Club",
-    multiplier: index === 0 ? 1 : 1,
+    multiplier: index === 0 ? 2 : 1,
     isCaptain: index === 0,
     isViceCaptain: index === 1,
     points: entryId,

@@ -15,17 +15,16 @@ export function calculateStartingXiCaptainScore(picks: FantasySquadPlayer[]): Fa
   }
 
   const starters = sorted.slice(0, 11);
-  const captains = starters.filter((player) => player.isCaptain);
+  const captains = starters.filter((player) => player.multiplier > 1);
   if (captains.length !== 1) throw new Error("Fantasy starting captain is invalid");
   if (starters.some((player) => typeof player.points !== "number" || !Number.isFinite(player.points))) {
     throw new Error("Fantasy starter points are invalid");
   }
 
-  const captain = captains[0];
-  const starterPoints = starters.reduce((total, player) => total + player.points!, 0);
+  const starterPoints = starters.reduce((total, player) => total + player.points! * player.multiplier, 0);
   return {
-    points: starterPoints + captain.points!,
-    captainPlayerId: captain.playerId,
+    points: starterPoints,
+    captainPlayerId: captains[0].playerId,
     calculationMethod: "starting_xi_captain_v1",
   };
 }

@@ -230,6 +230,17 @@ test("fantasy player-stat rows keep rank, photo and metric fixed while the name 
   assert.equal(rowContents[5].flex, 0);
 });
 
+test("uses a football fallback when a player photo is unavailable", () => {
+  const message = buildFantasyPlayerStatsShareFlex({
+    gameweek: 3,
+    categoryLabel: "ฟอร์มสูงสุด",
+    positionLabel: "กองกลาง",
+    rows: [{ rank: 1, position: "MID", playerName: "Unknown Player", clubName: "Unknown FC", metricValue: 8 }],
+  });
+
+  assert.match(JSON.stringify(message), /⚽/);
+});
+
 test("shares all player positions as four ordered bubbles", () => {
   const message = buildFantasyPlayerStatsShareFlex({
     gameweek: 3,

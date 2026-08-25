@@ -59,6 +59,20 @@ test("rejects incomplete or duplicate pick positions", () => {
 
 test("rejects null starter points and a missing starting captain", () => {
   assert.throws(() => calculateStartingXiCaptainScore(picks({ nullStarterPosition: 1 })), /points/);
-  const noCaptain = picks().map((player) => ({ ...player, isCaptain: false }));
+  const noCaptain = picks().map((player) => ({ ...player, isCaptain: false, multiplier: 1 }));
   assert.throws(() => calculateStartingXiCaptainScore(noCaptain), /captain/);
+});
+
+test("uses the vice-captain multiplier when FPL moves the original captain to the bench", () => {
+  const autoSubstituted = picks().map((player) => {
+    if (player.playerId === 5) return { ...player, isCaptain: false, isViceCaptain: true, multiplier: 2 };
+    if (player.playerId === 12) return { ...player, isCaptain: true, multiplier: 0 };
+    return player;
+  });
+
+  assert.deepEqual(calculateStartingXiCaptainScore(autoSubstituted), {
+    points: 60,
+    captainPlayerId: 5,
+    calculationMethod: "starting_xi_captain_v1",
+  });
 });

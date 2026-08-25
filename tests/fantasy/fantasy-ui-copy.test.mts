@@ -15,3 +15,9 @@ test("leaderboard exposes the Top 5 and Bottom 5 share action", async () => {
   assert.match(source, /Bottom 5/);
   assert.match(source, /shareFantasyLeaderboardTopBottom/);
 });
+
+test("leaderboard warns that displayed scores exclude bench boost and triple captain", async () => {
+  const source = await readFile(new URL("../../app/fantasy/fantasy-app.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /text-\[#d9ff58\][^>]*>คะแนนที่เห็น คือ ไม่รวม Bench boost และ Triple Captain/);
+});

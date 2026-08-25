@@ -11,7 +11,7 @@ function squad(entryId: number, gameweekNumber: number) {
     playerName: `Player ${entryId}-${index + 1}`,
     position: index === 0 ? "GK" : index < 6 ? "DEF" : index < 10 ? "MID" : "FWD",
     clubName: "Club",
-    multiplier: 1,
+    multiplier: index === 0 ? 2 : 1,
     isCaptain: index === 0,
     isViceCaptain: index === 1,
     points: entryId,

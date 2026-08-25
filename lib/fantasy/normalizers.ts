@@ -31,7 +31,7 @@ export function normalizeEntryCurrentSquad(input: {
     gameweekNumber: input.gameweekNumber,
     formation: formationFor(starters),
     captainPlayerId: picks.find((pick) => pick.isCaptain)?.playerId ?? null,
-    viceCaptainPlayerId: picks.find((pick) => pick.isViceCaptain)?.playerId ?? null,
+    viceCaptainPlayerId: picks.find((pick) => pick.wasViceCaptain || pick.isViceCaptain)?.playerId ?? null,
     starters,
     bench,
   };

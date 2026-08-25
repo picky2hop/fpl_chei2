@@ -61,7 +61,7 @@ function imageOrFallback(url: string | null | undefined, fallback: string, size 
     backgroundColor: "#29435D",
     justifyContent: "center",
     alignItems: "center",
-    contents: [text(initials(fallback), "xs", "bold", PRIMARY_TEXT)],
+    contents: [text("⚽", "lg", "bold", PRIMARY_TEXT)],
   };
 }
 
