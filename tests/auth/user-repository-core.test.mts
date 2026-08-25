@@ -12,16 +12,24 @@ test("new non-admin LINE users use the database player role", () => {
   assert.equal(getAppUserRole("U-player", "U-admin"), "player");
 });
 
-test("new users join every active-season gameweek that has no participant row", () => {
+test("new users join only open or upcoming gameweeks that have no participant row", () => {
   assert.deepEqual(
-    getMissingParticipantGameweekIds(["gw-1", "gw-2", "gw-3"], ["gw-2"]),
-    ["gw-1", "gw-3"],
+    getMissingParticipantGameweekIds([
+      { id: "gw-1", status: "closed" },
+      { id: "gw-2", status: "open" },
+      { id: "gw-3", status: "upcoming" },
+      { id: "gw-4", status: "reopened" },
+    ], ["gw-3"]),
+    ["gw-2"],
   );
 });
 
 test("excluded participant rows are preserved and are not treated as missing", () => {
   assert.deepEqual(
-    getMissingParticipantGameweekIds(["gw-1", "gw-2"], ["gw-1", "gw-2"]),
+    getMissingParticipantGameweekIds([
+      { id: "gw-1", status: "open" },
+      { id: "gw-2", status: "upcoming" },
+    ], ["gw-1", "gw-2"]),
     [],
   );
 });

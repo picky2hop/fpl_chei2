@@ -15,6 +15,7 @@ test("maps approved fixture and prediction aliases exactly", () => {
   for (const text of ["ผลทาย", "คำทาย", "ทายผล"]) {
     assert.equal(parseLineCommand(text), "myPredictions");
   }
+  assert.equal(parseLineCommand("แชมป์บ๊วยทายผล"), "predictionAwards");
 });
 
 test("maps menu aliases and ignores ordinary text", () => {
@@ -26,7 +27,7 @@ test("maps menu aliases and ignores ordinary text", () => {
   assert.equal(parseLineCommand("   \n  "), null);
 });
 
-test("menu Flex exposes three red command actions without configuration values", () => {
+test("menu Flex exposes four red command actions without configuration values", () => {
   const message = buildLineMenuMessage();
   assert.equal(message.type, "flex");
   if (message.type !== "flex") return;
@@ -36,6 +37,7 @@ test("menu Flex exposes three red command actions without configuration values",
     { label: "ขอตาราง", text: "ขอตาราง" },
     { label: "บอลวันนี้", text: "บอลวันนี้" },
     { label: "ผลทายของฉัน", text: "ผลทาย" },
+    { label: "แชมป์บ๊วยทายผล", text: "แชมป์บ๊วยทายผล" },
   ];
   for (const command of commands) {
     assert.match(serialized, new RegExp(`"type":"message","label":"${command.label}","text":"${command.text}"`));

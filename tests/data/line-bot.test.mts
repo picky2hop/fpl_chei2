@@ -11,6 +11,8 @@ import {
   mapTodayFixtureRows,
   mapUserPredictionRows,
   selectCompleteParticipantIds,
+  selectLatestAwardedGameweek,
+  mapPredictionAwards,
 } from "../../lib/data/line-bot-core.ts";
 
 test("selects the current gameweek and falls back when FPL has no current flag", () => {
@@ -28,6 +30,34 @@ test("selects the current gameweek and falls back when FPL has no current flag",
     ]),
     { id: "gw-1", number: 1, isCurrent: false },
   );
+});
+
+test("keeps the latest closed gameweek with awards until the next gameweek is also closed", () => {
+  const gameweeks = [
+    { id: "gw-5", number: 5, status: "closed" as const },
+    { id: "gw-6", number: 6, status: "open" as const },
+  ];
+  const awards = [{ gameweekId: "gw-5" }];
+
+  assert.deepEqual(selectLatestAwardedGameweek(gameweeks, awards), gameweeks[0]);
+  assert.deepEqual(
+    selectLatestAwardedGameweek(
+      [...gameweeks, { id: "gw-7", number: 7, status: "closed" as const }],
+      [...awards, { gameweekId: "gw-7" }],
+    ),
+    { id: "gw-7", number: 7, status: "closed" },
+  );
+});
+
+test("maps tied prediction award recipients with profile and LINE identity", () => {
+  assert.deepEqual(mapPredictionAwards([
+    { gameweekId: "gw-5", gameweek: 5, award: "champion", userId: "u1", lineUserId: "line-1", displayName: "Ar Tao", avatarUrl: "https://example.test/ar.png", points: 18 },
+    { gameweekId: "gw-5", gameweek: 5, award: "wooden_spoon", userId: "u2", lineUserId: null, displayName: "สำรอง", avatarUrl: null, points: 3 },
+  ]), {
+    gameweek: 5,
+    champions: [{ userId: "u1", lineUserId: "line-1", displayName: "Ar Tao", avatarUrl: "https://example.test/ar.png", points: 18 }],
+    woodenSpoons: [{ userId: "u2", lineUserId: null, displayName: "สำรอง", avatarUrl: "", points: 3 }],
+  });
 });
 
 test("calculates a Bangkok calendar day as UTC boundaries", () => {

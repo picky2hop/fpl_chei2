@@ -64,6 +64,12 @@ export type TodayFixturesFlexInput = {
   }>;
 };
 
+export type PredictionAwardsFlexInput = {
+  gameweek: number;
+  champions: Array<{ displayName: string; avatarUrl?: string; points: number }>;
+  woodenSpoons: Array<{ displayName: string; avatarUrl?: string; points: number }>;
+};
+
 export type FlexMessage = {
   type: "flex";
   altText: string;
@@ -217,6 +223,22 @@ function bubble(contents: Record<string, unknown>[]) {
       layout: "vertical",
       spacing: "sm",
       contents: [footerButton()],
+    },
+  };
+}
+
+function awardsBubble(contents: Record<string, unknown>[]) {
+  return {
+    type: "bubble",
+    size: "giga",
+    styles: {
+      body: { backgroundColor: MAIN_BACKGROUND },
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents,
     },
   };
 }
@@ -634,6 +656,52 @@ function standingsRow(row: StandingsFlexInput["rows"][number]) {
       { ...text(row.displayName, "sm", "bold"), flex: 1 },
       { ...text(`${row.points} คะแนน`, "sm", "bold", row.rank === 1 ? ACCENT : PRIMARY_TEXT), flex: 0 },
     ],
+  };
+}
+
+function awardRecipientRow(recipient: PredictionAwardsFlexInput["champions"][number]) {
+  return {
+    type: "box",
+    layout: "horizontal",
+    spacing: "sm",
+    paddingAll: "9px",
+    cornerRadius: "md",
+    backgroundColor: CARD_BACKGROUND,
+    alignItems: "center",
+    contents: [
+      { ...imageOrFallback(recipient.avatarUrl, recipient.displayName, "38px"), flex: 0 },
+      { ...text(recipient.displayName, "sm", "bold"), flex: 1 },
+      { ...text(`${recipient.points} คะแนน`, "sm", "bold", ACCENT), flex: 0 },
+    ],
+  };
+}
+
+function awardSection(
+  title: string,
+  recipients: PredictionAwardsFlexInput["champions"],
+) {
+  return {
+    type: "box",
+    layout: "vertical",
+    spacing: "xs",
+    contents: [
+      text(title, "md", "bold", ACCENT),
+      ...(recipients.length ? recipients.map(awardRecipientRow) : [text("ไม่มีข้อมูล", "sm", "regular", MUTED_TEXT)]),
+    ],
+  };
+}
+
+export function buildPredictionAwardsFlex(input: PredictionAwardsFlexInput): FlexMessage {
+  const title = `แชมป์บ๊วยทายผล · GW ${input.gameweek}`;
+  return {
+    type: "flex",
+    altText: `เกมทายผลพรีเมียร์ลีก · ${title}`,
+    contents: awardsBubble([
+      text("เกมทายผลพรีเมียร์ลีก", "lg", "bold", ACCENT),
+      text(`ผลตัดสิน GW ${input.gameweek}`, "sm", "bold"),
+      awardSection("🏆 แชมป์", input.champions),
+      awardSection("🥄 บ๊วย", input.woodenSpoons),
+    ]),
   };
 }
 

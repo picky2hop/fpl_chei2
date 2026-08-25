@@ -2,7 +2,7 @@
 
 เว็บทายผลพรีเมียร์ลีกสำหรับกลุ่มเพื่อนใน LINE สร้างด้วย Next.js App Router และ Tailwind CSS
 
-สถานะล่าสุด ณ 11 สิงหาคม 2026: ระบบ Production-only ใช้งานได้แล้ว, LINE Flex/Bot ผ่าน production smoke test แล้ว และ mobile/LIFF regression ผ่านแล้ว เหลือรอการยืนยัน scoring จากการแข่งขันจริง รวมถึง manual production check ของการแชร์ผลแข่งรายคู่ ดู [สถานะ production](docs/phase-2-production-status.md) และ [roadmap Phase 3A](docs/phase-3a-preseason-hardening.md)
+สถานะล่าสุด ณ 25 สิงหาคม 2026: ระบบ Production-only ใช้งานได้แล้ว, LINE Flex/Bot ผ่าน production smoke test เดิมแล้ว, automated verification ของกฎแชมป์/บ๊วยและคำสั่งใหม่ผ่านแล้ว และ migration scoring ถูก apply production พร้อมตรวจ function/privilege แบบ read-only แล้ว. Production smoke test ของคำสั่งใหม่ยังรอการตรวจจากผู้ใช้ ดู [สถานะ production](docs/phase-2-production-status.md), [roadmap Phase 3A](docs/phase-3a-preseason-hardening.md) และ [design/plan ล่าสุด](docs/superpowers/specs/2026-08-25-prediction-awards-and-line-announcement-design.md)
 
 ## Phase 1 MVP
 
@@ -15,6 +15,7 @@
 - ใช้ Lucide icons และ SVG club crests แบบไม่มีกรอบขาว
 - ใช้ LIFF authentication และข้อมูลจริงจาก server API สำหรับการใช้งาน Production
 - preview profile และ mock dashboard fallback ถูกยกเลิกหลัง Production-only cutover
+- LINE Bot มีคำสั่ง `แชมป์บ๊วยทายผล` สำหรับประกาศผล GW ล่าสุดที่ปิดแล้ว พร้อม Flex profile และข้อความ mention ในกลุ่ม
 
 ## Run locally
 

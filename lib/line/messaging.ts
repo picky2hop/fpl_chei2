@@ -1,5 +1,13 @@
 export type LineTextMessage = { type: "text"; text: string };
-export type LineMessage = LineTextMessage | {
+export type LineTextV2Message = {
+  type: "textV2";
+  text: string;
+  substitution: Record<string, {
+    type: "mention";
+    mentionee: { type: "user"; userId: string };
+  }>;
+};
+export type LineMessage = LineTextMessage | LineTextV2Message | {
   type: "flex";
   altText: string;
   contents: Record<string, unknown>;

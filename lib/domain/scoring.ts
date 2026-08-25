@@ -67,29 +67,37 @@ export function calculateGameweekScoring(input: ScoringInput): GameweekScoringRe
     finishedFixtures.map((fixture) => [fixture.id, getFinishedOutcome(fixture)] as const),
   );
   const activePredictions = input.predictions.filter((prediction) => prediction.status === "active");
+  const gameweekFixtureIds = new Set(input.fixtures.map((fixture) => fixture.id));
+  const eligibleParticipantIds = new Set(
+    activePredictions
+      .filter((prediction) => gameweekFixtureIds.has(prediction.fixtureId))
+      .map((prediction) => prediction.userId),
+  );
 
-  const scores = activeParticipants.map<GameweekScore>((participant) => {
-    const userPredictions = activePredictions.filter((prediction) => prediction.userId === participant.userId);
-    let points = 0;
-    let correctPredictions = 0;
+  const scores = activeParticipants
+    .filter((participant) => eligibleParticipantIds.has(participant.userId))
+    .map<GameweekScore>((participant) => {
+      const userPredictions = activePredictions.filter((prediction) => prediction.userId === participant.userId);
+      let points = 0;
+      let correctPredictions = 0;
 
-    for (const prediction of userPredictions) {
-      const outcome = fixtureOutcomes.get(prediction.fixtureId) ?? null;
-      if (outcome === null) continue;
-      if (scorePrediction(prediction.choice, outcome) === 3) {
-        points += 3;
-        correctPredictions += 1;
+      for (const prediction of userPredictions) {
+        const outcome = fixtureOutcomes.get(prediction.fixtureId) ?? null;
+        if (outcome === null) continue;
+        if (scorePrediction(prediction.choice, outcome) === 3) {
+          points += 3;
+          correctPredictions += 1;
+        }
       }
-    }
 
-    return {
-      userId: participant.userId,
-      points,
-      correctPredictions,
-      predictedFixtures: userPredictions.filter((prediction) => fixtureOutcomes.has(prediction.fixtureId)).length,
-      countedFixtures: finishedFixtures.length,
-    };
-  });
+      return {
+        userId: participant.userId,
+        points,
+        correctPredictions,
+        predictedFixtures: userPredictions.filter((prediction) => fixtureOutcomes.has(prediction.fixtureId)).length,
+        countedFixtures: finishedFixtures.length,
+      };
+    });
 
   if (finishedFixtures.length === 0 || scores.length === 0) {
     return { scores, awards: [] };

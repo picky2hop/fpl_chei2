@@ -5,7 +5,7 @@ import { replyToLine } from "../../lib/line/messaging.ts";
 
 function fakeCommandService(
   result: Awaited<ReturnType<LineBotCommandService["replyForText"]>>,
-  calls: Array<{ text: string; lineUserId?: string }>,
+  calls: Array<{ text: string; lineUserId?: string; chatType?: "group" | "room" | "user" }>,
 ): LineBotCommandService {
   return {
     async replyForText(input) {
@@ -17,7 +17,7 @@ function fakeCommandService(
 
 test("replies to an approved command and passes the sender LINE user ID", async () => {
   const replies: unknown[] = [];
-  const calls: Array<{ text: string; lineUserId?: string }> = [];
+  const calls: Array<{ text: string; lineUserId?: string; chatType?: "group" | "room" | "user" }> = [];
   const result = await handleLineWebhookPayload(
     {
       destination: "channel",
@@ -33,7 +33,7 @@ test("replies to an approved command and passes the sender LINE user ID", async 
   );
 
   assert.deepEqual(result, { processed: 1, replied: 1 });
-  assert.deepEqual(calls, [{ text: "ผลทาย", lineUserId: "line-user-id" }]);
+  assert.deepEqual(calls, [{ text: "ผลทาย", lineUserId: "line-user-id", chatType: "group" }]);
   assert.deepEqual(replies, [{
     replyToken: "reply-token",
     messages: [{ type: "flex", altText: "prediction", contents: { type: "bubble" } }],
@@ -42,7 +42,7 @@ test("replies to an approved command and passes the sender LINE user ID", async 
 
 test("does not reply to unsupported text", async () => {
   const replies: unknown[] = [];
-  const calls: Array<{ text: string; lineUserId?: string }> = [];
+  const calls: Array<{ text: string; lineUserId?: string; chatType?: "group" | "room" | "user" }> = [];
   const result = await handleLineWebhookPayload(
     {
       destination: "channel",
@@ -58,7 +58,7 @@ test("does not reply to unsupported text", async () => {
   );
 
   assert.deepEqual(result, { processed: 1, replied: 0 });
-  assert.deepEqual(calls, [{ text: "ข้อความทั่วไป", lineUserId: undefined }]);
+  assert.deepEqual(calls, [{ text: "ข้อความทั่วไป", lineUserId: undefined, chatType: "group" }]);
   assert.deepEqual(replies, []);
 });
 
@@ -67,6 +67,7 @@ test("returns a safe reply when an approved data command cannot load data", asyn
     async getCurrentStandings() { throw new Error("database details must stay private"); },
     async getTodayFixtures() { throw new Error("database details must stay private"); },
     async getUserPredictions() { throw new Error("database details must stay private"); },
+    async getPredictionAwards() { throw new Error("database details must stay private"); },
   });
 
   const messages = await service.replyForText({ text: "บอลวันนี้" });
@@ -80,6 +81,7 @@ test("returns the interactive Flex command menu for the menu command", async () 
     async getCurrentStandings() { throw new Error("must not load standings for menu"); },
     async getTodayFixtures() { throw new Error("must not load fixtures for menu"); },
     async getUserPredictions() { throw new Error("must not load predictions for menu"); },
+    async getPredictionAwards() { throw new Error("must not load awards for menu"); },
   });
 
   const messages = await service.replyForText({ text: "เมนู" });
@@ -88,9 +90,31 @@ test("returns the interactive Flex command menu for the menu command", async () 
   assert.match(JSON.stringify(messages), /"type":"message","label":"ขอตาราง","text":"ขอตาราง"/);
 });
 
+test("returns awards Flex and a decorated group announcement", async () => {
+  const service = createLineBotCommandService({
+    async getCurrentStandings() { throw new Error("must not load standings"); },
+    async getTodayFixtures() { throw new Error("must not load fixtures"); },
+    async getUserPredictions() { throw new Error("must not load predictions"); },
+    async getPredictionAwards() {
+      return {
+        gameweek: 5,
+        champions: [{ userId: "u1", lineUserId: "line-1", displayName: "Ar Tao", avatarUrl: "", points: 18 }],
+        woodenSpoons: [{ userId: "u2", lineUserId: "line-2", displayName: "สำรอง", avatarUrl: "", points: 3 }],
+      };
+    },
+  });
+
+  const messages = await service.replyForText({ text: "แชมป์บ๊วยทายผล", chatType: "group" });
+
+  assert.equal(messages?.length, 2);
+  assert.equal(messages?.[0]?.type, "flex");
+  assert.equal(messages?.[1]?.type, "textV2");
+  assert.match(JSON.stringify(messages), /Ar Tao|สำรอง|champion_1|wooden_spoon_1/);
+});
+
 test("ignores LINE verification payloads and non-text events", async () => {
   const replies: unknown[] = [];
-  const calls: Array<{ text: string; lineUserId?: string }> = [];
+  const calls: Array<{ text: string; lineUserId?: string; chatType?: "group" | "room" | "user" }> = [];
   const result = await handleLineWebhookPayload(
     { destination: "channel", events: [{ type: "follow", replyToken: "unused" }] },
     async (reply) => { replies.push(reply); },

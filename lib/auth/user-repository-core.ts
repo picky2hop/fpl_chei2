@@ -11,6 +11,11 @@ export type RepositorySeason = {
   name: string;
 };
 
+export type RepositoryGameweek = {
+  id: string;
+  status: "open" | "upcoming" | "closed" | "reopened";
+};
+
 export type AppUserRole = "player" | "admin";
 
 export function getAppUserRole(lineUserId: string, adminLineUserId: string): AppUserRole {
@@ -18,11 +23,14 @@ export function getAppUserRole(lineUserId: string, adminLineUserId: string): App
 }
 
 export function getMissingParticipantGameweekIds(
-  seasonGameweekIds: readonly string[],
+  seasonGameweeks: readonly RepositoryGameweek[],
   existingParticipantGameweekIds: readonly string[],
 ): string[] {
   const existing = new Set(existingParticipantGameweekIds);
-  return seasonGameweekIds.filter((id) => !existing.has(id));
+  return seasonGameweeks
+    .filter((gameweek) => gameweek.status === "open" || gameweek.status === "upcoming")
+    .map((gameweek) => gameweek.id)
+    .filter((id) => !existing.has(id));
 }
 
 export function toLiffAuthIdentity(

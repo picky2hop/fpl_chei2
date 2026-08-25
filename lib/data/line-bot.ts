@@ -2,7 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
-import { formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, selectActiveGameweek, selectCompleteParticipantIds } from "./line-bot-core";
+import { formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type PredictionAwardsData } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -174,7 +174,7 @@ export function mapUserPredictionRows(input: {
   };
 }
 
-async function activeContext() {
+async function activeSeasonContext() {
   const admin = getSupabaseAdmin();
   const { data: season, error: seasonError } = await admin
     .from("seasons")
@@ -182,6 +182,12 @@ async function activeContext() {
     .eq("status", "active")
     .maybeSingle();
   if (seasonError || !season) throw new Error("Active season is unavailable");
+
+  return { admin, season };
+}
+
+async function activeContext() {
+  const { admin, season } = await activeSeasonContext();
 
   const { data: gameweeks, error: gameweekError } = await admin
     .from("gameweeks")
@@ -202,6 +208,7 @@ export type LineBotDataReader = {
   getCurrentStandings(): Promise<StandingsData>;
   getTodayFixtures(now: Date): Promise<TodayFixturesData>;
   getUserPredictions(lineUserId: string): Promise<UserPredictionData | null>;
+  getPredictionAwards(): Promise<PredictionAwardsData | null>;
 };
 
 export function createLineBotDataReader(): LineBotDataReader {
@@ -277,6 +284,55 @@ export function createLineBotDataReader(): LineBotDataReader {
         return [{ externalFixtureId: fixture.external_fixture_id, kickoffAt: fixture.kickoff_at, homeTeam, awayTeam, outcome, status: fixture.status, homeScore: fixture.home_score, awayScore: fixture.away_score }];
       });
       return mapUserPredictionRows({ gameweek: gameweek.number, displayName: user.display_name, avatarUrl: user.avatar_url, rows });
+    },
+
+    async getPredictionAwards() {
+      const { admin, season } = await activeSeasonContext();
+      const { data: gameweeks, error: gameweekError } = await admin
+        .from("gameweeks")
+        .select("id,number,status")
+        .eq("season_id", season.id)
+        .eq("status", "closed")
+        .order("number", { ascending: false });
+      if (gameweekError) throw new Error("Prediction awards are unavailable");
+
+      const closedGameweekIds = (gameweeks ?? []).map((gameweek) => gameweek.id);
+      if (closedGameweekIds.length === 0) return null;
+
+      const { data: awards, error: awardError } = await admin
+        .from("gameweek_awards")
+        .select("gameweek_id,user_id,award,points")
+        .in("gameweek_id", closedGameweekIds);
+      if (awardError) throw new Error("Prediction awards are unavailable");
+
+      const selectedGameweek = selectLatestAwardedGameweek(
+        (gameweeks ?? []).map((gameweek) => ({ id: gameweek.id, number: gameweek.number, status: gameweek.status as "closed" })),
+        (awards ?? []).map((award) => ({ gameweekId: award.gameweek_id })),
+      );
+      if (!selectedGameweek) return null;
+
+      const selectedAwards = (awards ?? []).filter((award) => award.gameweek_id === selectedGameweek.id);
+      const userIds = [...new Set(selectedAwards.map((award) => award.user_id))];
+      const { data: users, error: userError } = userIds.length
+        ? await admin.from("app_users").select("id,line_user_id,display_name,avatar_url").in("id", userIds)
+        : { data: [], error: null };
+      if (userError) throw new Error("Prediction awards are unavailable");
+
+      const usersById = new Map((users ?? []).map((user) => [user.id, user]));
+      return mapPredictionAwards(selectedAwards.flatMap((award) => {
+        const user = usersById.get(award.user_id);
+        if (!user) return [];
+        return [{
+          gameweekId: award.gameweek_id,
+          gameweek: selectedGameweek.number,
+          award: award.award as "champion" | "wooden_spoon",
+          userId: user.id,
+          lineUserId: user.line_user_id,
+          displayName: user.display_name,
+          avatarUrl: user.avatar_url,
+          points: award.points,
+        }];
+      }));
     },
   };
 }

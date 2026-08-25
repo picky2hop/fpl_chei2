@@ -48,8 +48,66 @@ export type ActiveGameweek = {
   isCurrent: boolean;
 };
 
+export type AwardGameweek = {
+  id: string;
+  number: number;
+  status: "open" | "upcoming" | "closed" | "reopened";
+};
+
+export type PredictionAwardRow = {
+  gameweekId: string;
+  gameweek: number;
+  award: "champion" | "wooden_spoon";
+  userId: string;
+  lineUserId: string | null;
+  displayName: string;
+  avatarUrl: string | null;
+  points: number;
+};
+
+export type PredictionAwardRecipient = {
+  userId: string;
+  lineUserId: string | null;
+  displayName: string;
+  avatarUrl: string;
+  points: number;
+};
+
+export type PredictionAwardsData = {
+  gameweek: number;
+  champions: PredictionAwardRecipient[];
+  woodenSpoons: PredictionAwardRecipient[];
+};
+
 export function selectActiveGameweek(gameweeks: ActiveGameweek[]): ActiveGameweek | null {
   return gameweeks.find((gameweek) => gameweek.isCurrent) ?? [...gameweeks].sort((left, right) => left.number - right.number)[0] ?? null;
+}
+
+export function selectLatestAwardedGameweek(
+  gameweeks: readonly AwardGameweek[],
+  awards: readonly { gameweekId: string }[],
+): AwardGameweek | null {
+  const awardedGameweekIds = new Set(awards.map((award) => award.gameweekId));
+  return [...gameweeks]
+    .filter((gameweek) => gameweek.status === "closed" && awardedGameweekIds.has(gameweek.id))
+    .sort((left, right) => right.number - left.number)[0] ?? null;
+}
+
+export function mapPredictionAwards(rows: readonly PredictionAwardRow[]): PredictionAwardsData | null {
+  const first = rows[0];
+  if (!first) return null;
+  const mapRecipient = (row: PredictionAwardRow) => ({
+    userId: row.userId,
+    lineUserId: row.lineUserId,
+    displayName: row.displayName,
+    avatarUrl: row.avatarUrl ?? "",
+    points: row.points,
+  });
+  return {
+    gameweek: first.gameweek,
+    champions: rows.filter((row) => row.award === "champion").map(mapRecipient),
+    woodenSpoons: rows.filter((row) => row.award === "wooden_spoon").map(mapRecipient),
+  };
 }
 
 type StandingsRowInput = {

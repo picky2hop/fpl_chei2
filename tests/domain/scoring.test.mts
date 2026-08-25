@@ -47,6 +47,30 @@ describe("scoring domain rules", () => {
     ]);
   });
 
+  it("scores only participants with an active prediction in the gameweek", () => {
+    const result = calculateGameweekScoring({
+      fixtures: [{ id: "fx-1", status: "finished", homeScore: 2, awayScore: 1 }],
+      predictions: [
+        { userId: "u1", fixtureId: "fx-1", choice: "home", status: "active" },
+        { userId: "u2", fixtureId: "fx-1", choice: "draw", status: "active" },
+      ],
+      participants: [
+        { userId: "u1", status: "active" },
+        { userId: "u2", status: "active" },
+        { userId: "u3", status: "active" },
+      ],
+    });
+
+    assert.deepEqual(result.scores, [
+      { userId: "u1", points: 3, correctPredictions: 1, predictedFixtures: 1, countedFixtures: 1 },
+      { userId: "u2", points: 0, correctPredictions: 0, predictedFixtures: 1, countedFixtures: 1 },
+    ]);
+    assert.deepEqual(result.awards, [
+      { userId: "u1", award: "champion", points: 3 },
+      { userId: "u2", award: "wooden_spoon", points: 0 },
+    ]);
+  });
+
   it("gives every tied player each applicable award", () => {
     const result = calculateGameweekScoring({
       fixtures: [{ id: "fx-1", status: "finished", homeScore: 2, awayScore: 1 }],
@@ -75,13 +99,7 @@ describe("scoring domain rules", () => {
       participants: [{ userId: "u1", status: "active" }],
     });
 
-    assert.deepEqual(result.scores, [{
-      userId: "u1",
-      points: 0,
-      correctPredictions: 0,
-      predictedFixtures: 0,
-      countedFixtures: 0,
-    }]);
+    assert.deepEqual(result.scores, []);
     assert.deepEqual(result.awards, []);
   });
 

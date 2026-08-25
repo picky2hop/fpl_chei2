@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildFixturePredictionFlex,
+  buildPredictionAwardsFlex,
   buildPredictionResultFlex,
   buildStandingsFlex,
   buildTodayFixturesFlex,
@@ -116,6 +117,27 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   assert.equal(rowContents[4]?.flex, 1);
   assert.equal(rowContents[5]?.text, "6 คะแนน");
   assert.equal(rowContents[5]?.flex, 0);
+});
+
+test("prediction awards Flex shows profiles and points without an app button", () => {
+  const message = buildPredictionAwardsFlex({
+    gameweek: 5,
+    champions: [{ displayName: "Ar Tao", avatarUrl: "https://example.test/ar.png", points: 18 }],
+    woodenSpoons: [{ displayName: "สำรอง", avatarUrl: "https://example.test/backup.png", points: 3 }],
+  });
+
+  assert.equal(message.type, "flex");
+  assert.match(message.altText, /แชมป์บ๊วยทายผล|GW5/);
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /GW 5/);
+  assert.match(serialized, /แชมป์/);
+  assert.match(serialized, /บ๊วย/);
+  assert.match(serialized, /Ar Tao/);
+  assert.match(serialized, /สำรอง/);
+  assert.match(serialized, /18 คะแนน/);
+  assert.match(serialized, /3 คะแนน/);
+  assert.match(serialized, /https:\/\/example\.test\/ar\.png/);
+  assert.doesNotMatch(serialized, /เปิดแอป|2010604800|"action"/);
 });
 
 test("prediction Flex is a single app-style bubble with all picks and choice highlights", () => {

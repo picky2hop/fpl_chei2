@@ -1,6 +1,8 @@
 import { buildLineMenuMessage, parseLineCommand } from "./commands.ts";
-import { buildPredictionResultFlex, buildStandingsFlex, buildTodayFixturesFlex } from "./flex.ts";
+import { buildPredictionAwardsFlex, buildPredictionResultFlex, buildStandingsFlex, buildTodayFixturesFlex } from "./flex.ts";
+import { buildPredictionAwardsAnnouncement } from "./announcement.ts";
 import type { LineMessage } from "./messaging.ts";
+import type { PredictionAwardsData } from "../data/line-bot-core.ts";
 
 export type LineWebhookPayload = {
   destination?: string;
@@ -39,10 +41,11 @@ export type LineBotDataReader = {
       choice: "home" | "draw" | "away";
     }>;
   } | null>;
+  getPredictionAwards: () => Promise<PredictionAwardsData | null>;
 };
 
 export type LineBotCommandService = {
-  replyForText(input: { text: string; lineUserId?: string }): Promise<LineMessage[] | null>;
+  replyForText(input: { text: string; lineUserId?: string; chatType?: "group" | "room" | "user" }): Promise<LineMessage[] | null>;
 };
 
 const unknownUserMessage: LineMessage = {
@@ -80,6 +83,24 @@ export function createLineBotCommandService(data: LineBotDataReader): LineBotCom
         }
         return [buildTodayFixturesFlex(fixtures)];
       }
+      if (command === "predictionAwards") {
+        let awards;
+        try {
+          awards = await data.getPredictionAwards();
+        } catch {
+          return [dataUnavailableMessage];
+        }
+        if (!awards) return [{ type: "text", text: "ยังไม่มีผลตัดสินแชมป์บ๊วยของ GW ที่จบแล้วครับ" }];
+        return [
+          buildPredictionAwardsFlex(awards),
+          buildPredictionAwardsAnnouncement({
+            gameweek: awards.gameweek,
+            champions: awards.champions,
+            woodenSpoons: awards.woodenSpoons,
+            allowMentions: input.chatType === "group" || input.chatType === "room",
+          }),
+        ];
+      }
       if (!input.lineUserId) return [unknownUserMessage];
 
       let predictions;
@@ -104,7 +125,11 @@ export async function handleLineWebhookPayload(
 
   for (const event of events) {
     if (event.type !== "message" || event.message?.type !== "text" || !event.replyToken || !event.message.text) continue;
-    const messages = await commandService.replyForText({ text: event.message.text, lineUserId: event.source?.userId });
+    const messages = await commandService.replyForText({
+      text: event.message.text,
+      lineUserId: event.source?.userId,
+      chatType: event.source?.type as "group" | "room" | "user" | undefined,
+    });
     if (!messages?.length) continue;
     await reply({ replyToken: event.replyToken, messages });
     replied += 1;

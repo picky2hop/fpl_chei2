@@ -28,6 +28,10 @@
 - prediction: predictor avatar/name, home name + home logo, away logo + away name, selected side highlight
 - match-result share: selected fixture team/score/time, outcome percentages, and all predictors for that fixture in one app-style bubble
 - app prediction/results/player detail/fixture detail ใช้ลำดับทีมเดียวกัน
+
+## 2026-08-25 — Prediction awards follow-up
+
+การเปลี่ยนแปลงรอบนี้เพิ่มคำสั่ง `แชมป์บ๊วยทายผล` ใน implementation และ automated tests แล้ว โดยเลือก gameweek ล่าสุดที่ `closed` และมี awards, แสดง profile/ชื่อ/คะแนนใน Flex ที่ไม่มีปุ่มเข้าแอป และส่งข้อความประกาศพร้อม emoji/mention สำหรับ group chat. Migration ถูก apply production และตรวจ function/privilege แบบ read-only แล้ว; production smoke test ของคำสั่งนี้ยังรอการตรวจจากผู้ใช้.
 - avatar initials แสดงเฉพาะเมื่อไม่มี avatar URL
 
 ## Automated evidence from implementation batches

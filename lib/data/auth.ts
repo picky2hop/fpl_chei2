@@ -91,7 +91,7 @@ async function joinActiveSeason(userId: string, season: RepositorySeason): Promi
   const admin = getSupabaseAdmin();
   const { data: gameweeks, error: gameweekError } = await admin
     .from("gameweeks")
-    .select("id")
+    .select("id,status")
     .eq("season_id", season.id)
     .order("number", { ascending: true });
   if (gameweekError) throw new Error(`Unable to load gameweeks: ${gameweekError.message}`);
@@ -107,7 +107,10 @@ async function joinActiveSeason(userId: string, season: RepositorySeason): Promi
   if (participantError) throw new Error(`Unable to load participation: ${participantError.message}`);
 
   const missingGameweekIds = getMissingParticipantGameweekIds(
-    gameweekIds,
+    gameweeks.map((gameweek) => ({
+      id: gameweek.id,
+      status: gameweek.status as "open" | "upcoming" | "closed" | "reopened",
+    })),
     participants.map((participant) => participant.gameweek_id),
   );
   if (missingGameweekIds.length === 0) return;
