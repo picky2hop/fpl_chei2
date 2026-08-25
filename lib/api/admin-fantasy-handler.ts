@@ -14,6 +14,39 @@ export function fantasySyncResponseStatus(result: { currentGameweek: number | nu
   return result.currentGameweek === null ? 502 : 200;
 }
 
+type AdminActionDependencies<T extends { currentGameweek: number | null }> = {
+  requireAdmin: () => Promise<AdminUser>;
+  run: () => Promise<T>;
+};
+
+function createAdminFantasyActionHandler<T extends { currentGameweek: number | null }>(dependencies: AdminActionDependencies<T>) {
+  return async function POST(): Promise<Response> {
+    try {
+      await dependencies.requireAdmin();
+    } catch {
+      return Response.json({ error: "Admin access required" }, { status: 403 });
+    }
+    try {
+      const result = await dependencies.run();
+      return Response.json(result, { status: fantasySyncResponseStatus(result) });
+    } catch {
+      return Response.json({ error: "ไม่สามารถดำเนินการ Fantasy ได้" }, { status: 500 });
+    }
+  };
+}
+
+export function createAdminFantasyScoreSyncHandler(dependencies: AdminActionDependencies<{ currentGameweek: number | null }>) {
+  return createAdminFantasyActionHandler(dependencies);
+}
+
+export function createAdminFantasyPlayerStatsSyncHandler(dependencies: AdminActionDependencies<{ currentGameweek: number | null }>) {
+  return createAdminFantasyActionHandler(dependencies);
+}
+
+export function createAdminFantasyRecalculateScoresHandler(dependencies: AdminActionDependencies<{ currentGameweek: number | null }>) {
+  return createAdminFantasyActionHandler(dependencies);
+}
+
 function jsonRequest(request: Request): boolean {
   return request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() === "application/json";
 }

@@ -10,14 +10,30 @@ function dependencies(overrides: Partial<FantasyLeagueSyncDependencies> = {}) {
     league: [] as number[],
     members: [] as number[],
     history: [] as number[],
+    picks: [] as Array<{ entryId: number; gameweekNumber: number }>,
     apply: 0,
     finish: [] as string[],
   };
+  const makePicks = (entryId: number) => Array.from({ length: 15 }, (_, index) => ({
+    pickPosition: index + 1,
+    playerId: entryId * 100 + index + 1,
+    playerName: `Player ${entryId}-${index + 1}`,
+    position: index === 0 ? "GK" as const : index < 6 ? "DEF" as const : index < 10 ? "MID" as const : "FWD" as const,
+    clubName: "Club",
+    multiplier: index === 0 ? 1 : 1,
+    isCaptain: index === 0,
+    isViceCaptain: index === 1,
+    points: entryId,
+  }));
   const provider: FantasyFplProvider = {
     getEntrySummary: async (entryId) => ({ entryId, teamName: `Team ${entryId}`, managerName: `Manager ${entryId}` }),
     getEntryHistory: async (entryId) => {
       calls.history.push(entryId);
       return [{ event: 1, points: entryId, event_transfers: 0, event_transfers_cost: 0, points_on_bench: 0 }];
+    },
+    getEntryPicks: async (entryId, gameweekNumber) => {
+      calls.picks.push({ entryId, gameweekNumber });
+      return { gameweekNumber, formation: "1-5-4-3", captainPlayerId: entryId * 100 + 1, viceCaptainPlayerId: entryId * 100 + 2, starters: makePicks(entryId).slice(0, 11), bench: makePicks(entryId).slice(11) };
     },
     getBootstrap: async () => ({
       currentGameweek: 2,
@@ -43,18 +59,20 @@ function dependencies(overrides: Partial<FantasyLeagueSyncDependencies> = {}) {
         ];
     },
   };
-  const repository: Pick<FantasyLeagueRepository, "listActiveLeagues" | "applyLeagueSync"> = {
+  const repository: Pick<FantasyLeagueRepository, "listActiveLeagues" | "listEntryGameweekScores" | "applyLeagueSync"> = {
     listActiveLeagues: async () => [
       { id: "league-1", season_id: "season-1", fpl_league_id: 819498, official_name: "Old Cup", status: "active", archived_at: null },
       { id: "league-2", season_id: "season-1", fpl_league_id: 819502, official_name: "Old Love", status: "active", archived_at: null },
     ],
+    listEntryGameweekScores: async () => [],
     applyLeagueSync: async (input) => {
       calls.apply += 1;
       assert.deepEqual(input.leagues.map((league) => league.official_name), ["Official Cup", "Official Love"]);
       assert.equal(input.memberships.length, 4);
-      assert.deepEqual(input.scores.map((score) => score.fpl_entry_id), [10, 20, 30]);
-      assert.equal(input.players.length, 1);
-      return { jobRunId: input.jobRunId, leaguesUpserted: 2, membershipsUpserted: 4, scoresUpserted: 3, playersUpserted: 1 };
+      assert.deepEqual([...new Set(input.scores.map((score) => score.fpl_entry_id))], [10, 20, 30]);
+      assert.equal(input.scores.every((score) => score.calculation_method === "starting_xi_captain_v1"), true);
+      assert.equal(input.players.length, 0);
+      return { jobRunId: input.jobRunId, leaguesUpserted: 2, membershipsUpserted: 4, scoresUpserted: input.scores.length, playersUpserted: input.players.length };
     },
   };
   const base: FantasyLeagueSyncDependencies = {
@@ -84,11 +102,11 @@ test("syncs all active leagues, deduplicates shared Entries, and fetches each hi
   assert.equal(result.membershipsUpserted, 4);
   assert.match(result.message ?? "", /ลีก 2/);
   assert.match(result.message ?? "", /สมาชิก 4/);
-  assert.match(result.message ?? "", /คะแนน 3/);
-  assert.match(result.message ?? "", /นักเตะ 1/);
+  assert.match(result.message ?? "", /คะแนน 6/);
+  assert.match(result.message ?? "", /นักเตะ 0/);
 });
 
-test("uses live league standings points for the current gameweek", async () => {
+test("uses starting XI plus captain points for the current gameweek", async () => {
   const base = dependencies();
   const scores: Array<{ gameweek_id: string; fpl_entry_id: number; points: number; event_transfers: number; event_transfers_cost: number }> = [];
   const originalMembers = base.dependencies.provider.getLeagueMembers;
@@ -118,10 +136,52 @@ test("uses live league standings points for the current gameweek", async () => {
   await runFantasyLeagueSync(base.dependencies);
 
   assert.deepEqual(scores.filter((score) => score.gameweek_id === "gw-2"), [
-    { gameweek_id: "gw-2", fpl_entry_id: 10, points: 18, event_transfers: 2, event_transfers_cost: 0 },
-    { gameweek_id: "gw-2", fpl_entry_id: 20, points: 22, event_transfers: 1, event_transfers_cost: 4 },
-    { gameweek_id: "gw-2", fpl_entry_id: 30, points: 27, event_transfers: 1, event_transfers_cost: 0 },
+    { gameweek_id: "gw-2", fpl_entry_id: 10, points: 120, event_transfers: 2, event_transfers_cost: 0 },
+    { gameweek_id: "gw-2", fpl_entry_id: 20, points: 240, event_transfers: 1, event_transfers_cost: 4 },
+    { gameweek_id: "gw-2", fpl_entry_id: 30, points: 360, event_transfers: 1, event_transfers_cost: 0 },
   ]);
+});
+
+test("writes successful Picks rows while reporting failed Entry/GW targets without zero fallback", async () => {
+  const base = dependencies();
+  const originalPicks = base.dependencies.provider.getEntryPicks!;
+  const savedScores: Array<{ entryId: number; gameweekId: string; points: number }> = [];
+  base.dependencies.provider = {
+    ...base.dependencies.provider,
+    getEntryPicks: async (entryId, gameweekNumber) => {
+      if (entryId === 20 && gameweekNumber === 2) throw new FantasyFplError("FANTASY_FPL_HTTP_502", "raw picks response");
+      return originalPicks(entryId, gameweekNumber);
+    },
+  };
+  base.dependencies.repository = {
+    ...base.dependencies.repository,
+    applyLeagueSync: async (input) => {
+      savedScores.push(...input.scores.map((score) => ({ entryId: score.fpl_entry_id, gameweekId: score.gameweek_id, points: score.points })));
+      return { jobRunId: input.jobRunId, leaguesUpserted: 2, membershipsUpserted: 4, scoresUpserted: input.scores.length, playersUpserted: 0 };
+    },
+  };
+
+  const result = await runFantasyLeagueSync(base.dependencies);
+
+  assert.equal(result.stale, false);
+  assert.equal(result.failedScoreTargets.length, 1);
+  assert.deepEqual(result.failedScoreTargets[0], { entryId: 20, gameweek: 2, reason: "FPL API ไม่พร้อมให้บริการ" });
+  assert.equal(savedScores.some((score) => score.entryId === 20 && score.gameweekId === "gw-2"), false);
+  assert.equal(savedScores.every((score) => score.points !== 0), true);
+  assert.match(result.message ?? "", /ล้มเหลว 1 รายการ/);
+});
+
+test("refreshes the current gameweek even when its stored row uses the new method", async () => {
+  const base = dependencies();
+  base.dependencies.repository = {
+    ...base.dependencies.repository,
+    listEntryGameweekScores: async () => [{ fpl_entry_id: 10, gameweek_id: "gw-2", calculation_method: "starting_xi_captain_v1" }],
+  };
+
+  await runFantasyLeagueSync(base.dependencies);
+
+  assert.equal(base.calls.picks.some((pick) => pick.entryId === 10 && pick.gameweekNumber === 2), true);
+  assert.equal(base.calls.picks.length, 6);
 });
 
 test("does not apply a partial snapshot when a league request fails", async () => {

@@ -89,6 +89,7 @@ test("fetches and normalizes the current Entry picks with player metadata", asyn
     fetchImpl: async (input) => {
       const url = String(input);
       if (url.endsWith("/api/entry/123/event/2/picks/")) return Response.json(picks);
+      if (url.endsWith("/api/event/2/live/")) return Response.json({ elements: Array.from({ length: 15 }, (_, index) => ({ id: index + 1, stats: { total_points: index === 0 ? 60 : index + 10 } })) });
       if (url.endsWith("/api/bootstrap-static/")) return Response.json(squadBootstrap);
       return Response.json({ id: 123, name: "Chei FC", player_first_name: "Chei", player_last_name: "Manager" });
     },
@@ -100,7 +101,7 @@ test("fetches and normalizes the current Entry picks with player metadata", asyn
   assert.equal(squad.captainPlayerId, 5);
   assert.equal(squad.viceCaptainPlayerId, 9);
   assert.equal(squad.starters[0].playerName, "Player 1");
-  assert.equal(squad.starters[0].points, 6);
+  assert.equal(squad.starters[0].points, 60);
   assert.equal(squad.starters[0].photoUrl, "https://resources.premierleague.com/premierleague25/photos/players/110x140/154561.png");
   assert.equal(squad.bench[0].playerId, 12);
 });

@@ -748,6 +748,7 @@ export type Database = {
       fantasy_entry_gameweek_scores: {
         Row: {
           created_at: string
+          calculation_method: string
           event_transfers: number
           event_transfers_cost: number
           fpl_entry_id: number
@@ -763,6 +764,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          calculation_method?: string
           event_transfers?: number
           event_transfers_cost?: number
           fpl_entry_id: number
@@ -778,6 +780,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          calculation_method?: string
           event_transfers?: number
           event_transfers_cost?: number
           fpl_entry_id?: number
@@ -1092,6 +1095,21 @@ export type Database = {
           p_memberships: Json
           p_players: Json
           p_scores: Json
+          p_synced_at: string
+        }
+        Returns: Json
+      }
+      apply_fantasy_score_recalculation: {
+        Args: {
+          p_job_run_id: string
+          p_scores: Json
+        }
+        Returns: Json
+      }
+      apply_fantasy_player_stats_sync: {
+        Args: {
+          p_job_run_id: string
+          p_players: Json
           p_synced_at: string
         }
         Returns: Json

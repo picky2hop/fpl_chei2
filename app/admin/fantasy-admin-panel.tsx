@@ -10,6 +10,7 @@ type League = { id: string; fpl_league_id: number; official_name: string; status
 type EntryOption = { fpl_entry_id: number; fpl_team_name: string; fpl_manager_name: string; leagues: Array<{ id: string; official_name: string }> };
 type Mapping = { id: string; app_user_id: string; fpl_entry_id: number; fpl_team_name: string; fpl_manager_name: string; mapping_status: "active" | "archived"; last_validation_status: "valid" | "error"; last_error_message: string | null };
 type AdminData = { mappings: Mapping[]; users: Array<{ id: string; displayName: string; status: string }>; gameweeks: Array<{ id: string; number: number; name: string | null; is_current: boolean }>; leagues: League[]; unmappedEntries: EntryOption[]; leagueEntries: EntryOption[] };
+type FantasySyncAction = "scores" | "players" | "recalculate";
 
 export default function FantasyAdminPanel() {
   const [data, setData] = useState<AdminData | null>(null);
@@ -22,6 +23,7 @@ export default function FantasyAdminPanel() {
   const [champions, setChampions] = useState<number[]>([]);
   const [woodenSpoons, setWoodenSpoons] = useState<number[]>([]);
   const [state, setState] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [syncAction, setSyncAction] = useState<FantasySyncAction | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ArchiveTarget | null>(null);
 
@@ -57,6 +59,22 @@ export default function FantasyAdminPanel() {
     }
   }
 
+  async function runSyncAction(endpoint: string, actionName: FantasySyncAction, success: string) {
+    setSyncAction(actionName);
+    setFeedback(null);
+    try {
+      const response = await fetch(endpoint, { method: "POST" });
+      const value = await response.json().catch(() => ({})) as { error?: string; message?: string };
+      if (!response.ok) throw new Error(value.message ?? value.error ?? "ดำเนินการไม่สำเร็จ");
+      setFeedback(feedbackFromAction({ ok: true, successMessage: value.message ?? success }));
+      applyData(await load());
+    } catch (error) {
+      setFeedback(feedbackFromAction({ ok: false, successMessage: success, errorMessage: error instanceof Error ? error.message : "ดำเนินการไม่สำเร็จ" }));
+    } finally {
+      setSyncAction(null);
+    }
+  }
+
   function confirmArchive() {
     if (!archiveTarget) return;
     const target = archiveTarget;
@@ -68,7 +86,7 @@ export default function FantasyAdminPanel() {
   const awardEntries = data?.leagueEntries.filter((entry) => entry.leagues.some((league) => league.id === awardLeagueId)) ?? [];
 
   return <section className="mt-4 rounded-3xl border border-[#6da9ff]/25 bg-[#10253a] p-5">
-    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6da9ff]">Fantasy analytics</p><h2 className="mt-1 text-lg font-black">จัดการ Fantasy</h2></div><button type="button" onClick={() => void action(fetch("/api/admin/fantasy/sync", { method: "POST" }), "ซิงก์ Fantasy สำเร็จแล้ว", true)} disabled={state === "running"} className="rounded-xl bg-[#6da9ff] px-3 py-2 text-xs font-black text-[#071525] disabled:opacity-50">{state === "running" ? "กำลังซิงก์…" : "Sync Fantasy"}</button></div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6da9ff]">Fantasy analytics</p><h2 className="mt-1 text-lg font-black">จัดการ Fantasy</h2></div><div className="grid grid-cols-1 gap-2 sm:min-w-[220px]"><button type="button" onClick={() => void runSyncAction("/api/admin/fantasy/sync", "scores", "ซิงก์ Fantasy Scores สำเร็จแล้ว")} disabled={syncAction !== null} className="rounded-xl bg-[#6da9ff] px-3 py-2 text-xs font-black text-[#071525] disabled:opacity-50">{syncAction === "scores" ? "กำลังซิงก์คะแนน…" : "Sync Fantasy Scores"}</button><button type="button" onClick={() => void runSyncAction("/api/admin/fantasy/player-stats-sync", "players", "ซิงก์ Player Statistics สำเร็จแล้ว")} disabled={syncAction !== null} className="rounded-xl bg-[#d9ff58] px-3 py-2 text-xs font-black text-[#071525] disabled:opacity-50">{syncAction === "players" ? "กำลังซิงก์สถิติ…" : "Sync Player Statistics"}</button><button type="button" onClick={() => void runSyncAction("/api/admin/fantasy/recalculate-scores", "recalculate", "Recalculate Fantasy Scores สำเร็จแล้ว")} disabled={syncAction !== null} className="rounded-xl border border-[#d9ff58]/40 bg-[#d9ff58]/10 px-3 py-2 text-xs font-black text-[#d9ff58] disabled:opacity-50">{syncAction === "recalculate" ? "กำลังคำนวณใหม่…" : "Recalculate Fantasy Scores"}</button></div></div>
     <p className="mt-2 text-sm leading-6 text-white/60">จัดการลีก, ผูก LINE user กับสมาชิกลีก และเลือกแชมป์/บ๊วยจาก FPL Entry ID</p>
 
     <div className="mt-5 rounded-2xl border border-white/10 bg-[#071525]/50 p-4"><h3 className="text-sm font-black">Fantasy Leagues</h3><div className="mt-3 flex gap-2"><input value={newLeagueId} onChange={(event) => setNewLeagueId(event.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="FPL League ID" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#071525] px-3 py-3 text-sm font-bold text-white" /><button type="button" onClick={() => void action(fetch("/api/admin/fantasy/leagues", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fplLeagueId: Number(newLeagueId) }) }), "เพิ่มลีกและตรวจสอบชื่อทางการแล้ว")} disabled={!newLeagueId || state === "running"} className="rounded-xl bg-[#d9ff58] px-3 py-2 text-xs font-black text-[#071525] disabled:opacity-40">เพิ่มลีก</button></div><div className="mt-3 space-y-2">{data?.leagues.map((league) => <div key={league.id} className="rounded-xl border border-white/10 bg-white/5 p-3"><div className="flex items-center gap-2"><div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{league.official_name}</p><p className="text-[10px] font-bold text-white/45">FPL League {league.fpl_league_id} · {league.status === "active" ? "ใช้งาน" : "เก็บประวัติ"}</p></div>{league.status === "active" && <button type="button" onClick={() => setArchiveTarget({ kind: "league", id: league.id, label: league.official_name })} className="rounded-lg border border-[#ff647c]/30 px-2 py-1 text-[10px] font-black text-[#ff8698]">Archive</button>}</div>{league.status === "active" && <div className="mt-2 flex gap-2"><input value={replaceLeagueId[league.id] ?? ""} onChange={(event) => setReplaceLeagueId((current) => ({ ...current, [league.id]: event.target.value.replace(/\D/g, "") }))} inputMode="numeric" placeholder="เปลี่ยน League ID" className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#071525] px-2 py-2 text-xs font-bold text-white" /><button type="button" onClick={() => void action(fetch(`/api/admin/fantasy/leagues/${league.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ fplLeagueId: Number(replaceLeagueId[league.id]) }) }), "ตรวจสอบและเปลี่ยนลีกแล้ว")} disabled={!replaceLeagueId[league.id] || state === "running"} className="rounded-lg border border-[#6da9ff]/30 px-2 py-1 text-[10px] font-black text-[#b8d4ff] disabled:opacity-40">เปลี่ยน</button></div>}</div>)}</div></div>

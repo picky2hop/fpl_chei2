@@ -68,7 +68,14 @@ export type FantasyEntryGameweekScoreInsert = {
   event_transfers: number;
   event_transfers_cost: number;
   points_on_bench: number;
+  calculation_method: "legacy_fpl_history" | "starting_xi_captain_v1";
   source_synced_at: string;
+};
+
+export type FantasyEntryGameweekScoreMethodRow = {
+  fpl_entry_id: number;
+  gameweek_id: string;
+  calculation_method: "legacy_fpl_history" | "starting_xi_captain_v1";
 };
 
 export type FantasyLeagueSyncWriteResult = {

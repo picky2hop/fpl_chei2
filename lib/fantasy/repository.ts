@@ -15,6 +15,7 @@ import type {
 } from "./types.ts";
 import type {
   FantasyEntryGameweekScoreInsert,
+  FantasyEntryGameweekScoreMethodRow,
   FantasyLeagueMembershipInsert,
   FantasyLeagueRecord,
   CreateFantasyLeagueInput,
@@ -58,6 +59,7 @@ export type FantasyLeagueRepository = {
   listLeagueEntries(input: { seasonId: string; gameweekId: string }): Promise<FantasyLeagueMappingCandidate[]>;
   listUnmappedLeagueEntries(input: { seasonId: string; gameweekId: string }): Promise<FantasyLeagueMappingCandidate[]>;
   listLeagueEntryIds(input: { seasonId: string; leagueId: string; gameweekId: string }): Promise<number[]>;
+  listEntryGameweekScores(seasonId: string): Promise<FantasyEntryGameweekScoreMethodRow[]>;
   getCurrentLeagueEntry?(input: { seasonId: string; leagueId: string; entryId: number }): Promise<{ gameweekId: string; gameweekNumber: number }>;
   replaceLeagueAwards(input: { seasonId: string; leagueId: string; gameweekId: string; selectedBy: string; awards: Array<{ fplEntryId: number; award: "champion" | "wooden_spoon" }> }): Promise<void>;
   getLeagueDashboard(input: { seasonId: string; leagueId: string; selectedGameweekNumber?: number }): Promise<FantasyLeagueDashboardInput>;
@@ -69,6 +71,15 @@ export type FantasyLeagueRepository = {
     scores: FantasyEntryGameweekScoreInsert[];
     players: FantasyPlayerStatInsert[];
   }): Promise<FantasyLeagueSyncWriteResult>;
+  applyScoreRecalculation(input: {
+    jobRunId: string;
+    scores: FantasyEntryGameweekScoreInsert[];
+  }): Promise<{ jobRunId: string; scoresUpserted: number }>;
+  applyPlayerStatsSync(input: {
+    jobRunId: string;
+    syncedAt: string;
+    players: FantasyPlayerStatInsert[];
+  }): Promise<{ jobRunId: string; playersUpserted: number }>;
 };
 
 type FantasyDatabaseClient = SupabaseClient<Database>;
@@ -220,6 +231,19 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         .eq("gameweek_id", input.gameweekId);
       if (error || !data) throw new Error("Fantasy database operation failed");
       return data.map((row) => row.fpl_entry_id);
+    },
+
+    async listEntryGameweekScores(seasonId) {
+      const { data, error } = await client
+        .from("fantasy_entry_gameweek_scores")
+        .select("fpl_entry_id,gameweek_id,calculation_method")
+        .eq("season_id", seasonId);
+      if (error || !data) throw new Error("Fantasy database operation failed");
+      return data.map((row) => ({
+        fpl_entry_id: row.fpl_entry_id,
+        gameweek_id: row.gameweek_id,
+        calculation_method: row.calculation_method as FantasyEntryGameweekScoreMethodRow["calculation_method"],
+      }));
     },
 
     async getCurrentLeagueEntry(input) {
@@ -503,6 +527,29 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         scoresUpserted: row.scoresUpserted,
         playersUpserted: row.playersUpserted,
       };
+    },
+
+    async applyScoreRecalculation(input) {
+      const { data, error } = await client.rpc("apply_fantasy_score_recalculation", {
+        p_job_run_id: input.jobRunId,
+        p_scores: input.scores,
+      });
+      if (error || !data || typeof data !== "object") throw new Error("Fantasy database operation failed");
+      const row = data as Record<string, unknown>;
+      if (typeof row.jobRunId !== "string" || typeof row.scoresUpserted !== "number") throw new Error("Fantasy recalculation response is invalid");
+      return { jobRunId: row.jobRunId, scoresUpserted: row.scoresUpserted };
+    },
+
+    async applyPlayerStatsSync(input) {
+      const { data, error } = await client.rpc("apply_fantasy_player_stats_sync", {
+        p_job_run_id: input.jobRunId,
+        p_synced_at: input.syncedAt,
+        p_players: input.players,
+      });
+      if (error || !data || typeof data !== "object") throw new Error("Fantasy database operation failed");
+      const row = data as Record<string, unknown>;
+      if (typeof row.jobRunId !== "string" || typeof row.playersUpserted !== "number") throw new Error("Fantasy player stats response is invalid");
+      return { jobRunId: row.jobRunId, playersUpserted: row.playersUpserted };
     },
 
     async replaceAwards(input) {

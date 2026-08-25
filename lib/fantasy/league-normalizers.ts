@@ -103,6 +103,7 @@ export function buildEntryGameweekScoreRows(input: {
         event_transfers: event.event_transfers,
         event_transfers_cost: event.event_transfers_cost,
         points_on_bench: event.points_on_bench,
+        calculation_method: "legacy_fpl_history",
         source_synced_at: input.syncedAt,
       });
     }

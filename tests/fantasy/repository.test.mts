@@ -125,3 +125,163 @@ test("current league Entry context uses the current membership snapshot", async 
   });
   assert.deepEqual(calls, ["gameweeks", "fantasy_league_membership_snapshots"]);
 });
+
+test("passes calculation method through the multi-league score RPC", async () => {
+  let rpcName = "";
+  let rpcArgs: Record<string, unknown> | null = null;
+  const client = {
+    rpc(name: string, args: Record<string, unknown>) {
+      rpcName = name;
+      rpcArgs = args;
+      return Promise.resolve({
+        data: { jobRunId: "job-1", leaguesUpserted: 0, membershipsUpserted: 0, scoresUpserted: 1, playersUpserted: 0 },
+        error: null,
+      });
+    },
+  } as never;
+  const repository = createFantasyRepository(client);
+
+  await repository.applyLeagueSync({
+    jobRunId: "job-1",
+    syncedAt: "2026-08-21T00:00:00.000Z",
+    leagues: [],
+    memberships: [],
+    scores: [{
+      season_id: "season-1",
+      gameweek_id: "gw-1",
+      fpl_entry_id: 101,
+      fpl_team_name: "Team One",
+      fpl_manager_name: "Manager One",
+      points: 60,
+      event_transfers: 2,
+      event_transfers_cost: 4,
+      points_on_bench: 11,
+      calculation_method: "starting_xi_captain_v1",
+      source_synced_at: "2026-08-21T00:00:00.000Z",
+    }],
+    players: [],
+  });
+
+  assert.equal(rpcName, "apply_fantasy_league_sync");
+  assert.deepEqual((rpcArgs as { p_scores: unknown[] }).p_scores, [{
+    season_id: "season-1",
+    gameweek_id: "gw-1",
+    fpl_entry_id: 101,
+    fpl_team_name: "Team One",
+    fpl_manager_name: "Manager One",
+    points: 60,
+    event_transfers: 2,
+    event_transfers_cost: 4,
+    points_on_bench: 11,
+    calculation_method: "starting_xi_captain_v1",
+    source_synced_at: "2026-08-21T00:00:00.000Z",
+  }]);
+});
+
+test("reads existing multi-league score calculation methods", async () => {
+  const client = {
+    from(table: string) {
+      assert.equal(table, "fantasy_entry_gameweek_scores");
+      return {
+        select(fields: string) {
+          assert.equal(fields, "fpl_entry_id,gameweek_id,calculation_method");
+          return {
+            eq(field: string, value: string) {
+              assert.equal(field, "season_id");
+              assert.equal(value, "season-1");
+              return Promise.resolve({
+                data: [{ fpl_entry_id: 101, gameweek_id: "gw-1", calculation_method: "legacy_fpl_history" }],
+                error: null,
+              });
+            },
+          };
+        },
+      };
+    },
+  } as never;
+  const repository = createFantasyRepository(client);
+
+  assert.deepEqual(await repository.listEntryGameweekScores!("season-1"), [
+    { fpl_entry_id: 101, gameweek_id: "gw-1", calculation_method: "legacy_fpl_history" },
+  ]);
+});
+
+test("passes score-only recalculation rows through its dedicated RPC", async () => {
+  let rpcName = "";
+  let rpcArgs: Record<string, unknown> | null = null;
+  const client = {
+    rpc(name: string, args: Record<string, unknown>) {
+      rpcName = name;
+      rpcArgs = args;
+      return Promise.resolve({ data: { jobRunId: "job-2", scoresUpserted: 1 }, error: null });
+    },
+  } as never;
+  const repository = createFantasyRepository(client);
+
+  const result = await repository.applyScoreRecalculation!({
+    jobRunId: "job-2",
+    scores: [{
+      season_id: "season-1",
+      gameweek_id: "gw-1",
+      fpl_entry_id: 101,
+      fpl_team_name: "Team One",
+      fpl_manager_name: "Manager One",
+      points: 60,
+      event_transfers: 0,
+      event_transfers_cost: 0,
+      points_on_bench: 0,
+      calculation_method: "starting_xi_captain_v1",
+      source_synced_at: "2026-08-25T00:00:00.000Z",
+    }],
+  });
+
+  assert.equal(rpcName, "apply_fantasy_score_recalculation");
+  assert.deepEqual(rpcArgs, { p_job_run_id: "job-2", p_scores: [{
+    season_id: "season-1",
+    gameweek_id: "gw-1",
+    fpl_entry_id: 101,
+    fpl_team_name: "Team One",
+    fpl_manager_name: "Manager One",
+    points: 60,
+    event_transfers: 0,
+    event_transfers_cost: 0,
+    points_on_bench: 0,
+    calculation_method: "starting_xi_captain_v1",
+    source_synced_at: "2026-08-25T00:00:00.000Z",
+  }] });
+  assert.deepEqual(result, { jobRunId: "job-2", scoresUpserted: 1 });
+});
+
+test("passes player statistics through its dedicated current-GW RPC", async () => {
+  let rpcName = "";
+  let rpcArgs: Record<string, unknown> | null = null;
+  const client = {
+    rpc(name: string, args: Record<string, unknown>) {
+      rpcName = name;
+      rpcArgs = args;
+      return Promise.resolve({ data: { jobRunId: "job-3", playersUpserted: 1 }, error: null });
+    },
+  } as never;
+  const repository = createFantasyRepository(client);
+  const players = [{
+    season_id: "season-1",
+    gameweek_id: "gw-3",
+    fpl_player_id: 7,
+    player_name: "Player Seven",
+    position: "MID" as const,
+    club_id: 1,
+    club_name: "Club",
+    status: "a",
+    selected_by_percent: 10,
+    transfers_in_event: 20,
+    transfers_out_event: 3,
+    form: 5,
+    source_synced_at: "2026-08-25T00:00:00.000Z",
+  }];
+
+  const result = await repository.applyPlayerStatsSync!({ jobRunId: "job-3", syncedAt: "2026-08-25T00:00:00.000Z", players });
+
+  assert.equal(rpcName, "apply_fantasy_player_stats_sync");
+  assert.deepEqual(rpcArgs, { p_job_run_id: "job-3", p_synced_at: "2026-08-25T00:00:00.000Z", p_players: players });
+  assert.deepEqual(result, { jobRunId: "job-3", playersUpserted: 1 });
+});

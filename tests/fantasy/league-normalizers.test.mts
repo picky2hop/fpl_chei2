@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildEntryGameweekScoreRows,
   buildEntryScoreRequestIds,
   buildMembershipSnapshotRows,
   deduplicateLeagueMembers,
@@ -98,6 +99,28 @@ test("builds one membership snapshot row per league membership", () => {
 test("returns each Entry once for score requests in stable order", () => {
   const rows = buildMembershipSnapshotRows({ seasonId: "s", gameweekId: "g", syncedAt: "now", sources });
   assert.deepEqual(buildEntryScoreRequestIds(rows), [101, 102, 103]);
+});
+
+test("marks History-derived score rows as legacy while retaining FPL metadata", () => {
+  assert.deepEqual(buildEntryGameweekScoreRows({
+    seasonId: "season-1",
+    gameweekIdByNumber: new Map([[1, "gw-1"]]),
+    historyByEntry: new Map([[101, [{ event: 1, points: 72, event_transfers: 2, event_transfers_cost: 4, points_on_bench: 11 }]]]),
+    membersByEntry: new Map([[101, { teamName: "Team One", managerName: "Manager One" }]]),
+    syncedAt: "2026-08-21T00:00:00.000Z",
+  }), [{
+    season_id: "season-1",
+    gameweek_id: "gw-1",
+    fpl_entry_id: 101,
+    fpl_team_name: "Team One",
+    fpl_manager_name: "Manager One",
+    points: 72,
+    event_transfers: 2,
+    event_transfers_cost: 4,
+    points_on_bench: 11,
+    calculation_method: "legacy_fpl_history",
+    source_synced_at: "2026-08-21T00:00:00.000Z",
+  }]);
 });
 
 test("rejects a membership with an invalid Entry ID", () => {

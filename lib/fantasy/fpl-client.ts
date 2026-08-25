@@ -149,7 +149,7 @@ function normalizeDreamTeam(value: unknown): FplDreamTeamSnapshot {
   } satisfies FplDreamTeamSnapshot;
 }
 
-function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, gameweekNumber: number): FplEntryCurrentSquad {
+function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, gameweekNumber: number, eventPointsByPlayer = new Map<number, number>()): FplEntryCurrentSquad {
   const root = objectValue(value, "entry picks");
   const playersById = new Map(bootstrap.players.map((player) => [player.playerId, player]));
   const picks = arrayValue(root.picks, "entry picks").map((item, index) => {
@@ -168,7 +168,7 @@ function normalizeEntryPicks(value: unknown, bootstrap: FplBootstrapSnapshot, ga
       isCaptain: row.is_captain === true,
       isViceCaptain: row.is_vice_captain === true,
       photoUrl: player.photoKey ? buildFplPlayerPhotoUrl(player.photoKey) : undefined,
-      points: player.eventPoints ?? null,
+      points: eventPointsByPlayer.get(playerId) ?? player.eventPoints ?? null,
     } satisfies FantasySquadPlayer;
   });
   return normalizeEntryCurrentSquad({ gameweekNumber, picks });
@@ -271,11 +271,14 @@ export function createFantasyFplProvider(input: FetchFantasyFplOptions = {}): Fa
       return normalizeHistory(await fetchJson(`entry/${entryId}/history/`, options));
     },
     async getEntryPicks(entryId, gameweekNumber) {
-      const [picks, bootstrap] = await Promise.all([
+      const [picks, bootstrap, live] = await Promise.all([
         fetchJson(`entry/${entryId}/event/${gameweekNumber}/picks/`, options),
         fetchJson("bootstrap-static/", options),
+        fetchJson(`event/${gameweekNumber}/live/`, options),
       ]);
-      return normalizeEntryPicks(picks, normalizeBootstrap(bootstrap), gameweekNumber);
+      const normalizedBootstrap = normalizeBootstrap(bootstrap);
+      const eventPointsByPlayer = new Map(normalizeEventLive(live).map((player) => [player.playerId, player.points]));
+      return normalizeEntryPicks(picks, normalizedBootstrap, gameweekNumber, eventPointsByPlayer);
     },
     async getBootstrap() {
       return normalizeBootstrap(await fetchJson("bootstrap-static/", options));
