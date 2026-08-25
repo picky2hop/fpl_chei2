@@ -2,7 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
-import { formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type PredictionAwardsData } from "./line-bot-core";
+import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type PredictionAwardsData } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -311,26 +311,49 @@ export function createLineBotDataReader(): LineBotDataReader {
       );
       if (!selectedGameweek) return null;
 
-      const selectedAwards = (awards ?? []).filter((award) => award.gameweek_id === selectedGameweek.id);
-      const userIds = [...new Set(selectedAwards.map((award) => award.user_id))];
+      const [{ data: scores, error: scoreError }, { data: fixtures, error: fixtureError }, { data: participants, error: participantError }] = await Promise.all([
+        admin.from("gameweek_scores").select("user_id,points").eq("gameweek_id", selectedGameweek.id),
+        admin.from("fixtures").select("id").eq("gameweek_id", selectedGameweek.id),
+        admin.from("gameweek_participants").select("user_id").eq("gameweek_id", selectedGameweek.id).eq("status", "active"),
+      ]);
+      if (scoreError || fixtureError || participantError) throw new Error("Prediction awards are unavailable");
+
+      const fixtureIds = (fixtures ?? []).map((fixture) => fixture.id);
+      const { data: predictions, error: predictionError } = fixtureIds.length
+        ? await admin.from("predictions").select("user_id").eq("status", "active").in("fixture_id", fixtureIds)
+        : { data: [], error: null };
+      if (predictionError) throw new Error("Prediction awards are unavailable");
+
+      const activeParticipantIds = new Set((participants ?? []).map((participant) => participant.user_id));
+      const predictionUserIds = new Set((predictions ?? []).map((prediction) => prediction.user_id));
+      const eligibleUserIds = new Set([...activeParticipantIds].filter((userId) => predictionUserIds.has(userId)));
+      const selections = derivePredictionAwardSelections({
+        gameweekId: selectedGameweek.id,
+        gameweek: selectedGameweek.number,
+        scores: (scores ?? []).map((score) => ({ userId: score.user_id, points: score.points })),
+        eligibleUserIds,
+      });
+      if (selections.length === 0) return null;
+
+      const userIds = [...new Set(selections.map((selection) => selection.userId))];
       const { data: users, error: userError } = userIds.length
         ? await admin.from("app_users").select("id,line_user_id,display_name,avatar_url").in("id", userIds)
         : { data: [], error: null };
       if (userError) throw new Error("Prediction awards are unavailable");
 
       const usersById = new Map((users ?? []).map((user) => [user.id, user]));
-      return mapPredictionAwards(selectedAwards.flatMap((award) => {
-        const user = usersById.get(award.user_id);
+      return mapPredictionAwards(selections.flatMap((selection) => {
+        const user = usersById.get(selection.userId);
         if (!user) return [];
         return [{
-          gameweekId: award.gameweek_id,
+          gameweekId: selection.gameweekId,
           gameweek: selectedGameweek.number,
-          award: award.award as "champion" | "wooden_spoon",
+          award: selection.award,
           userId: user.id,
           lineUserId: user.line_user_id,
           displayName: user.display_name,
           avatarUrl: user.avatar_url,
-          points: award.points,
+          points: selection.points,
         }];
       }));
     },

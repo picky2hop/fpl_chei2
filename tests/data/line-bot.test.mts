@@ -12,6 +12,7 @@ import {
   mapUserPredictionRows,
   selectCompleteParticipantIds,
   selectLatestAwardedGameweek,
+  derivePredictionAwardSelections,
   mapPredictionAwards,
 } from "../../lib/data/line-bot-core.ts";
 
@@ -46,6 +47,27 @@ test("keeps the latest closed gameweek with awards until the next gameweek is al
       [...awards, { gameweekId: "gw-7" }],
     ),
     { id: "gw-7", number: 7, status: "closed" },
+  );
+});
+
+test("derives awards only from eligible users when stale zero-score rows exist", () => {
+  assert.deepEqual(
+    derivePredictionAwardSelections({
+      gameweekId: "gw-1",
+      gameweek: 1,
+      scores: [
+        { userId: "u1", points: 18 },
+        { userId: "u2", points: 12 },
+        { userId: "u3", points: 12 },
+        { userId: "u4", points: 3 },
+        { userId: "u5", points: 0 },
+      ],
+      eligibleUserIds: new Set(["u1", "u2", "u3", "u4"]),
+    }),
+    [
+      { gameweekId: "gw-1", gameweek: 1, award: "champion", userId: "u1", points: 18 },
+      { gameweekId: "gw-1", gameweek: 1, award: "wooden_spoon", userId: "u4", points: 3 },
+    ],
   );
 });
 

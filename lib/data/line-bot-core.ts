@@ -93,6 +93,44 @@ export function selectLatestAwardedGameweek(
     .sort((left, right) => right.number - left.number)[0] ?? null;
 }
 
+export type PredictionAwardScore = {
+  userId: string;
+  points: number;
+};
+
+export type PredictionAwardSelection = {
+  gameweekId: string;
+  gameweek: number;
+  award: "champion" | "wooden_spoon";
+  userId: string;
+  points: number;
+};
+
+export function derivePredictionAwardSelections(input: {
+  gameweekId: string;
+  gameweek: number;
+  scores: readonly PredictionAwardScore[];
+  eligibleUserIds: ReadonlySet<string>;
+}): PredictionAwardSelection[] {
+  const eligibleScores = input.scores.filter((score) => input.eligibleUserIds.has(score.userId));
+  if (eligibleScores.length === 0) return [];
+
+  const maxPoints = Math.max(...eligibleScores.map((score) => score.points));
+  const minPoints = Math.min(...eligibleScores.map((score) => score.points));
+  const toSelection = (score: PredictionAwardScore, award: "champion" | "wooden_spoon"): PredictionAwardSelection => ({
+    gameweekId: input.gameweekId,
+    gameweek: input.gameweek,
+    award,
+    userId: score.userId,
+    points: score.points,
+  });
+
+  return [
+    ...eligibleScores.filter((score) => score.points === maxPoints).map((score) => toSelection(score, "champion")),
+    ...eligibleScores.filter((score) => score.points === minPoints).map((score) => toSelection(score, "wooden_spoon")),
+  ];
+}
+
 export function mapPredictionAwards(rows: readonly PredictionAwardRow[]): PredictionAwardsData | null {
   const first = rows[0];
   if (!first) return null;
