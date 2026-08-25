@@ -14,6 +14,7 @@ import {
   selectLatestAwardedGameweek,
   derivePredictionAwardSelections,
   mapPredictionAwards,
+  mapFantasyAwards,
 } from "../../lib/data/line-bot-core.ts";
 
 test("selects the current gameweek and falls back when FPL has no current flag", () => {
@@ -79,6 +80,19 @@ test("maps tied prediction award recipients with profile and LINE identity", () 
     gameweek: 5,
     champions: [{ userId: "u1", lineUserId: "line-1", displayName: "Ar Tao", avatarUrl: "https://example.test/ar.png", points: 18 }],
     woodenSpoons: [{ userId: "u2", lineUserId: null, displayName: "สำรอง", avatarUrl: "", points: 3 }],
+  });
+});
+
+test("maps Fantasy award recipients with league, team, profile, and points", () => {
+  assert.deepEqual(mapFantasyAwards([
+    { leagueFplId: 819498, leagueName: "เชยเชย Cup", gameweek: 1, award: "champion", entryId: 1, lineUserId: "line-1", displayName: "Champion", avatarUrl: "https://example.test/champion.png", teamName: "Champion FC", managerName: "Manager", points: 70 },
+    { leagueFplId: 819498, leagueName: "เชยเชย Cup", gameweek: 1, award: "wooden_spoon", entryId: 2, lineUserId: null, displayName: "Spoon", avatarUrl: null, teamName: "Spoon FC", managerName: "Spoon Manager", points: 35 },
+  ]), {
+    leagueFplId: 819498,
+    leagueName: "เชยเชย Cup",
+    gameweek: 1,
+    champions: [{ entryId: 1, lineUserId: "line-1", displayName: "Champion", avatarUrl: "https://example.test/champion.png", teamName: "Champion FC", managerName: "Manager", points: 70 }],
+    woodenSpoons: [{ entryId: 2, lineUserId: null, displayName: "Spoon", avatarUrl: "", teamName: "Spoon FC", managerName: "Spoon Manager", points: 35 }],
   });
 });
 

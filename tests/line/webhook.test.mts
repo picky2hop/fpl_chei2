@@ -68,6 +68,7 @@ test("returns a safe reply when an approved data command cannot load data", asyn
     async getTodayFixtures() { throw new Error("database details must stay private"); },
     async getUserPredictions() { throw new Error("database details must stay private"); },
     async getPredictionAwards() { throw new Error("database details must stay private"); },
+    async getFantasyAwards() { throw new Error("database details must stay private"); },
   });
 
   const messages = await service.replyForText({ text: "บอลวันนี้" });
@@ -82,6 +83,7 @@ test("returns the interactive Flex command menu for the menu command", async () 
     async getTodayFixtures() { throw new Error("must not load fixtures for menu"); },
     async getUserPredictions() { throw new Error("must not load predictions for menu"); },
     async getPredictionAwards() { throw new Error("must not load awards for menu"); },
+    async getFantasyAwards() { throw new Error("must not load fantasy awards for menu"); },
   });
 
   const messages = await service.replyForText({ text: "เมนู" });
@@ -102,6 +104,7 @@ test("returns awards Flex and a decorated group announcement", async () => {
         woodenSpoons: [{ userId: "u2", lineUserId: "line-2", displayName: "สำรอง", avatarUrl: "", points: 3 }],
       };
     },
+    async getFantasyAwards() { throw new Error("must not load fantasy awards"); },
   });
 
   const messages = await service.replyForText({ text: "แชมป์บ๊วยทายผล", chatType: "group" });
@@ -110,6 +113,55 @@ test("returns awards Flex and a decorated group announcement", async () => {
   assert.equal(messages?.[0]?.type, "flex");
   assert.equal(messages?.[1]?.type, "textV2");
   assert.match(JSON.stringify(messages), /Ar Tao|สำรอง|champion_1|wooden_spoon_1/);
+});
+
+test("returns Fantasy Chei Flex and a group announcement with mentions", async () => {
+  const service = createLineBotCommandService({
+    async getCurrentStandings() { throw new Error("must not load standings"); },
+    async getTodayFixtures() { throw new Error("must not load fixtures"); },
+    async getUserPredictions() { throw new Error("must not load predictions"); },
+    async getPredictionAwards() { throw new Error("must not load prediction awards"); },
+    async getFantasyAwards(leagueFplId) {
+      assert.equal(leagueFplId, 819498);
+      return {
+        leagueFplId,
+        leagueName: "เชยเชย Cup",
+        gameweek: 1,
+        champions: [{ entryId: 1, lineUserId: "line-1", displayName: "Champion", avatarUrl: "", teamName: "Champion FC", managerName: "Champion", points: 70 }],
+        woodenSpoons: [{ entryId: 2, lineUserId: "line-2", displayName: "Spoon", avatarUrl: "", teamName: "Spoon FC", managerName: "Spoon", points: 35 }],
+      };
+    },
+  });
+
+  const messages = await service.replyForText({ text: "แชมป์บ๊วยเชย", chatType: "group" });
+  assert.equal(messages?.length, 2);
+  assert.equal(messages?.[0]?.type, "flex");
+  assert.equal(messages?.[1]?.type, "textV2");
+  assert.match(JSON.stringify(messages), /เชยเชย Cup|Champion FC|Spoon FC|champion_1|wooden_spoon_1/);
+});
+
+test("returns only one Fantasy Khao Flex without an announcement", async () => {
+  const service = createLineBotCommandService({
+    async getCurrentStandings() { throw new Error("must not load standings"); },
+    async getTodayFixtures() { throw new Error("must not load fixtures"); },
+    async getUserPredictions() { throw new Error("must not load predictions"); },
+    async getPredictionAwards() { throw new Error("must not load prediction awards"); },
+    async getFantasyAwards(leagueFplId) {
+      assert.equal(leagueFplId, 819502);
+      return {
+        leagueFplId,
+        leagueName: "เขาค้อ inLove",
+        gameweek: 1,
+        champions: [{ entryId: 3, lineUserId: "line-3", displayName: "Champion", avatarUrl: "", teamName: "Champion FC", managerName: "Champion", points: 70 }],
+        woodenSpoons: [],
+      };
+    },
+  });
+
+  const messages = await service.replyForText({ text: "แชมป์บ๊วยเขาค้อ", chatType: "group" });
+  assert.equal(messages?.length, 1);
+  assert.equal(messages?.[0]?.type, "flex");
+  assert.doesNotMatch(JSON.stringify(messages), /textV2|mention/);
 });
 
 test("ignores LINE verification payloads and non-text events", async () => {

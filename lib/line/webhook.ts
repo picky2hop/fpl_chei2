@@ -1,8 +1,8 @@
 import { buildLineMenuMessage, parseLineCommand } from "./commands.ts";
-import { buildPredictionAwardsFlex, buildPredictionResultFlex, buildStandingsFlex, buildTodayFixturesFlex } from "./flex.ts";
-import { buildPredictionAwardsAnnouncement } from "./announcement.ts";
+import { buildFantasyAwardsFlex, buildPredictionAwardsFlex, buildPredictionResultFlex, buildStandingsFlex, buildTodayFixturesFlex } from "./flex.ts";
+import { buildFantasyAwardsAnnouncement, buildPredictionAwardsAnnouncement } from "./announcement.ts";
 import type { LineMessage } from "./messaging.ts";
-import type { PredictionAwardsData } from "../data/line-bot-core.ts";
+import type { FantasyAwardsData, PredictionAwardsData } from "../data/line-bot-core.ts";
 
 export type LineWebhookPayload = {
   destination?: string;
@@ -42,6 +42,7 @@ export type LineBotDataReader = {
     }>;
   } | null>;
   getPredictionAwards: () => Promise<PredictionAwardsData | null>;
+  getFantasyAwards: (leagueFplId: 819498 | 819502) => Promise<FantasyAwardsData | null>;
 };
 
 export type LineBotCommandService = {
@@ -94,6 +95,28 @@ export function createLineBotCommandService(data: LineBotDataReader): LineBotCom
         return [
           buildPredictionAwardsFlex(awards),
           buildPredictionAwardsAnnouncement({
+            gameweek: awards.gameweek,
+            champions: awards.champions,
+            woodenSpoons: awards.woodenSpoons,
+            allowMentions: input.chatType === "group" || input.chatType === "room",
+          }),
+        ];
+      }
+      if (command === "fantasyAwardsChei" || command === "fantasyAwardsKhao") {
+        const leagueFplId = command === "fantasyAwardsChei" ? 819498 : 819502;
+        let awards;
+        try {
+          awards = await data.getFantasyAwards(leagueFplId);
+        } catch {
+          return [dataUnavailableMessage];
+        }
+        if (!awards) return [{ type: "text", text: "ยังไม่มีผลตัดสินแชมป์บ๊วย Fantasy ของ GW ที่จบแล้วครับ" }];
+        const flex = buildFantasyAwardsFlex(awards);
+        if (command === "fantasyAwardsKhao") return [flex];
+        return [
+          flex,
+          buildFantasyAwardsAnnouncement({
+            leagueName: awards.leagueName,
             gameweek: awards.gameweek,
             champions: awards.champions,
             woodenSpoons: awards.woodenSpoons,

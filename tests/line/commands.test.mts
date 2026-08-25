@@ -16,6 +16,8 @@ test("maps approved fixture and prediction aliases exactly", () => {
     assert.equal(parseLineCommand(text), "myPredictions");
   }
   assert.equal(parseLineCommand("แชมป์บ๊วยทายผล"), "predictionAwards");
+  assert.equal(parseLineCommand("แชมป์บ๊วยเชย"), "fantasyAwardsChei");
+  assert.equal(parseLineCommand("แชมป์บ๊วยเขาค้อ"), "fantasyAwardsKhao");
 });
 
 test("maps menu aliases and ignores ordinary text", () => {
@@ -27,7 +29,7 @@ test("maps menu aliases and ignores ordinary text", () => {
   assert.equal(parseLineCommand("   \n  "), null);
 });
 
-test("menu Flex exposes four red command actions without configuration values", () => {
+test("menu Flex exposes the Chei Fantasy award command without exposing Khao as a menu action", () => {
   const message = buildLineMenuMessage();
   assert.equal(message.type, "flex");
   if (message.type !== "flex") return;
@@ -38,6 +40,7 @@ test("menu Flex exposes four red command actions without configuration values", 
     { label: "บอลวันนี้", text: "บอลวันนี้" },
     { label: "ผลทายของฉัน", text: "ผลทาย" },
     { label: "แชมป์บ๊วยทายผล", text: "แชมป์บ๊วยทายผล" },
+    { label: "แชมป์บ๊วยเชย", text: "แชมป์บ๊วยเชย" },
   ];
   for (const command of commands) {
     assert.match(serialized, new RegExp(`"type":"message","label":"${command.label}","text":"${command.text}"`));
@@ -47,4 +50,5 @@ test("menu Flex exposes four red command actions without configuration values", 
   assert.equal((serialized.match(/"backgroundColor":"#E53935"/g) ?? []).length, commands.length);
   assert.ok((serialized.match(/"color":"#FFFFFF"/g) ?? []).length >= commands.length);
   assert.doesNotMatch(serialized, /SECRET|TOKEN|SUPABASE|session/i);
+  assert.doesNotMatch(serialized, /"label":"แชมป์บ๊วยเขาค้อ"/);
 });

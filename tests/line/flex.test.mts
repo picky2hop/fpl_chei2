@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildFixturePredictionFlex,
+  buildFantasyAwardsFlex,
   buildPredictionAwardsFlex,
   buildPredictionResultFlex,
   buildStandingsFlex,
@@ -137,6 +138,22 @@ test("prediction awards Flex shows profiles and points without an app button", (
   assert.match(serialized, /18 คะแนน/);
   assert.match(serialized, /3 คะแนน/);
   assert.match(serialized, /https:\/\/example\.test\/ar\.png/);
+  assert.doesNotMatch(serialized, /เปิดแอป|2010604800|"action"/);
+});
+
+test("Fantasy awards Flex shows the league, GW, teams, profiles, and points", () => {
+  const message = buildFantasyAwardsFlex({
+    leagueFplId: 819498,
+    leagueName: "เชยเชย Cup",
+    gameweek: 1,
+    champions: [{ entryId: 1, displayName: "Champion", managerName: "Manager", teamName: "Champion FC", avatarUrl: "https://example.test/champion.png", points: 70 }],
+    woodenSpoons: [{ entryId: 2, displayName: "Spoon", managerName: "Spoon Manager", teamName: "Spoon FC", avatarUrl: "", points: 35 }],
+  });
+
+  assert.equal(message.type, "flex");
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /เชยเชย Cup|GW 1|Champion FC|Spoon FC|70 คะแนน|35 คะแนน/);
+  assert.match(serialized, /https:\/\/example\.test\/champion\.png/);
   assert.doesNotMatch(serialized, /เปิดแอป|2010604800|"action"/);
 });
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminConfirmationModal } from "./admin-confirmation-modal";
+import { AdminAwardsConfirmationModal } from "./admin-awards-confirmation-modal";
 import { AdminFeedbackModal } from "./admin-feedback-modal";
 import { archiveEndpoint, type ArchiveTarget } from "@/lib/admin/archive-confirmation";
 import { feedbackFromAction, type AdminFeedback } from "@/lib/admin/feedback";
@@ -11,6 +12,7 @@ type EntryOption = { fpl_entry_id: number; fpl_team_name: string; fpl_manager_na
 type Mapping = { id: string; app_user_id: string; fpl_entry_id: number; fpl_team_name: string; fpl_manager_name: string; mapping_status: "active" | "archived"; last_validation_status: "valid" | "error"; last_error_message: string | null };
 type AdminData = { mappings: Mapping[]; users: Array<{ id: string; displayName: string; status: string }>; gameweeks: Array<{ id: string; number: number; name: string | null; is_current: boolean }>; leagues: League[]; unmappedEntries: EntryOption[]; leagueEntries: EntryOption[] };
 type FantasySyncAction = "scores" | "players" | "recalculate";
+type AwardSaveInput = { leagueId: string; gameweekId: string; championEntryIds: number[]; woodenSpoonEntryIds: number[]; leagueName: string; gameweekNumber: number | null };
 
 export default function FantasyAdminPanel() {
   const [data, setData] = useState<AdminData | null>(null);
@@ -26,6 +28,7 @@ export default function FantasyAdminPanel() {
   const [syncAction, setSyncAction] = useState<FantasySyncAction | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ArchiveTarget | null>(null);
+  const [awardConfirmation, setAwardConfirmation] = useState<AwardSaveInput | null>(null);
 
   function applyData(value: AdminData) {
     setData(value);
@@ -56,6 +59,43 @@ export default function FantasyAdminPanel() {
     } catch (error) {
       setState("error");
       setFeedback(feedbackFromAction({ ok: false, successMessage: success, errorMessage: error instanceof Error ? error.message : "ดำเนินการไม่สำเร็จ" }));
+    }
+  }
+
+  async function saveAwards(confirmReplace = false, confirmedInput?: AwardSaveInput) {
+    const league = data?.leagues.find((item) => item.id === (confirmedInput?.leagueId ?? awardLeagueId));
+    const gameweek = data?.gameweeks.find((item) => item.id === (confirmedInput?.gameweekId ?? gameweekId));
+    const input = confirmedInput ?? {
+      leagueId: awardLeagueId,
+      gameweekId,
+      championEntryIds: champions,
+      woodenSpoonEntryIds: woodenSpoons,
+      leagueName: league?.official_name ?? "ลีกที่เลือก",
+      gameweekNumber: gameweek?.number ?? null,
+    };
+
+    setState("running");
+    setFeedback(null);
+    try {
+      const response = await fetch("/api/admin/fantasy/awards", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ leagueId: input.leagueId, gameweekId: input.gameweekId, championEntryIds: input.championEntryIds, woodenSpoonEntryIds: input.woodenSpoonEntryIds, confirmReplace }),
+      });
+      const value = await response.json().catch(() => ({})) as { code?: string; error?: string; message?: string };
+      if (response.status === 409 && value.code === "FANTASY_AWARDS_EXIST" && !confirmReplace) {
+        setAwardConfirmation(input);
+        setState("idle");
+        return;
+      }
+      if (!response.ok) throw new Error(value.message ?? value.error ?? "บันทึก awards ไม่สำเร็จ");
+      setAwardConfirmation(null);
+      setState("done");
+      setFeedback(feedbackFromAction({ ok: true, successMessage: value.message ?? "บันทึก awards แล้ว" }));
+      applyData(await load());
+    } catch (error) {
+      setState("error");
+      setFeedback(feedbackFromAction({ ok: false, successMessage: "บันทึก awards แล้ว", errorMessage: error instanceof Error ? error.message : "บันทึก awards ไม่สำเร็จ" }));
     }
   }
 
@@ -95,9 +135,10 @@ export default function FantasyAdminPanel() {
 
     <div className="mt-4 space-y-2">{data?.mappings.map((mapping) => <div key={mapping.id} className="rounded-2xl border border-white/10 bg-white/5 p-3"><div className="flex items-start gap-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{mapping.fpl_team_name} · FPL {mapping.fpl_entry_id}</p><p className="text-xs font-bold text-white/45">{mapping.fpl_manager_name} · {mapping.mapping_status}{mapping.last_validation_status === "error" ? " · ต้องตรวจสอบใหม่" : ""}</p></div>{mapping.mapping_status === "active" && <button type="button" onClick={() => setArchiveTarget({ kind: "mapping", id: mapping.id, label: `${mapping.fpl_team_name} · FPL ${mapping.fpl_entry_id}` })} className="rounded-lg border border-[#ff647c]/30 px-2 py-1 text-[10px] font-black text-[#ff8698]">Archive</button>}</div></div>)}</div>
 
-    <div className="mt-5 rounded-2xl border border-white/10 bg-[#071525]/50 p-4"><h3 className="text-sm font-black">Awards รายลีก / ราย GW</h3><label className="mt-3 block text-xs font-bold text-white/60">ลีก<select value={awardLeagueId} onChange={(event) => { setAwardLeagueId(event.target.value); setChampions([]); setWoodenSpoons([]); }} className="mt-1 w-full rounded-xl border border-white/10 bg-[#071525] px-3 py-3 text-sm font-bold text-white">{data?.leagues.map((league) => <option key={league.id} value={league.id}>{league.official_name} · {league.status}</option>)}</select></label><select value={gameweekId} onChange={(event) => setGameweekId(event.target.value)} className="mt-3 w-full rounded-xl border border-white/10 bg-[#071525] px-3 py-3 text-sm font-bold text-white">{data?.gameweeks.map((gameweek) => <option key={gameweek.id} value={gameweek.id}>GW {gameweek.number} · {gameweek.name ?? ""}</option>)}</select><div className="mt-3 grid gap-3 sm:grid-cols-2"><div><p className="text-xs font-black text-[#d9ff58]">Champion</p>{awardEntries.map((entry) => <label key={`c-${entry.fpl_entry_id}`} className="mt-2 flex items-center gap-2 text-xs font-bold text-white/70"><input type="checkbox" checked={champions.includes(entry.fpl_entry_id)} onChange={() => toggle(setChampions, champions, entry.fpl_entry_id)} />{entry.fpl_team_name} · {entry.fpl_entry_id}</label>)}</div><div><p className="text-xs font-black text-[#ff8698]">Wooden spoon</p>{awardEntries.map((entry) => <label key={`w-${entry.fpl_entry_id}`} className="mt-2 flex items-center gap-2 text-xs font-bold text-white/70"><input type="checkbox" checked={woodenSpoons.includes(entry.fpl_entry_id)} onChange={() => toggle(setWoodenSpoons, woodenSpoons, entry.fpl_entry_id)} />{entry.fpl_team_name} · {entry.fpl_entry_id}</label>)}</div></div><button type="button" onClick={() => void action(fetch("/api/admin/fantasy/awards", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ leagueId: awardLeagueId, gameweekId, championEntryIds: champions, woodenSpoonEntryIds: woodenSpoons }) }), "บันทึก awards แล้ว")} disabled={!awardLeagueId || !gameweekId || state === "running"} className="mt-4 rounded-xl border border-[#d9ff58]/30 bg-[#d9ff58]/10 px-4 py-3 text-xs font-black text-[#d9ff58] disabled:opacity-40">บันทึก Awards</button></div>
+    <div className="mt-5 rounded-2xl border border-white/10 bg-[#071525]/50 p-4"><h3 className="text-sm font-black">Awards รายลีก / ราย GW</h3><label className="mt-3 block text-xs font-bold text-white/60">ลีก<select value={awardLeagueId} onChange={(event) => { setAwardLeagueId(event.target.value); setChampions([]); setWoodenSpoons([]); }} className="mt-1 w-full rounded-xl border border-white/10 bg-[#071525] px-3 py-3 text-sm font-bold text-white">{data?.leagues.map((league) => <option key={league.id} value={league.id}>{league.official_name} · {league.status}</option>)}</select></label><select value={gameweekId} onChange={(event) => setGameweekId(event.target.value)} className="mt-3 w-full rounded-xl border border-white/10 bg-[#071525] px-3 py-3 text-sm font-bold text-white">{data?.gameweeks.map((gameweek) => <option key={gameweek.id} value={gameweek.id}>GW {gameweek.number} · {gameweek.name ?? ""}</option>)}</select><div className="mt-3 grid gap-3 sm:grid-cols-2"><div><p className="text-xs font-black text-[#d9ff58]">Champion</p>{awardEntries.map((entry) => <label key={`c-${entry.fpl_entry_id}`} className="mt-2 flex items-center gap-2 text-xs font-bold text-white/70"><input type="checkbox" checked={champions.includes(entry.fpl_entry_id)} onChange={() => toggle(setChampions, champions, entry.fpl_entry_id)} />{entry.fpl_team_name} · {entry.fpl_entry_id}</label>)}</div><div><p className="text-xs font-black text-[#ff8698]">Wooden spoon</p>{awardEntries.map((entry) => <label key={`w-${entry.fpl_entry_id}`} className="mt-2 flex items-center gap-2 text-xs font-bold text-white/70"><input type="checkbox" checked={woodenSpoons.includes(entry.fpl_entry_id)} onChange={() => toggle(setWoodenSpoons, woodenSpoons, entry.fpl_entry_id)} />{entry.fpl_team_name} · {entry.fpl_entry_id}</label>)}</div></div><button type="button" onClick={() => void saveAwards()} disabled={!awardLeagueId || !gameweekId || state === "running"} className="mt-4 rounded-xl border border-[#d9ff58]/30 bg-[#d9ff58]/10 px-4 py-3 text-xs font-black text-[#d9ff58] disabled:opacity-40">บันทึก Awards</button></div>
 
     <AdminConfirmationModal target={archiveTarget} onCancel={() => setArchiveTarget(null)} onConfirm={confirmArchive} />
+    <AdminAwardsConfirmationModal open={awardConfirmation !== null} leagueName={awardConfirmation?.leagueName ?? "ลีกที่เลือก"} gameweekNumber={awardConfirmation?.gameweekNumber ?? null} onCancel={() => setAwardConfirmation(null)} onConfirm={() => { const input = awardConfirmation; if (input) void saveAwards(true, input); }} />
     <AdminFeedbackModal feedback={feedback} onClose={() => setFeedback(null)} />
   </section>;
 }

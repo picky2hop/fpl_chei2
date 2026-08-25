@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildPredictionAwardsAnnouncement } from "../../lib/line/announcement.ts";
+import { buildFantasyAwardsAnnouncement, buildPredictionAwardsAnnouncement } from "../../lib/line/announcement.ts";
 
 const awards = {
   gameweek: 5,
@@ -48,4 +48,17 @@ test("caps LINE mentions at twenty and keeps extra tied names visible", () => {
   if (message.type !== "textV2") return;
   assert.equal(Object.keys(message.substitution).length, 20);
   assert.match(message.text, /Champion 21/);
+});
+
+test("builds a Fantasy award announcement with the league name", () => {
+  const message = buildFantasyAwardsAnnouncement({
+    leagueName: "เชยเชย Cup",
+    gameweek: 1,
+    champions: [{ lineUserId: "line-1", displayName: "Champion" }],
+    woodenSpoons: [{ lineUserId: "line-2", displayName: "Spoon" }],
+    allowMentions: true,
+  });
+
+  assert.equal(message.type, "textV2");
+  assert.match(JSON.stringify(message), /เชยเชย Cup|Champion|Spoon|champion_1|wooden_spoon_1/);
 });

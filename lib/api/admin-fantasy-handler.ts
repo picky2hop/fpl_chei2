@@ -196,7 +196,7 @@ export function createAdminFantasyAwardsHandler(dependencies: Pick<AdminFantasyD
 
 export function createAdminFantasyLeagueAwardsHandler(dependencies: {
   requireAdmin: () => Promise<AdminUser>;
-  repository: Pick<FantasyRepository & FantasyLeagueRepository, "getActiveSeason" | "listLeagues" | "getDashboard" | "listLeagueEntryIds" | "replaceLeagueAwards">;
+  repository: Pick<FantasyRepository & FantasyLeagueRepository, "getActiveSeason" | "listLeagues" | "getDashboard" | "listLeagueEntryIds" | "listLeagueAwards" | "replaceLeagueAwards">;
 }) {
   return async function PUT(request: Request): Promise<Response> {
     let admin: AdminUser;
@@ -221,6 +221,9 @@ export function createAdminFantasyLeagueAwardsHandler(dependencies: {
       const entryIds = [...value.championEntryIds, ...value.woodenSpoonEntryIds];
       const eligible = new Set(await dependencies.repository.listLeagueEntryIds({ seasonId: season.id, leagueId: value.leagueId, gameweekId: value.gameweekId }));
       if (entryIds.some((entryId) => !eligible.has(entryId))) return Response.json({ error: "Invalid Fantasy award target" }, { status: 400 });
+      if (value.confirmReplace !== true && (await dependencies.repository.listLeagueAwards(season.id)).some((award) => award.leagueId === value.leagueId && award.gameweekId === value.gameweekId)) {
+        return Response.json({ code: "FANTASY_AWARDS_EXIST", message: "Fantasy awards already exist for this league and gameweek" }, { status: 409 });
+      }
       await dependencies.repository.replaceLeagueAwards({
         seasonId: season.id,
         leagueId: value.leagueId,

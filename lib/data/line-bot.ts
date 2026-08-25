@@ -2,7 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
-import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type PredictionAwardsData } from "./line-bot-core";
+import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type FantasyAwardsData, type PredictionAwardsData } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -209,6 +209,7 @@ export type LineBotDataReader = {
   getTodayFixtures(now: Date): Promise<TodayFixturesData>;
   getUserPredictions(lineUserId: string): Promise<UserPredictionData | null>;
   getPredictionAwards(): Promise<PredictionAwardsData | null>;
+  getFantasyAwards(leagueFplId: 819498 | 819502): Promise<FantasyAwardsData | null>;
 };
 
 export function createLineBotDataReader(): LineBotDataReader {
@@ -355,6 +356,72 @@ export function createLineBotDataReader(): LineBotDataReader {
           avatarUrl: user.avatar_url,
           points: selection.points,
         }];
+      }));
+    },
+
+    async getFantasyAwards(leagueFplId) {
+      const { admin, season } = await activeSeasonContext();
+      const { data: league, error: leagueError } = await admin
+        .from("fantasy_leagues")
+        .select("id,fpl_league_id,official_name")
+        .eq("season_id", season.id)
+        .eq("fpl_league_id", leagueFplId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (leagueError) throw new Error("Fantasy awards are unavailable");
+      if (!league) return null;
+
+      const [{ data: gameweeks, error: gameweekError }, { data: awards, error: awardError }] = await Promise.all([
+        admin.from("gameweeks").select("id,number,status").eq("season_id", season.id).eq("status", "closed").order("number", { ascending: false }),
+        admin.from("fantasy_league_awards").select("gameweek_id,fpl_entry_id,award").eq("season_id", season.id).eq("league_id", league.id),
+      ]);
+      if (gameweekError || awardError) throw new Error("Fantasy awards are unavailable");
+
+      const selectedGameweek = selectLatestAwardedGameweek(
+        (gameweeks ?? []).map((gameweek) => ({ id: gameweek.id, number: gameweek.number, status: gameweek.status as "closed" })),
+        (awards ?? []).map((award) => ({ gameweekId: award.gameweek_id })),
+      );
+      if (!selectedGameweek) return null;
+
+      const selectedAwards = (awards ?? []).filter((award) => award.gameweek_id === selectedGameweek.id && (award.award === "champion" || award.award === "wooden_spoon"));
+      const entryIds = [...new Set(selectedAwards.map((award) => award.fpl_entry_id))];
+      if (entryIds.length === 0) return null;
+
+      const [{ data: memberships, error: membershipError }, { data: scores, error: scoreError }, { data: mappings, error: mappingError }] = await Promise.all([
+        admin.from("fantasy_league_membership_snapshots").select("fpl_entry_id,fpl_team_name,fpl_manager_name").eq("season_id", season.id).eq("league_id", league.id).eq("gameweek_id", selectedGameweek.id).in("fpl_entry_id", entryIds),
+        admin.from("fantasy_entry_gameweek_scores").select("fpl_entry_id,points").eq("season_id", season.id).eq("gameweek_id", selectedGameweek.id).in("fpl_entry_id", entryIds),
+        admin.from("fantasy_entry_mappings").select("fpl_entry_id,app_user_id").eq("season_id", season.id).eq("mapping_status", "active").in("fpl_entry_id", entryIds),
+      ]);
+      if (membershipError || scoreError || mappingError) throw new Error("Fantasy awards are unavailable");
+
+      const userIds = [...new Set((mappings ?? []).map((mapping) => mapping.app_user_id))];
+      const { data: users, error: userError } = userIds.length
+        ? await admin.from("app_users").select("id,line_user_id,display_name,avatar_url").in("id", userIds)
+        : { data: [], error: null };
+      if (userError) throw new Error("Fantasy awards are unavailable");
+
+      const membershipByEntry = new Map((memberships ?? []).map((membership) => [membership.fpl_entry_id, membership]));
+      const scoreByEntry = new Map((scores ?? []).map((score) => [score.fpl_entry_id, score.points]));
+      const mappingByEntry = new Map((mappings ?? []).map((mapping) => [mapping.fpl_entry_id, mapping]));
+      const userById = new Map((users ?? []).map((user) => [user.id, user]));
+      return mapFantasyAwards(selectedAwards.map((award) => {
+        const membership = membershipByEntry.get(award.fpl_entry_id);
+        const mapping = mappingByEntry.get(award.fpl_entry_id);
+        const user = mapping ? userById.get(mapping.app_user_id) : undefined;
+        const managerName = membership?.fpl_manager_name ?? `FPL ${award.fpl_entry_id}`;
+        return {
+          leagueFplId: league.fpl_league_id,
+          leagueName: league.official_name,
+          gameweek: selectedGameweek.number,
+          award: award.award as "champion" | "wooden_spoon",
+          entryId: award.fpl_entry_id,
+          lineUserId: user?.line_user_id ?? null,
+          displayName: user?.display_name ?? managerName,
+          avatarUrl: user?.avatar_url ?? null,
+          teamName: membership?.fpl_team_name ?? `FPL ${award.fpl_entry_id}`,
+          managerName,
+          points: scoreByEntry.get(award.fpl_entry_id) ?? 0,
+        };
       }));
     },
   };

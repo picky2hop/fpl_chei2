@@ -79,6 +79,38 @@ export type PredictionAwardsData = {
   woodenSpoons: PredictionAwardRecipient[];
 };
 
+export type FantasyAwardRow = {
+  leagueFplId: number;
+  leagueName: string;
+  gameweek: number;
+  award: "champion" | "wooden_spoon";
+  entryId: number;
+  lineUserId: string | null;
+  displayName: string;
+  avatarUrl: string | null;
+  teamName: string;
+  managerName: string;
+  points: number;
+};
+
+export type FantasyAwardRecipient = {
+  entryId: number;
+  lineUserId: string | null;
+  displayName: string;
+  avatarUrl: string;
+  teamName: string;
+  managerName: string;
+  points: number;
+};
+
+export type FantasyAwardsData = {
+  leagueFplId: number;
+  leagueName: string;
+  gameweek: number;
+  champions: FantasyAwardRecipient[];
+  woodenSpoons: FantasyAwardRecipient[];
+};
+
 export function selectActiveGameweek(gameweeks: ActiveGameweek[]): ActiveGameweek | null {
   return gameweeks.find((gameweek) => gameweek.isCurrent) ?? [...gameweeks].sort((left, right) => left.number - right.number)[0] ?? null;
 }
@@ -142,6 +174,27 @@ export function mapPredictionAwards(rows: readonly PredictionAwardRow[]): Predic
     points: row.points,
   });
   return {
+    gameweek: first.gameweek,
+    champions: rows.filter((row) => row.award === "champion").map(mapRecipient),
+    woodenSpoons: rows.filter((row) => row.award === "wooden_spoon").map(mapRecipient),
+  };
+}
+
+export function mapFantasyAwards(rows: readonly FantasyAwardRow[]): FantasyAwardsData | null {
+  const first = rows[0];
+  if (!first) return null;
+  const mapRecipient = (row: FantasyAwardRow): FantasyAwardRecipient => ({
+    entryId: row.entryId,
+    lineUserId: row.lineUserId,
+    displayName: row.displayName,
+    avatarUrl: row.avatarUrl ?? "",
+    teamName: row.teamName,
+    managerName: row.managerName,
+    points: row.points,
+  });
+  return {
+    leagueFplId: first.leagueFplId,
+    leagueName: first.leagueName,
     gameweek: first.gameweek,
     champions: rows.filter((row) => row.award === "champion").map(mapRecipient),
     woodenSpoons: rows.filter((row) => row.award === "wooden_spoon").map(mapRecipient),

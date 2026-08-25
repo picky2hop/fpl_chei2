@@ -14,7 +14,7 @@ function repository(): FantasyRepository & FantasyLeagueRepository {
     listActiveLeagues: async () => [], listLeagues: async () => [{ id: "league-1", season_id: "season-1", fpl_league_id: 819498, official_name: "Cup", status: "active", archived_at: null }],
     createLeague: async () => { throw new Error("not used"); }, updateLeagueId: async () => { throw new Error("not used"); }, archiveLeague: async () => undefined,
     listLeagueEntries: async () => [],
-    listUnmappedLeagueEntries: async () => [], getLeagueDashboard: async () => { throw new Error("not used"); }, applyLeagueSync: async () => ({ jobRunId: "job", leaguesUpserted: 0, membershipsUpserted: 0, scoresUpserted: 0, playersUpserted: 0 }),
+    listUnmappedLeagueEntries: async () => [], listLeagueAwards: async () => [], getLeagueDashboard: async () => { throw new Error("not used"); }, applyLeagueSync: async () => ({ jobRunId: "job", leaguesUpserted: 0, membershipsUpserted: 0, scoresUpserted: 0, playersUpserted: 0 }),
     listLeagueEntryIds: async () => [10, 20], replaceLeagueAwards: async () => undefined,
   };
 }
@@ -45,4 +45,50 @@ test("admin awards reject an Entry outside the selected league snapshot", async 
     body: JSON.stringify({ leagueId: "league-1", gameweekId: "gw-1", championEntryIds: [20], woodenSpoonEntryIds: [] }),
   }));
   assert.equal(response.status, 400);
+});
+
+test("admin awards ask for confirmation before replacing an existing league/GW award", async () => {
+  let replaceCalls = 0;
+  const base = repository();
+  const handler = createAdminFantasyLeagueAwardsHandler({
+    requireAdmin: async () => ({ id: "admin-1" }),
+    repository: {
+      ...base,
+      listLeagueAwards: async () => [{ leagueId: "league-1", gameweekId: "gw-1", fplEntryId: 10, award: "champion" as const }],
+      replaceLeagueAwards: async () => { replaceCalls += 1; },
+    },
+  });
+
+  const response = await handler(new Request("https://example.test/api/admin/fantasy/awards", {
+    method: "PUT", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ leagueId: "league-1", gameweekId: "gw-1", championEntryIds: [20], woodenSpoonEntryIds: [] }),
+  }));
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), {
+    code: "FANTASY_AWARDS_EXIST",
+    message: "Fantasy awards already exist for this league and gameweek",
+  });
+  assert.equal(replaceCalls, 0);
+});
+
+test("admin awards replace existing records only after explicit confirmation", async () => {
+  let replaceCalls = 0;
+  const base = repository();
+  const handler = createAdminFantasyLeagueAwardsHandler({
+    requireAdmin: async () => ({ id: "admin-1" }),
+    repository: {
+      ...base,
+      listLeagueAwards: async () => [{ leagueId: "league-1", gameweekId: "gw-1", fplEntryId: 10, award: "champion" as const }],
+      replaceLeagueAwards: async () => { replaceCalls += 1; },
+    },
+  });
+
+  const response = await handler(new Request("https://example.test/api/admin/fantasy/awards", {
+    method: "PUT", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ leagueId: "league-1", gameweekId: "gw-1", championEntryIds: [20], woodenSpoonEntryIds: [], confirmReplace: true }),
+  }));
+
+  assert.equal(response.status, 200);
+  assert.equal(replaceCalls, 1);
 });

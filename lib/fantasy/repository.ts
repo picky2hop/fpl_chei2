@@ -59,6 +59,7 @@ export type FantasyLeagueRepository = {
   listLeagueEntries(input: { seasonId: string; gameweekId: string }): Promise<FantasyLeagueMappingCandidate[]>;
   listUnmappedLeagueEntries(input: { seasonId: string; gameweekId: string }): Promise<FantasyLeagueMappingCandidate[]>;
   listLeagueEntryIds(input: { seasonId: string; leagueId: string; gameweekId: string }): Promise<number[]>;
+  listLeagueAwards(seasonId: string): Promise<Array<{ leagueId: string; gameweekId: string; fplEntryId: number; award: "champion" | "wooden_spoon" }>>;
   listEntryGameweekScores(seasonId: string): Promise<FantasyEntryGameweekScoreMethodRow[]>;
   getCurrentLeagueEntry?(input: { seasonId: string; leagueId: string; entryId: number }): Promise<{ gameweekId: string; gameweekNumber: number }>;
   replaceLeagueAwards(input: { seasonId: string; leagueId: string; gameweekId: string; selectedBy: string; awards: Array<{ fplEntryId: number; award: "champion" | "wooden_spoon" }> }): Promise<void>;
@@ -231,6 +232,17 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         .eq("gameweek_id", input.gameweekId);
       if (error || !data) throw new Error("Fantasy database operation failed");
       return data.map((row) => row.fpl_entry_id);
+    },
+
+    async listLeagueAwards(seasonId) {
+      const { data, error } = await client
+        .from("fantasy_league_awards")
+        .select("league_id,gameweek_id,fpl_entry_id,award")
+        .eq("season_id", seasonId);
+      if (error || !data) throw new Error("Fantasy database operation failed");
+      return data.flatMap((row) => row.award === "champion" || row.award === "wooden_spoon"
+        ? [{ leagueId: row.league_id, gameweekId: row.gameweek_id, fplEntryId: row.fpl_entry_id, award: row.award }]
+        : []);
     },
 
     async listEntryGameweekScores(seasonId) {

@@ -70,6 +70,14 @@ export type PredictionAwardsFlexInput = {
   woodenSpoons: Array<{ displayName: string; avatarUrl?: string; points: number }>;
 };
 
+export type FantasyAwardsFlexInput = {
+  leagueFplId: number;
+  leagueName: string;
+  gameweek: number;
+  champions: Array<{ entryId: number; displayName: string; managerName: string; teamName: string; avatarUrl?: string; points: number }>;
+  woodenSpoons: Array<{ entryId: number; displayName: string; managerName: string; teamName: string; avatarUrl?: string; points: number }>;
+};
+
 export type FlexMessage = {
   type: "flex";
   altText: string;
@@ -701,6 +709,58 @@ export function buildPredictionAwardsFlex(input: PredictionAwardsFlexInput): Fle
       text(`ผลตัดสิน GW ${input.gameweek}`, "sm", "bold"),
       awardSection("🏆 แชมป์", input.champions),
       awardSection("🥄 บ๊วย", input.woodenSpoons),
+    ]),
+  };
+}
+
+function fantasyAwardRecipientRow(recipient: FantasyAwardsFlexInput["champions"][number]) {
+  return {
+    type: "box",
+    layout: "horizontal",
+    spacing: "sm",
+    paddingAll: "9px",
+    cornerRadius: "md",
+    backgroundColor: CARD_BACKGROUND,
+    alignItems: "center",
+    contents: [
+      { ...imageOrFallback(recipient.avatarUrl, recipient.displayName, "38px"), flex: 0 },
+      {
+        type: "box",
+        layout: "vertical",
+        spacing: "2px",
+        flex: 1,
+        contents: [
+          text(recipient.displayName, "sm", "bold"),
+          text(`ทีม : ${recipient.teamName}`, "xs", "regular", MUTED_TEXT),
+        ],
+      },
+      { ...text(`${recipient.points} คะแนน`, "sm", "bold", ACCENT), flex: 0 },
+    ],
+  };
+}
+
+function fantasyAwardSection(title: string, recipients: FantasyAwardsFlexInput["champions"]) {
+  return {
+    type: "box",
+    layout: "vertical",
+    spacing: "xs",
+    contents: [
+      text(title, "md", "bold", ACCENT),
+      ...(recipients.length ? recipients.map(fantasyAwardRecipientRow) : [text("ไม่มีข้อมูล", "sm", "regular", MUTED_TEXT)]),
+    ],
+  };
+}
+
+export function buildFantasyAwardsFlex(input: FantasyAwardsFlexInput): FlexMessage {
+  const title = `แชมป์บ๊วยแฟนตาซี · GW ${input.gameweek}`;
+  return {
+    type: "flex",
+    altText: `${input.leagueName} · ${title}`,
+    contents: awardsBubble([
+      text(`แฟนตาซี ${input.leagueName}`, "lg", "bold", ACCENT),
+      text(`ผลตัดสิน GW ${input.gameweek}`, "sm", "bold"),
+      fantasyAwardSection("🏆 แชมป์", input.champions),
+      fantasyAwardSection("🥄 บ๊วย", input.woodenSpoons),
     ]),
   };
 }

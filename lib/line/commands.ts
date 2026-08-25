@@ -1,7 +1,7 @@
 import type { LineMessage } from "./messaging";
 import { buildCommandMenuFlex } from "./flex.ts";
 
-export type LineBotCommand = "menu" | "standings" | "todayFixtures" | "myPredictions" | "predictionAwards";
+export type LineBotCommand = "menu" | "standings" | "todayFixtures" | "myPredictions" | "predictionAwards" | "fantasyAwardsChei" | "fantasyAwardsKhao";
 
 const aliases: Record<string, LineBotCommand> = {
   "ขอตาราง": "standings",
@@ -15,6 +15,8 @@ const aliases: Record<string, LineBotCommand> = {
   "คำทาย": "myPredictions",
   "ทายผล": "myPredictions",
   "แชมป์บ๊วยทายผล": "predictionAwards",
+  "แชมป์บ๊วยเชย": "fantasyAwardsChei",
+  "แชมป์บ๊วยเขาค้อ": "fantasyAwardsKhao",
   "เมนู": "menu",
   "ช่วย": "menu",
   "คำสั่ง": "menu",
@@ -34,5 +36,6 @@ export function buildLineMenuMessage(): LineMessage {
     "บอลวันนี้",
     { label: "ผลทายของฉัน", text: "ผลทาย" },
     "แชมป์บ๊วยทายผล",
+    "แชมป์บ๊วยเชย",
   ]);
 }
