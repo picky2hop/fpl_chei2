@@ -138,7 +138,7 @@ test("prediction Flex footers open the prediction tab with the requested label",
 
   for (const message of messages) {
     const serialized = JSON.stringify(message);
-    assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF\?tab=predictions/);
+    assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF\/dashboard\?tab=predictions/);
     assert.match(serialized, /"label":"กดเพื่อเข้าไป ทายผล"/);
     assert.match(serialized, /"text":"กดเพื่อเข้าไป ทายผล","size":"xxl"/);
     assert.match(serialized, /"height":"56px"/);

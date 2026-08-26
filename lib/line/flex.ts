@@ -90,8 +90,9 @@ const ACCENT = "#D9FF58";
 const PRIMARY_TEXT = "#FFFFFF";
 const MUTED_TEXT = "#8CA6BD";
 const APP_URI = "https://liff.line.me/2010604800-Y9eFejTF";
-const PREDICTION_APP_URI = `${APP_URI}?tab=predictions`;
+const PREDICTION_APP_URI = `${APP_URI}/dashboard?tab=predictions`;
 const PREDICTION_APP_BUTTON_LABEL = "กดเพื่อเข้าไป ทายผล";
+const MENU_APP_BUTTON_LABEL = "เข้า App แฟนตาซี + ทายผลบอล";
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const PREMIER_LEAGUE_BADGE = /^https:\/\/resources\.premierleague\.com\/premierleague25\/badges-alt\/(\d+)\.svg$/i;
 
@@ -174,7 +175,7 @@ function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, ce
   };
 }
 
-function footerButton() {
+function footerButton(uri = PREDICTION_APP_URI, label = PREDICTION_APP_BUTTON_LABEL) {
   return {
     type: "box",
     layout: "horizontal",
@@ -183,8 +184,8 @@ function footerButton() {
     backgroundColor: ACCENT,
     justifyContent: "center",
     alignItems: "center",
-    action: { type: "uri", label: PREDICTION_APP_BUTTON_LABEL, uri: PREDICTION_APP_URI },
-    contents: [{ ...text(PREDICTION_APP_BUTTON_LABEL, "xxl", "bold", "#071525"), align: "center" }],
+    action: { type: "uri", label, uri },
+    contents: [{ ...text(label, "xxl", "bold", "#071525"), align: "center" }],
   };
 }
 
@@ -228,11 +229,11 @@ export function buildCommandMenuFlex(sections: CommandMenuSection[]): FlexMessag
     contents: bubble([
       header("เมนูคำสั่ง", "เลือกคำสั่งที่ต้องการ"),
       ...contents,
-    ]),
+    ], APP_URI, MENU_APP_BUTTON_LABEL),
   };
 }
 
-function bubble(contents: Record<string, unknown>[]) {
+function bubble(contents: Record<string, unknown>[], footerUri = PREDICTION_APP_URI, footerLabel = PREDICTION_APP_BUTTON_LABEL) {
   return {
     type: "bubble",
     size: "giga",
@@ -250,7 +251,7 @@ function bubble(contents: Record<string, unknown>[]) {
       type: "box",
       layout: "vertical",
       spacing: "sm",
-      contents: [footerButton()],
+      contents: [footerButton(footerUri, footerLabel)],
     },
   };
 }
