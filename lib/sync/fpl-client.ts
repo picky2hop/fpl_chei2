@@ -6,6 +6,7 @@ export type FetchFplSnapshotOptions = {
   fetchImpl?: typeof fetch;
   baseUrl?: string;
   timeoutMs?: number;
+  expectedFixtureCount?: number;
 };
 
 async function fetchJson(url: string, fetchImpl: typeof fetch, signal: AbortSignal): Promise<unknown> {
@@ -45,7 +46,7 @@ export async function fetchFplSnapshot(options: FetchFplSnapshotOptions = {}): P
       teams: "teams" in bootstrap ? bootstrap.teams : undefined,
       events: "events" in bootstrap ? bootstrap.events : undefined,
       fixtures,
-    });
+    }, { expectedFixtureCount: options.expectedFixtureCount ?? 380 });
   } catch (error) {
     controller.abort();
     if (error instanceof SyncFailure) throw error;

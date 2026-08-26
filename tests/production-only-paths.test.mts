@@ -18,6 +18,9 @@ test("dashboard never falls back to mock fixtures", async () => {
   assert.equal(source.includes("/api/dashboard"), true);
   assert.equal(source.includes("setInterval"), true);
   assert.equal(source.includes("cache: \"no-store\""), true);
+  assert.equal(source.includes("AbortController"), true);
+  assert.equal(source.includes("ข้อมูลอาจไม่ใช่ข้อมูลล่าสุด"), true);
+  assert.equal(source.includes("setRefreshVersion"), true);
 });
 
 test("landing copy does not advertise preview mode", async () => {
@@ -35,6 +38,18 @@ test("prediction app preserves editable picks and exposes the fantasy switch", a
   assert.equal(source.includes("Preview / LIFF"), false);
   assert.equal(source.includes("href=\"/\""), true);
   assert.equal(source.includes(">หน้าหลัก</Link>"), true);
+  assert.equal(source.includes("ข้อมูลตัวอย่าง Phase 1"), false);
+  assert.equal(source.includes("ข้อมูลจาก Production"), true);
   assert.equal(source.includes('String(entry.rank).padStart(2, "0")'), false);
   assert.equal(source.includes("bg-[#d9ff58] text-[#071525]"), true);
+});
+
+test("detail modal manages focus and body scroll for keyboard users", async () => {
+  const source = await readFile(new URL("../app/components/detail-modal.tsx", import.meta.url), "utf8");
+
+  assert.equal(source.includes("document.activeElement"), true);
+  assert.equal(source.includes("document.body.style.overflow"), true);
+  assert.equal(source.includes('event.key !== "Tab"'), true);
+  assert.equal(source.includes("requestAnimationFrame"), true);
+  assert.equal(source.includes("useId"), true);
 });

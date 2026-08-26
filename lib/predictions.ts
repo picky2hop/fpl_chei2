@@ -79,6 +79,16 @@ export function getCompleteLeaderboardEntries<T extends { id: string }>(
   return entries.filter((entry) => isPredictionComplete(fixtureIds, predictionBook[gameweek]?.[entry.id] ?? {}));
 }
 
+export function getLeaderboardEntriesWithPrediction<T extends { id: string }>(
+  entries: T[],
+  fixtureIds: string[],
+  predictionBook: Record<number, Record<string, PredictionMap>>,
+  gameweek: number,
+): T[] {
+  const predictions = predictionBook[gameweek] ?? {};
+  return entries.filter((entry) => fixtureIds.some((fixtureId) => Boolean(predictions[entry.id]?.[fixtureId])));
+}
+
 export function normalizePredictionPercentage(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }

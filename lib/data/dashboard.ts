@@ -3,6 +3,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { mapPredictionBook, type DashboardPredictionBook } from "@/lib/data/dashboard-core";
 import { sortFixturesForFplOrder } from "@/lib/data/fixture-order";
+import { buildDashboardLeaderboardRows } from "@/lib/data/dashboard-view";
 
 export type DashboardData = {
   season: { id: string; name: string };
@@ -21,13 +22,13 @@ export type DashboardData = {
   }>;
   predictions: Array<{ fixtureId: string; choice: string; status: string }>;
   predictionBookByGameweek: DashboardPredictionBook;
-  leaderboard: Array<{
+  leaderboardByGameweek: Record<number, Array<{
     id: string;
     displayName: string;
     avatarUrl: string;
     gameweekPoints: number;
     seasonPoints: number;
-  }>;
+  }>>;
 };
 
 function percentages(choices: string[]) {
@@ -72,14 +73,8 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
 
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const gameweekById = new Map(gameweeks.map((gameweek) => [gameweek.id, gameweek]));
-  const activeParticipants = participants.filter((participant) => participant.status === "active");
   const currentGameweek = gameweeks.find((gameweek) => gameweek.is_current)?.number ?? gameweeks[0]?.number ?? 0;
-  const usersById = new Map(users.map((user) => [user.id, user]));
-  const seasonTotals = new Map<string, number>();
-  for (const score of scores) seasonTotals.set(score.user_id, (seasonTotals.get(score.user_id) ?? 0) + score.points);
-  const currentGameweekId = gameweeks.find((gameweek) => gameweek.number === currentGameweek)?.id;
-  const currentScores = new Map(scores.filter((score) => score.gameweek_id === currentGameweekId).map((score) => [score.user_id, score.points]));
-  const leaderboardUserIds = new Set(activeParticipants.map((participant) => participant.user_id));
+  const leaderboardByGameweek = buildDashboardLeaderboardRows(gameweeks, participants, scores, users);
 
   return {
     season,
@@ -115,10 +110,6 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       fixtures: fixtures.map((fixture) => ({ id: fixture.id, gameweekId: fixture.gameweek_id })),
       predictions: predictions.map((prediction) => ({ userId: prediction.user_id, fixtureId: prediction.fixture_id, outcome: prediction.outcome, status: prediction.status })),
     }),
-    leaderboard: [...leaderboardUserIds].flatMap((id) => {
-      const user = usersById.get(id);
-      if (!user) return [];
-      return [{ id, displayName: user.display_name, avatarUrl: user.avatar_url ?? "", gameweekPoints: currentScores.get(id) ?? 0, seasonPoints: seasonTotals.get(id) ?? 0 }];
-    }).sort((a, b) => b.seasonPoints - a.seasonPoints || b.gameweekPoints - a.gameweekPoints),
+    leaderboardByGameweek,
   };
 }

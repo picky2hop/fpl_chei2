@@ -87,7 +87,18 @@ test("accepts a complete snapshot and preserves its 380 fixture rows", () => {
     id: index + 1,
   }));
 
-  const snapshot = fplCore.validateFplSnapshot({ ...validSnapshot, fixtures });
+  const snapshot = fplCore.validateFplSnapshot({ ...validSnapshot, fixtures }, { expectedFixtureCount: 380 });
 
   assert.equal(snapshot.fixtures.length, 380);
+});
+
+test("rejects an incomplete provider fixture set before persistence", () => {
+  assert.throws(
+    () => fplCore.validateFplSnapshot(validSnapshot, { expectedFixtureCount: 380 }),
+    (error: unknown) => error instanceof Error
+      && "code" in error
+      && error.code === "FPL_INVALID_SNAPSHOT"
+      && "details" in error
+      && (error.details as { reason?: string }).reason === "incomplete_fixture_set",
+  );
 });

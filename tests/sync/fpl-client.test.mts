@@ -84,7 +84,7 @@ test("returns a validated snapshot from both FPL endpoints", async () => {
     return Response.json(url.endsWith("/api/fixtures/") ? fixtures : bootstrap);
   };
 
-  const snapshot = await fetchFplSnapshot({ fetchImpl, baseUrl: "https://fpl.test/", timeoutMs: 100 });
+  const snapshot = await fetchFplSnapshot({ fetchImpl, baseUrl: "https://fpl.test/", timeoutMs: 100, expectedFixtureCount: 1 });
 
   assert.equal(snapshot.fixtures.length, 1);
   assert.equal(snapshot.teams.length, 2);

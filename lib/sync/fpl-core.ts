@@ -33,6 +33,10 @@ export type FplSnapshot = {
   fixtures: FplFixturePayload[];
 };
 
+export type FplSnapshotValidationOptions = {
+  expectedFixtureCount?: number;
+};
+
 export type NormalizedFplFixture = {
   externalFixtureId: number;
   externalGameweekId: number;
@@ -138,7 +142,7 @@ function validateUniqueIds(rows: readonly { id: number }[], entity: string): voi
   }
 }
 
-export function validateFplSnapshot(value: unknown): FplSnapshot {
+export function validateFplSnapshot(value: unknown, options: FplSnapshotValidationOptions = {}): FplSnapshot {
   if (!isRecord(value) || !Array.isArray(value.teams) || !Array.isArray(value.events) || !Array.isArray(value.fixtures)) {
     invalidSnapshot("invalid_root_shape");
   }
@@ -192,6 +196,10 @@ export function validateFplSnapshot(value: unknown): FplSnapshot {
   validateUniqueIds(teams, "team");
   validateUniqueIds(events, "gameweek");
   validateUniqueIds(fixtures, "fixture");
+
+  if (options.expectedFixtureCount !== undefined && fixtures.length !== options.expectedFixtureCount) {
+    invalidSnapshot("incomplete_fixture_set", { expectedFixtureCount: options.expectedFixtureCount, actualFixtureCount: fixtures.length });
+  }
 
   const teamIds = new Set(teams.map((team) => team.id));
   const eventIds = new Set(events.map((event) => event.id));

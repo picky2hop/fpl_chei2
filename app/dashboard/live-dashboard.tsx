@@ -2,71 +2,42 @@
 
 import { useEffect, useState } from "react";
 import PredictionApp from "../components/prediction-app-final";
-import type { Fixture, Gameweek, LeaderboardEntry, Team, UserProfile } from "@/lib/mock-data";
-import type { PredictionMap } from "@/lib/predictions";
-import type { DashboardPredictionBook } from "@/lib/data/dashboard-core";
-
-type DashboardPayload = {
-  gameweeks: Array<{ id: string; number: number; label: string; state: "current" | "past" | "future"; fixtureCount: number }>;
-  fixtures: Array<{
-    id: string; gameweekId: string; gameweekNumber: number; kickoffAt: string; status: string; homeScore: number | null; awayScore: number | null;
-    homeTeam: { id: string; name: string; shortName: string; crest: string };
-    awayTeam: { id: string; name: string; shortName: string; crest: string };
-    predictionPercentages: { home: number; draw: number; away: number };
-  }>;
-  predictions: Array<{ fixtureId: string; choice: string; status: string }>;
-  predictionBookByGameweek: DashboardPredictionBook;
-  leaderboard: Array<{ id: string; displayName: string; avatarUrl: string; gameweekPoints: number; seasonPoints: number }>;
-};
-
-function team(value: DashboardPayload["fixtures"][number]["homeTeam"]): Team {
-  return { id: value.id, name: value.name, shortName: value.shortName, accent: "#38bdf8", crest: value.crest || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='16' fill='%2310253a'/%3E%3C/svg%3E" };
-}
-
-function toFixture(value: DashboardPayload["fixtures"][number]): Fixture {
-  const dateLabel = new Intl.DateTimeFormat("th-TH", { timeZone: "Asia/Bangkok", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value.kickoffAt));
-  return { id: value.id, gameweek: value.gameweekNumber, kickoff: value.kickoffAt, dateLabel, status: value.status as Fixture["status"], homeTeam: team(value.homeTeam), awayTeam: team(value.awayTeam), homeScore: value.homeScore ?? undefined, awayScore: value.awayScore ?? undefined, predictionPercentages: value.predictionPercentages, predictors: { home: [], draw: [], away: [] } };
-}
-
-function buildLiveProps(payload: DashboardPayload, profile: UserProfile) {
-  const fixtures = payload.fixtures.map(toFixture);
-  const fixturesByGameweek = Object.fromEntries(payload.gameweeks.map((gameweek) => [gameweek.number, fixtures.filter((fixture) => fixture.gameweek === gameweek.number)]));
-  const gameweeks: Gameweek[] = payload.gameweeks.map((gameweek) => ({ id: gameweek.number, label: gameweek.label, state: gameweek.state, fixtureCount: gameweek.fixtureCount }));
-  const entries: LeaderboardEntry[] = payload.leaderboard.map((entry, index) => ({ ...entry, shortName: entry.displayName.slice(0, 2), rank: index + 1, trend: "same", form: [] }));
-  const leaderboardByGameweek = Object.fromEntries(gameweeks.map((gameweek) => [gameweek.id, entries]));
-  const gameweekNumberById = new Map(payload.gameweeks.map((gameweek) => [gameweek.id, gameweek.number]));
-  const fixtureGameweek = new Map(fixtures.map((fixture) => [fixture.id, fixture.gameweek]));
-  const initialPredictionsByGameweek: Record<number, PredictionMap> = {};
-  for (const prediction of payload.predictions) {
-    const gameweek = fixtureGameweek.get(prediction.fixtureId);
-    if (gameweek && (prediction.choice === "home" || prediction.choice === "draw" || prediction.choice === "away")) {
-      initialPredictionsByGameweek[gameweek] ??= {};
-      initialPredictionsByGameweek[gameweek][prediction.fixtureId] = prediction.choice;
-    }
-  }
-  const current = payload.gameweeks.find((gameweek) => gameweek.state === "current")?.number ?? gameweeks[0]?.id ?? 0;
-  return { current, gameweeks, fixturesByGameweek, leaderboardByGameweek, initialPredictionsByGameweek, profile, gameweekNumberById };
-}
+import { buildLiveProps, type DashboardPayload } from "@/lib/data/dashboard-view";
+import type { UserProfile } from "@/lib/mock-data";
 
 export default function LiveDashboard({ profile }: { profile: UserProfile }) {
   const [payload, setPayload] = useState<DashboardPayload | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   useEffect(() => {
     let disposed = false;
+    let requestSequence = 0;
+    let activeController: AbortController | null = null;
+    let hasLoaded = false;
     const load = async () => {
+      const requestId = ++requestSequence;
+      activeController?.abort();
+      const controller = new AbortController();
+      activeController = controller;
+      if (hasLoaded) setIsRefreshing(true);
       try {
-        const response = await fetch("/api/dashboard", { cache: "no-store" });
+        const response = await fetch("/api/dashboard", { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error("Unable to load live dashboard");
         const nextPayload = await response.json() as DashboardPayload;
-        if (!disposed) {
+        if (!disposed && requestId === requestSequence) {
           setPayload(nextPayload);
           setError("");
+          hasLoaded = true;
         }
       } catch (reason: unknown) {
-        if (!disposed) setError(reason instanceof Error ? reason.message : "Unable to load live dashboard");
+        if (!disposed && requestId === requestSequence && !(reason instanceof DOMException && reason.name === "AbortError")) setError("โหลดข้อมูลรอบล่าสุดไม่สำเร็จ");
       } finally {
-        if (!disposed) setIsLoading(false);
+        if (!disposed && requestId === requestSequence) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
       }
     };
 
@@ -74,20 +45,21 @@ export default function LiveDashboard({ profile }: { profile: UserProfile }) {
     const interval = window.setInterval(() => void load(), 30_000);
     return () => {
       disposed = true;
+      activeController?.abort();
       window.clearInterval(interval);
     };
-  }, []);
+  }, [refreshVersion]);
 
   if (!payload) {
     return <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#071525] text-sm font-bold text-white/60">{error || "กำลังโหลดข้อมูลการแข่งขัน…"}{!isLoading && error && <button type="button" onClick={() => window.location.reload()} className="rounded-xl bg-[#d9ff58] px-4 py-2 text-xs font-black text-[#071525]">ลองใหม่</button>}</main>;
   }
 
   const props = buildLiveProps(payload, profile);
-  return <PredictionApp currentUser={props.profile} gameweeks={props.gameweeks} fixturesByGameweek={props.fixturesByGameweek} leaderboardByGameweek={props.leaderboardByGameweek} initialPredictionsByGameweek={props.initialPredictionsByGameweek} initialGameweek={props.current} predictionBookByGameweek={payload.predictionBookByGameweek} onConfirmPredictions={async (_gameweek, predictions) => {
+  return <>{error && <div role="alert" className="border-b border-[#ffc857]/30 bg-[#ffc857]/10 px-4 py-3 text-center text-xs font-bold text-[#ffe0a0]">ข้อมูลอาจไม่ใช่ข้อมูลล่าสุด <button type="button" onClick={() => setRefreshVersion((version) => version + 1)} className="ml-2 rounded-full border border-[#ffc857]/40 px-3 py-1 font-black text-[#ffe0a0]">ลองใหม่</button></div>}{isRefreshing && <p role="status" className="sr-only">กำลังตรวจข้อมูลล่าสุด…</p>}<PredictionApp currentUser={props.profile} gameweeks={props.gameweeks} fixturesByGameweek={props.fixturesByGameweek} leaderboardByGameweek={props.leaderboardByGameweek} initialPredictionsByGameweek={props.initialPredictionsByGameweek} initialGameweek={props.current} predictionBookByGameweek={payload.predictionBookByGameweek} onConfirmPredictions={async (_gameweek, predictions) => {
     const response = await fetch("/api/predictions", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ predictions: Object.entries(predictions).map(([fixtureId, choice]) => ({ fixtureId, choice })) }) });
     if (!response.ok) {
       const body = await response.json().catch(() => null) as { error?: string } | null;
       throw new Error(body?.error === "Prediction is locked" ? "มีคู่ที่เริ่มแข่งแล้ว กรุณาตรวจสอบคำทายอีกครั้ง" : "บันทึกคำทายไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     }
-  }} />;
+  }} /></>;
 }
