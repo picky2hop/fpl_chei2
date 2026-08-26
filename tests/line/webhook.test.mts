@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createLineBotCommandService, handleLineWebhookPayload, type LineBotCommandService } from "../../lib/line/webhook.ts";
 import { replyToLine } from "../../lib/line/messaging.ts";
+import type { FantasyMyTeamData } from "../../lib/data/line-bot-core.ts";
 
 function fakeCommandService(
   result: Awaited<ReturnType<LineBotCommandService["replyForText"]>>,
@@ -193,6 +194,59 @@ test("returns the Chei Fantasy Top/Bottom Flex for the new bot command", async (
   assert.equal(messages?.[0]?.type, "flex");
   assert.match(JSON.stringify(messages), /เชยเชย Cup|Top Manager|Bottom Manager|Top 5|Bottom 5/);
   assert.doesNotMatch(JSON.stringify(messages), /textV2|mention/);
+});
+
+const myFantasyTeam: FantasyMyTeamData = {
+  leagueFplId: 819498,
+  leagueName: "เชยเชย Cup",
+  entryId: 498,
+  displayName: "Picky",
+  avatarUrl: "https://example.test/avatar.png",
+  teamName: "Chei FC",
+  managerName: "Picky Manager",
+  squad: {
+    gameweekNumber: 1,
+    formation: "4-4-2",
+    captainPlayerId: 1,
+    viceCaptainPlayerId: 2,
+    starters: [],
+    bench: [],
+  },
+};
+
+test("returns the mapped Fantasy team Flex for the my-team command", async () => {
+  const service = createLineBotCommandService({
+    async getCurrentStandings() { throw new Error("must not load standings"); },
+    async getTodayFixtures() { throw new Error("must not load fixtures"); },
+    async getUserPredictions() { throw new Error("must not load predictions"); },
+    async getPredictionAwards() { throw new Error("must not load prediction awards"); },
+    async getFantasyAwards() { throw new Error("must not load fantasy awards"); },
+    async getFantasyTopBottom() { throw new Error("must not load fantasy leaderboard"); },
+    async getFantasyTeam(lineUserId) {
+      assert.equal(lineUserId, "line-user-1");
+      return myFantasyTeam;
+    },
+  });
+
+  const messages = await service.replyForText({ text: "ทีมของฉัน", lineUserId: "line-user-1" });
+  assert.equal(messages?.length, 1);
+  assert.equal(messages?.[0]?.type, "flex");
+  assert.match(JSON.stringify(messages), /Chei FC|Picky/);
+});
+
+test("returns the requested no-team message when my-team has no Fantasy mapping", async () => {
+  const service = createLineBotCommandService({
+    async getCurrentStandings() { throw new Error("must not load standings"); },
+    async getTodayFixtures() { throw new Error("must not load fixtures"); },
+    async getUserPredictions() { throw new Error("must not load predictions"); },
+    async getPredictionAwards() { throw new Error("must not load prediction awards"); },
+    async getFantasyAwards() { throw new Error("must not load fantasy awards"); },
+    async getFantasyTopBottom() { throw new Error("must not load fantasy leaderboard"); },
+    async getFantasyTeam() { return null; },
+  });
+
+  const messages = await service.replyForText({ text: "ทีมของฉัน", lineUserId: "line-user-1" });
+  assert.deepEqual(messages, [{ type: "text", text: "ไม่พบทีมของคุณ กรุณาติดต่อ admin" }]);
 });
 
 test("ignores LINE verification payloads and non-text events", async () => {

@@ -1,4 +1,5 @@
 import type { PredictionChoice, FlexTeam } from "../line/flex.ts";
+import type { FantasyEntryCurrentSquad } from "../fantasy/types.ts";
 import { sortFixturesForFplOrder } from "./fixture-order.ts";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
@@ -125,6 +126,25 @@ export type FantasyTopBottomData = {
   gameweek: number;
   rows: FantasyTopBottomRow[];
 };
+
+export type FantasyMyTeamData = {
+  leagueFplId: 819498 | 819502;
+  leagueName: string;
+  entryId: number;
+  displayName: string;
+  avatarUrl: string | null;
+  teamName: string;
+  managerName: string;
+  squad: FantasyEntryCurrentSquad;
+};
+
+export type FantasyTeamCandidate = Pick<FantasyMyTeamData, "leagueFplId" | "leagueName" | "entryId">;
+
+export function selectPreferredFantasyTeam<T extends FantasyTeamCandidate>(teams: readonly T[]): T | null {
+  return teams.find((team) => team.leagueFplId === 819498)
+    ?? teams.find((team) => team.leagueFplId === 819502)
+    ?? null;
+}
 
 export function selectActiveGameweek(gameweeks: ActiveGameweek[]): ActiveGameweek | null {
   return gameweeks.find((gameweek) => gameweek.isCurrent) ?? [...gameweeks].sort((left, right) => left.number - right.number)[0] ?? null;

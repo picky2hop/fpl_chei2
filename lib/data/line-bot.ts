@@ -3,7 +3,8 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
 import { buildLeagueLeaderboard } from "@/lib/fantasy/league-scoring";
-import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type FantasyAwardsData, type FantasyTopBottomData, type PredictionAwardsData } from "./line-bot-core";
+import { getFantasyMyTeamData } from "./fantasy.ts";
+import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type FantasyAwardsData, type FantasyMyTeamData, type FantasyTopBottomData, type PredictionAwardsData } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -212,6 +213,7 @@ export type LineBotDataReader = {
   getPredictionAwards(): Promise<PredictionAwardsData | null>;
   getFantasyAwards(leagueFplId: 819498 | 819502): Promise<FantasyAwardsData | null>;
   getFantasyTopBottom(leagueFplId: 819498): Promise<FantasyTopBottomData | null>;
+  getFantasyTeam(lineUserId: string): Promise<FantasyMyTeamData | null>;
 };
 
 export function createLineBotDataReader(): LineBotDataReader {
@@ -500,6 +502,10 @@ export function createLineBotDataReader(): LineBotDataReader {
           avatarUrl: row.avatarUrl,
         })),
       };
+    },
+
+    async getFantasyTeam(lineUserId) {
+      return getFantasyMyTeamData({ lineUserId });
     },
   };
 }

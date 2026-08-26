@@ -28,6 +28,7 @@ test("maps menu aliases and ignores ordinary text", () => {
   assert.equal(parseLineCommand("ขอตารางคะแนนของทุกคนหน่อยครับ"), null);
   assert.equal(parseLineCommand(""), null);
   assert.equal(parseLineCommand("   \n  "), null);
+  assert.equal(parseLineCommand("ทีมของฉัน"), "myFantasyTeam");
 });
 
 test("menu Flex uses two columns, grouped game labels, and the Top/Bottom command", () => {
@@ -43,6 +44,7 @@ test("menu Flex uses two columns, grouped game labels, and the Top/Bottom comman
     { label: "แชมป์บ๊วยทายผล", text: "แชมป์บ๊วยทายผล" },
     { label: "แชมป์บ๊วยเชย", text: "แชมป์บ๊วยเชย" },
     { label: "แชมป์บ๊วยเขาค้อ", text: "แชมป์บ๊วยเขาค้อ" },
+    { label: "ทีมของฉัน", text: "ทีมของฉัน" },
     { label: "Top 5 + บ๊วย 5", text: "Top 5 + บ๊วย 5" },
   ];
   for (const command of commands) {
@@ -56,7 +58,7 @@ test("menu Flex uses two columns, grouped game labels, and the Top/Bottom comman
   assert.match(serialized, /เกมทายผลพรีเมียร์ลีก/);
   assert.match(serialized, /เกมแฟนตาซี/);
   assert.match(serialized, /"color":"#D9FF58"/);
-  assert.equal((serialized.match(/"type":"message"/g) ?? []).length, 7);
+  assert.equal((serialized.match(/"type":"message"/g) ?? []).length, 8);
   assert.doesNotMatch(serialized, /"label":"เมนู","text":"เมนู"/);
   assert.doesNotThrow(() => validateFlexMessage(message));
 
@@ -71,5 +73,5 @@ test("menu Flex uses two columns, grouped game labels, and the Top/Bottom comman
   assert.equal(bodyContents[5]?.layout, "horizontal");
   assert.equal(bodyContents[5]?.contents?.length, 2);
   assert.equal(bodyContents[6]?.layout, "horizontal");
-  assert.equal(bodyContents[6]?.contents?.length, 1);
+  assert.equal(bodyContents[6]?.contents?.length, 2);
 });

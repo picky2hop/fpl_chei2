@@ -1,10 +1,10 @@
 import { buildLineMenuMessage, parseLineCommand } from "./commands.ts";
 import { buildFantasyAwardsFlex, buildPredictionAwardsFlex, buildPredictionResultFlex, buildStandingsFlex, buildTodayFixturesFlex } from "./flex.ts";
 import { buildFantasyAwardsAnnouncement, buildPredictionAwardsAnnouncement } from "./announcement.ts";
-import { buildFantasyLeaderboardTopBottomShareFlex } from "../fantasy/fantasy-share-payload.ts";
+import { buildFantasyLeaderboardTopBottomShareFlex, buildFantasySquadShareFlex } from "../fantasy/fantasy-share-payload.ts";
 import { selectBottomLeaderboardRows, selectTopLeaderboardRows } from "../fantasy/leaderboard-share-selection.ts";
 import type { LineMessage } from "./messaging.ts";
-import type { FantasyAwardsData, FantasyTopBottomData, PredictionAwardsData } from "../data/line-bot-core.ts";
+import type { FantasyAwardsData, FantasyMyTeamData, FantasyTopBottomData, PredictionAwardsData } from "../data/line-bot-core.ts";
 
 export type LineWebhookPayload = {
   destination?: string;
@@ -46,6 +46,7 @@ export type LineBotDataReader = {
   getPredictionAwards: () => Promise<PredictionAwardsData | null>;
   getFantasyAwards: (leagueFplId: 819498 | 819502) => Promise<FantasyAwardsData | null>;
   getFantasyTopBottom: (leagueFplId: 819498) => Promise<FantasyTopBottomData | null>;
+  getFantasyTeam: (lineUserId: string) => Promise<FantasyMyTeamData | null>;
 };
 
 export type LineBotCommandService = {
@@ -141,6 +142,22 @@ export function createLineBotCommandService(data: LineBotDataReader): LineBotCom
           period: "gameweek",
           topRows: selectTopLeaderboardRows(leaderboard.rows),
           bottomRows: selectBottomLeaderboardRows(leaderboard.rows),
+        })];
+      }
+      if (command === "myFantasyTeam") {
+        if (!input.lineUserId) return [unknownUserMessage];
+        let team;
+        try {
+          team = await data.getFantasyTeam(input.lineUserId);
+        } catch {
+          return [dataUnavailableMessage];
+        }
+        if (!team) return [{ type: "text", text: "ไม่พบทีมของคุณ กรุณาติดต่อ admin" }];
+        return [buildFantasySquadShareFlex({
+          managerName: team.displayName,
+          managerAvatarUrl: team.avatarUrl,
+          teamName: team.teamName,
+          squad: team.squad,
         })];
       }
       if (!input.lineUserId) return [unknownUserMessage];
