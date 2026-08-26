@@ -90,6 +90,8 @@ const ACCENT = "#D9FF58";
 const PRIMARY_TEXT = "#FFFFFF";
 const MUTED_TEXT = "#8CA6BD";
 const APP_URI = "https://liff.line.me/2010604800-Y9eFejTF";
+const PREDICTION_APP_URI = `${APP_URI}?tab=predictions`;
+const PREDICTION_APP_BUTTON_LABEL = "กดเพื่อเข้าไป ทายผล";
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const PREMIER_LEAGUE_BADGE = /^https:\/\/resources\.premierleague\.com\/premierleague25\/badges-alt\/(\d+)\.svg$/i;
 
@@ -181,8 +183,8 @@ function footerButton() {
     backgroundColor: ACCENT,
     justifyContent: "center",
     alignItems: "center",
-    action: { type: "uri", label: "เปิดแอป FPL Chei Chei", uri: APP_URI },
-    contents: [{ ...text("เปิดแอป FPL Chei Chei", "sm", "bold", "#071525"), align: "center" }],
+    action: { type: "uri", label: PREDICTION_APP_BUTTON_LABEL, uri: PREDICTION_APP_URI },
+    contents: [{ ...text(PREDICTION_APP_BUTTON_LABEL, "xxl", "bold", "#071525"), align: "center" }],
   };
 }
 

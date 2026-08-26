@@ -97,7 +97,7 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   assert.match(serialized, /"text":"2"/);
   assert.doesNotMatch(serialized, /"text":"0[12]"/);
   assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF/);
-  assert.match(serialized, /"text":"เปิดแอป FPL Chei Chei"/);
+  assert.match(serialized, /"text":"กดเพื่อเข้าไป ทายผล"/);
   assert.match(serialized, /"color":"#071525"/);
   assert.match(serialized, /"cornerRadius":"xxl"/);
   assert.match(serialized, /อัปเดต 1 Aug 2026 18:46/);
@@ -118,6 +118,31 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   assert.equal(rowContents[4]?.flex, 1);
   assert.equal(rowContents[5]?.text, "6 คะแนน");
   assert.equal(rowContents[5]?.flex, 0);
+});
+
+test("prediction Flex footers open the prediction tab with the requested label", () => {
+  const messages = [
+    buildPredictionResultFlex({ displayName: "Picky", gameweek: 1, fixtures: [] }),
+    buildFixturePredictionFlex({
+      gameweek: 1,
+      dateLabel: "เสาร์ 22 ส.ค.",
+      status: "upcoming",
+      homeTeam: { name: "Arsenal" },
+      awayTeam: { name: "Chelsea" },
+      predictionPercentages: { home: 50, draw: 0, away: 50 },
+      predictors: [],
+    }),
+    buildStandingsFlex({ period: "gameweek", gameweek: 1, rows: [] }),
+    buildTodayFixturesFlex({ dateLabel: "วันนี้", fixtures: [] }),
+  ];
+
+  for (const message of messages) {
+    const serialized = JSON.stringify(message);
+    assert.match(serialized, /https:\/\/liff\.line\.me\/2010604800-Y9eFejTF\?tab=predictions/);
+    assert.match(serialized, /"label":"กดเพื่อเข้าไป ทายผล"/);
+    assert.match(serialized, /"text":"กดเพื่อเข้าไป ทายผล","size":"xxl"/);
+    assert.match(serialized, /"height":"56px"/);
+  }
 });
 
 test("prediction awards Flex shows profiles and points without an app button", () => {

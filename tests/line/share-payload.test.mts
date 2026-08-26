@@ -33,7 +33,7 @@ test("builds the standings share payload from the selected app mode", () => {
 
   assert.match(serialized, /42 คะแนน/);
   assert.match(serialized, /https:\/\/example\.com\/avatar\.jpg/);
-  assert.match(serialized, /เปิดแอป FPL Chei Chei/);
+  assert.match(serialized, /กดเพื่อเข้าไป ทายผล/);
 });
 
 test("builds the prediction share payload with profile and team assets", () => {

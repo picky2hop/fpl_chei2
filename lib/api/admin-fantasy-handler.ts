@@ -81,14 +81,26 @@ export function createAdminFantasyMappingsHandler(dependencies: AdminFantasyDepe
           dependencies.repository.getDashboard({ seasonId: season.id }),
         ]);
         const currentGameweek = dashboard.gameweeks.find((gameweek) => gameweek.is_current) ?? dashboard.gameweeks[0];
-        const [leagues, unmappedEntries, leagueEntries] = dependencies.repository.listLeagues && dependencies.repository.listUnmappedLeagueEntries && dependencies.repository.listLeagueEntries && currentGameweek
+        const [leagues, unmappedEntries, leagueEntriesByGameweek] = dependencies.repository.listLeagues && dependencies.repository.listUnmappedLeagueEntries && dependencies.repository.listLeagueEntries && currentGameweek
           ? await Promise.all([
             dependencies.repository.listLeagues(season.id, true),
             dependencies.repository.listUnmappedLeagueEntries({ seasonId: season.id, gameweekId: currentGameweek.id }),
-            dependencies.repository.listLeagueEntries({ seasonId: season.id, gameweekId: currentGameweek.id }),
+            Promise.all(dashboard.gameweeks.map(async (gameweek) => [
+              gameweek.id,
+              await dependencies.repository.listLeagueEntries!({ seasonId: season.id, gameweekId: gameweek.id }),
+            ] as const)).then((entries) => Object.fromEntries(entries)),
           ])
-          : [[], [], []];
-        return Response.json({ season, mappings, users, gameweeks: dashboard.gameweeks, leagues, unmappedEntries, leagueEntries });
+          : [[], [], {} as Record<string, Awaited<ReturnType<FantasyLeagueRepository["listLeagueEntries"]>>>];
+        return Response.json({
+          season,
+          mappings,
+          users,
+          gameweeks: dashboard.gameweeks,
+          leagues,
+          unmappedEntries,
+          leagueEntries: leagueEntriesByGameweek[currentGameweek?.id ?? ""] ?? [],
+          leagueEntriesByGameweek,
+        });
       } catch {
         return Response.json({ error: "Unable to load Fantasy mappings" }, { status: 500 });
       }

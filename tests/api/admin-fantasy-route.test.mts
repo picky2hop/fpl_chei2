@@ -75,6 +75,32 @@ test("admin mapping GET exposes league member candidates with badges", async () 
   assert.equal(value.unmappedEntries[0].leagues.length, 1);
 });
 
+test("admin mapping GET exposes league entries for every available gameweek", async () => {
+  const base = repository();
+  const gameweeks = [
+    { id: "gw-1", number: 1, name: "GW 1", is_current: true, status: "open" as const },
+    { id: "gw-2", number: 2, name: "GW 2", is_current: false, status: "open" as const },
+  ];
+  const entry = (id: number) => ({ fpl_entry_id: id, fpl_team_name: `Team ${id}`, fpl_manager_name: "Manager", leagues: [{ id: "league-1", official_name: "Cup" }] });
+  const response = await createAdminFantasyMappingsHandler({
+    requireAdmin: async () => ({ id: "admin-1" }),
+    repository: {
+      ...base,
+      getDashboard: async () => ({ ...await base.getDashboard({ seasonId: "season-1" }), gameweeks, mappings: [] }),
+      listLeagues: async () => [{ id: "league-1", season_id: "season-1", fpl_league_id: 819498, official_name: "Cup", status: "active", archived_at: null }],
+      listUnmappedLeagueEntries: async () => [],
+      listLeagueEntries: async ({ gameweekId }) => [entry(gameweekId === "gw-1" ? 10 : 20)],
+    },
+    listUsers: async () => [],
+    provider: { getEntrySummary: async (entryId) => ({ entryId, teamName: "Team", managerName: "Manager" }) },
+  })(new Request("https://example.test/api/admin/fantasy/mappings", { method: "GET" }));
+
+  const value = await response.json() as { leagueEntriesByGameweek: Record<string, Array<{ fpl_entry_id: number }>> };
+  assert.deepEqual(Object.keys(value.leagueEntriesByGameweek), ["gw-1", "gw-2"]);
+  assert.deepEqual(value.leagueEntriesByGameweek["gw-1"], [entry(10)]);
+  assert.deepEqual(value.leagueEntriesByGameweek["gw-2"], [entry(20)]);
+});
+
 test("admin awards replace multiple recipients after validating mappings and GW", async () => {
   let awards: unknown;
   const base = repository();

@@ -44,6 +44,14 @@ test("prediction app preserves editable picks and exposes the fantasy switch", a
   assert.equal(source.includes("bg-[#d9ff58] text-[#071525]"), true);
 });
 
+test("prediction app opens the requested prediction tab from a LIFF deep link", async () => {
+  const source = await readFile(new URL("../app/components/prediction-app-final.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /new URLSearchParams\(window\.location\.search\)/);
+  assert.match(source, /get\("tab"\)/);
+  assert.match(source, /tab === "predictions"/);
+});
+
 test("detail modal manages focus and body scroll for keyboard users", async () => {
   const source = await readFile(new URL("../app/components/detail-modal.tsx", import.meta.url), "utf8");
 

@@ -231,7 +231,11 @@ function SharePrompt({ gameweek, completionLabel, errorMessage, onClose, onShare
 }
 
 export default function PredictionApp({ currentUser, gameweeks, fixturesByGameweek, leaderboardByGameweek, initialPredictionsByGameweek, initialGameweek, predictionBookByGameweek: livePredictionBookByGameweek, onConfirmPredictions }: PredictionAppProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("leaderboard");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "leaderboard";
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    return tab === "predictions" ? "predictions" : "leaderboard";
+  });
   const [selectedGameweek, setSelectedGameweek] = useState(initialGameweek ?? gameweeks[0]?.id ?? 0);
   const [predictionsByGameweek, setPredictionsByGameweek] = useState<Record<number, PredictionMap>>(initialPredictionsByGameweek ?? {});
   const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);

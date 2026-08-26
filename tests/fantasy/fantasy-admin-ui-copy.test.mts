@@ -11,3 +11,14 @@ test("Fantasy admin exposes three independent sync actions", async () => {
   assert.match(source, /\/api\/admin\/fantasy\/player-stats-sync/);
   assert.match(source, /\/api\/admin\/fantasy\/recalculate-scores/);
 });
+
+test("Fantasy admin keeps mapping history compact and scopes awards to the selected gameweek", async () => {
+  const source = await readFile(new URL("../../app/admin/fantasy-admin-panel.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /selectedMappingId/);
+  assert.match(source, /ประวัติ Mapping/);
+  assert.match(source, /leagueEntriesByGameweek/);
+  assert.match(source, /<select/);
+  assert.match(source, /championEntryIds/);
+  assert.match(source, /woodenSpoonEntryIds/);
+});
