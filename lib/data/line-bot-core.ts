@@ -111,6 +111,21 @@ export type FantasyAwardsData = {
   woodenSpoons: FantasyAwardRecipient[];
 };
 
+export type FantasyTopBottomRow = {
+  rank: number;
+  managerName: string;
+  teamName: string;
+  points: number;
+  avatarUrl: string | null;
+};
+
+export type FantasyTopBottomData = {
+  leagueFplId: number;
+  leagueName: string;
+  gameweek: number;
+  rows: FantasyTopBottomRow[];
+};
+
 export function selectActiveGameweek(gameweeks: ActiveGameweek[]): ActiveGameweek | null {
   return gameweeks.find((gameweek) => gameweek.isCurrent) ?? [...gameweeks].sort((left, right) => left.number - right.number)[0] ?? null;
 }

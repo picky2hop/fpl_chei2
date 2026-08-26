@@ -1,7 +1,7 @@
 import type { LineMessage } from "./messaging";
 import { buildCommandMenuFlex } from "./flex.ts";
 
-export type LineBotCommand = "menu" | "standings" | "todayFixtures" | "myPredictions" | "predictionAwards" | "fantasyAwardsChei" | "fantasyAwardsKhao";
+export type LineBotCommand = "menu" | "standings" | "todayFixtures" | "myPredictions" | "predictionAwards" | "fantasyAwardsChei" | "fantasyAwardsKhao" | "fantasyTopBottomChei";
 
 const aliases: Record<string, LineBotCommand> = {
   "ขอตาราง": "standings",
@@ -17,6 +17,7 @@ const aliases: Record<string, LineBotCommand> = {
   "แชมป์บ๊วยทายผล": "predictionAwards",
   "แชมป์บ๊วยเชย": "fantasyAwardsChei",
   "แชมป์บ๊วยเขาค้อ": "fantasyAwardsKhao",
+  "top 5 + บ๊วย 5": "fantasyTopBottomChei",
   "เมนู": "menu",
   "ช่วย": "menu",
   "คำสั่ง": "menu",
@@ -32,10 +33,19 @@ export function parseLineCommand(text: string): LineBotCommand | null {
 
 export function buildLineMenuMessage(): LineMessage {
   return buildCommandMenuFlex([
-    "ขอตาราง",
-    "บอลวันนี้",
-    { label: "ผลทายของฉัน", text: "ผลทาย" },
-    "แชมป์บ๊วยทายผล",
-    "แชมป์บ๊วยเชย",
+    {
+      title: "เกมทายผลพรีเมียร์ลีก",
+      rows: [
+        [{ label: "ขอตารางทายผล", text: "ขอตาราง" }, { label: "ผลทายของฉัน", text: "ผลทาย" }],
+        ["บอลวันนี้", "แชมป์บ๊วยทายผล"],
+      ],
+    },
+    {
+      title: "เกมแฟนตาซี",
+      rows: [
+        ["แชมป์บ๊วยเชย", "แชมป์บ๊วยเขาค้อ"],
+        ["Top 5 + บ๊วย 5"],
+      ],
+    },
   ]);
 }

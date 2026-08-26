@@ -2,7 +2,8 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
-import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type FantasyAwardsData, type PredictionAwardsData } from "./line-bot-core";
+import { buildLeagueLeaderboard } from "@/lib/fantasy/league-scoring";
+import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type FantasyAwardsData, type FantasyTopBottomData, type PredictionAwardsData } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -210,6 +211,7 @@ export type LineBotDataReader = {
   getUserPredictions(lineUserId: string): Promise<UserPredictionData | null>;
   getPredictionAwards(): Promise<PredictionAwardsData | null>;
   getFantasyAwards(leagueFplId: 819498 | 819502): Promise<FantasyAwardsData | null>;
+  getFantasyTopBottom(leagueFplId: 819498): Promise<FantasyTopBottomData | null>;
 };
 
 export function createLineBotDataReader(): LineBotDataReader {
@@ -423,6 +425,81 @@ export function createLineBotDataReader(): LineBotDataReader {
           points: scoreByEntry.get(award.fpl_entry_id) ?? 0,
         };
       }));
+    },
+
+    async getFantasyTopBottom(leagueFplId) {
+      const { admin, season } = await activeSeasonContext();
+      const { data: league, error: leagueError } = await admin
+        .from("fantasy_leagues")
+        .select("id,fpl_league_id,official_name")
+        .eq("season_id", season.id)
+        .eq("fpl_league_id", leagueFplId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (leagueError) throw new Error("Fantasy leaderboard is unavailable");
+      if (!league) return null;
+
+      const { data: gameweeks, error: gameweekError } = await admin
+        .from("gameweeks")
+        .select("id,number,is_current,status")
+        .eq("season_id", season.id)
+        .order("number");
+      if (gameweekError) throw new Error("Fantasy leaderboard is unavailable");
+      const currentGameweek = (gameweeks ?? []).find((gameweek) => gameweek.is_current)
+        ?? [...(gameweeks ?? [])].filter((gameweek) => gameweek.status === "closed" || gameweek.status === "reopened").sort((left, right) => right.number - left.number)[0]
+        ?? (gameweeks ?? [])[0];
+      if (!currentGameweek) return null;
+
+      const [{ data: memberships, error: membershipError }, { data: scores, error: scoreError }, { data: mappings, error: mappingError }] = await Promise.all([
+        admin.from("fantasy_league_membership_snapshots").select("league_id,gameweek_id,fpl_entry_id,fpl_team_name,fpl_manager_name").eq("season_id", season.id).eq("league_id", league.id).eq("gameweek_id", currentGameweek.id),
+        admin.from("fantasy_entry_gameweek_scores").select("fpl_entry_id,gameweek_id,points").eq("season_id", season.id).eq("gameweek_id", currentGameweek.id),
+        admin.from("fantasy_entry_mappings").select("fpl_entry_id,app_user_id").eq("season_id", season.id).eq("mapping_status", "active"),
+      ]);
+      if (membershipError || scoreError || mappingError) throw new Error("Fantasy leaderboard is unavailable");
+
+      const userIds = [...new Set((mappings ?? []).map((mapping) => mapping.app_user_id))];
+      const { data: users, error: userError } = userIds.length
+        ? await admin.from("app_users").select("id,display_name,avatar_url").in("id", userIds)
+        : { data: [], error: null };
+      if (userError) throw new Error("Fantasy leaderboard is unavailable");
+
+      const usersById = new Map((users ?? []).map((user) => [user.id, user]));
+      const leaderboard = buildLeagueLeaderboard({
+        members: (memberships ?? []).map((membership) => ({
+          league_id: membership.league_id,
+          gameweek_id: membership.gameweek_id,
+          fpl_entry_id: membership.fpl_entry_id,
+          fpl_team_name: membership.fpl_team_name,
+          fpl_manager_name: membership.fpl_manager_name,
+        })),
+        scores: (scores ?? []).map((score) => ({
+          fpl_entry_id: score.fpl_entry_id,
+          gameweek_id: score.gameweek_id,
+          gameweek_number: currentGameweek.number,
+          points: score.points,
+        })),
+        mappings: (mappings ?? []).map((mapping) => ({
+          fpl_entry_id: mapping.fpl_entry_id,
+          app_user_id: mapping.app_user_id,
+          display_name: usersById.get(mapping.app_user_id)?.display_name ?? "ไม่ทราบชื่อ",
+          avatar_url: usersById.get(mapping.app_user_id)?.avatar_url ?? null,
+        })),
+        selectedGameweekId: currentGameweek.id,
+        selectedGameweekNumber: currentGameweek.number,
+        mode: "gameweek",
+      });
+      return {
+        leagueFplId: league.fpl_league_id,
+        leagueName: league.official_name,
+        gameweek: currentGameweek.number,
+        rows: leaderboard.map((row) => ({
+          rank: row.rank,
+          managerName: row.managerName,
+          teamName: row.teamName,
+          points: row.points,
+          avatarUrl: row.avatarUrl,
+        })),
+      };
     },
   };
 }

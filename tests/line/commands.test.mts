@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildLineMenuMessage, parseLineCommand } from "../../lib/line/commands.ts";
+import { validateFlexMessage } from "../../lib/line/flex.ts";
 
 test("maps approved standings aliases exactly", () => {
   for (const text of ["ขอตาราง", " ตารางคะแนน ", "คะแนน", "อันดับ"]) {
@@ -29,26 +30,46 @@ test("maps menu aliases and ignores ordinary text", () => {
   assert.equal(parseLineCommand("   \n  "), null);
 });
 
-test("menu Flex exposes the Chei Fantasy award command without exposing Khao as a menu action", () => {
+test("menu Flex uses two columns, grouped game labels, and the Top/Bottom command", () => {
   const message = buildLineMenuMessage();
   assert.equal(message.type, "flex");
   if (message.type !== "flex") return;
 
   const serialized = JSON.stringify(message);
   const commands = [
-    { label: "ขอตาราง", text: "ขอตาราง" },
-    { label: "บอลวันนี้", text: "บอลวันนี้" },
+    { label: "ขอตารางทายผล", text: "ขอตาราง" },
     { label: "ผลทายของฉัน", text: "ผลทาย" },
+    { label: "บอลวันนี้", text: "บอลวันนี้" },
     { label: "แชมป์บ๊วยทายผล", text: "แชมป์บ๊วยทายผล" },
     { label: "แชมป์บ๊วยเชย", text: "แชมป์บ๊วยเชย" },
+    { label: "แชมป์บ๊วยเขาค้อ", text: "แชมป์บ๊วยเขาค้อ" },
+    { label: "Top 5 + บ๊วย 5", text: "Top 5 + บ๊วย 5" },
   ];
   for (const command of commands) {
-    assert.match(serialized, new RegExp(`"type":"message","label":"${command.label}","text":"${command.text}"`));
+    assert.ok(serialized.includes(`"label":"${command.label}","text":"${command.text}"`));
   }
   assert.equal((serialized.match(/"type":"message"/g) ?? []).length, commands.length);
   assert.doesNotMatch(serialized, /"type":"message","label":"เมนู","text":"เมนู"/);
   assert.equal((serialized.match(/"backgroundColor":"#E53935"/g) ?? []).length, commands.length);
   assert.ok((serialized.match(/"color":"#FFFFFF"/g) ?? []).length >= commands.length);
   assert.doesNotMatch(serialized, /SECRET|TOKEN|SUPABASE|session/i);
-  assert.doesNotMatch(serialized, /"label":"แชมป์บ๊วยเขาค้อ"/);
+  assert.match(serialized, /เกมทายผลพรีเมียร์ลีก/);
+  assert.match(serialized, /เกมแฟนตาซี/);
+  assert.match(serialized, /"color":"#D9FF58"/);
+  assert.equal((serialized.match(/"type":"message"/g) ?? []).length, 7);
+  assert.doesNotMatch(serialized, /"label":"เมนู","text":"เมนู"/);
+  assert.doesNotThrow(() => validateFlexMessage(message));
+
+  const bubble = message.contents as { body: { contents: Array<{ type?: string; text?: string; layout?: string; contents?: unknown[] }> } };
+  const bodyContents = bubble.body.contents;
+  assert.equal(bodyContents[1]?.text, "เกมทายผลพรีเมียร์ลีก");
+  assert.equal(bodyContents[2]?.layout, "horizontal");
+  assert.equal(bodyContents[2]?.contents?.length, 2);
+  assert.equal(bodyContents[3]?.layout, "horizontal");
+  assert.equal(bodyContents[3]?.contents?.length, 2);
+  assert.equal(bodyContents[4]?.text, "เกมแฟนตาซี");
+  assert.equal(bodyContents[5]?.layout, "horizontal");
+  assert.equal(bodyContents[5]?.contents?.length, 2);
+  assert.equal(bodyContents[6]?.layout, "horizontal");
+  assert.equal(bodyContents[6]?.contents?.length, 1);
 });

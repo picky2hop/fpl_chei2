@@ -186,28 +186,46 @@ function footerButton() {
   };
 }
 
-export function buildCommandMenuFlex(commands: Array<string | { label: string; text: string }>): FlexMessage {
-  const buttons = commands.map((command) => {
+export type CommandMenuItem = string | { label: string; text: string };
+export type CommandMenuSection = { title?: string; rows: CommandMenuItem[][] };
+
+function commandMenuButton(command: CommandMenuItem) {
     const item = typeof command === "string" ? { label: command, text: command } : command;
     return {
-    type: "box",
-    layout: "horizontal",
-    height: "48px",
-    cornerRadius: "xl",
-    backgroundColor: "#E53935",
-    justifyContent: "center",
-    alignItems: "center",
-    action: { type: "message", label: item.label, text: item.text },
-    contents: [{ ...text(item.label, "sm", "bold", "#FFFFFF"), align: "center" }],
+      type: "box",
+      layout: "horizontal",
+      height: "48px",
+      flex: 1,
+      cornerRadius: "xl",
+      backgroundColor: "#E53935",
+      justifyContent: "center",
+      alignItems: "center",
+      action: { type: "message", label: item.label, text: item.text },
+      contents: [{ ...text(item.label, "sm", "bold", "#FFFFFF"), align: "center" }],
     };
-  });
+}
+
+function commandMenuSection(section: CommandMenuSection) {
+  return [
+    ...(section.title ? [text(section.title, "sm", "bold", ACCENT)] : []),
+    ...section.rows.map((row) => ({
+      type: "box",
+      layout: "horizontal",
+      spacing: "sm",
+      contents: row.map(commandMenuButton),
+    })),
+  ];
+}
+
+export function buildCommandMenuFlex(sections: CommandMenuSection[]): FlexMessage {
+  const contents = sections.flatMap(commandMenuSection);
 
   return {
     type: "flex",
     altText: "เมนูคำสั่ง เกมทายผลพรีเมียร์ลีก",
     contents: bubble([
       header("เมนูคำสั่ง", "เลือกคำสั่งที่ต้องการ"),
-      ...buttons,
+      ...contents,
     ]),
   };
 }

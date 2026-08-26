@@ -69,6 +69,7 @@ test("returns a safe reply when an approved data command cannot load data", asyn
     async getUserPredictions() { throw new Error("database details must stay private"); },
     async getPredictionAwards() { throw new Error("database details must stay private"); },
     async getFantasyAwards() { throw new Error("database details must stay private"); },
+    async getFantasyTopBottom() { throw new Error("database details must stay private"); },
   });
 
   const messages = await service.replyForText({ text: "บอลวันนี้" });
@@ -84,12 +85,13 @@ test("returns the interactive Flex command menu for the menu command", async () 
     async getUserPredictions() { throw new Error("must not load predictions for menu"); },
     async getPredictionAwards() { throw new Error("must not load awards for menu"); },
     async getFantasyAwards() { throw new Error("must not load fantasy awards for menu"); },
+    async getFantasyTopBottom() { throw new Error("must not load fantasy leaderboard for menu"); },
   });
 
   const messages = await service.replyForText({ text: "เมนู" });
   assert.equal(messages?.length, 1);
   assert.equal(messages?.[0]?.type, "flex");
-  assert.match(JSON.stringify(messages), /"type":"message","label":"ขอตาราง","text":"ขอตาราง"/);
+  assert.match(JSON.stringify(messages), /"label":"ขอตารางทายผล","text":"ขอตาราง"/);
 });
 
 test("returns awards Flex and a decorated group announcement", async () => {
@@ -105,6 +107,7 @@ test("returns awards Flex and a decorated group announcement", async () => {
       };
     },
     async getFantasyAwards() { throw new Error("must not load fantasy awards"); },
+    async getFantasyTopBottom() { throw new Error("must not load fantasy leaderboard"); },
   });
 
   const messages = await service.replyForText({ text: "แชมป์บ๊วยทายผล", chatType: "group" });
@@ -161,6 +164,34 @@ test("returns only one Fantasy Khao Flex without an announcement", async () => {
   const messages = await service.replyForText({ text: "แชมป์บ๊วยเขาค้อ", chatType: "group" });
   assert.equal(messages?.length, 1);
   assert.equal(messages?.[0]?.type, "flex");
+  assert.doesNotMatch(JSON.stringify(messages), /textV2|mention/);
+});
+
+test("returns the Chei Fantasy Top/Bottom Flex for the new bot command", async () => {
+  const service = createLineBotCommandService({
+    async getCurrentStandings() { throw new Error("must not load prediction standings"); },
+    async getTodayFixtures() { throw new Error("must not load fixtures"); },
+    async getUserPredictions() { throw new Error("must not load predictions"); },
+    async getPredictionAwards() { throw new Error("must not load prediction awards"); },
+    async getFantasyAwards() { throw new Error("must not load fantasy awards"); },
+    async getFantasyTopBottom(leagueFplId) {
+      assert.equal(leagueFplId, 819498);
+      return {
+        leagueFplId,
+        leagueName: "เชยเชย Cup",
+        gameweek: 1,
+        rows: [
+          { rank: 1, managerName: "Top Manager", teamName: "Top FC", avatarUrl: "https://example.test/top.png", points: 70 },
+          { rank: 6, managerName: "Bottom Manager", teamName: "Bottom FC", avatarUrl: null, points: 10 },
+        ],
+      };
+    },
+  });
+
+  const messages = await service.replyForText({ text: "Top 5 + บ๊วย 5", chatType: "group" });
+  assert.equal(messages?.length, 1);
+  assert.equal(messages?.[0]?.type, "flex");
+  assert.match(JSON.stringify(messages), /เชยเชย Cup|Top Manager|Bottom Manager|Top 5|Bottom 5/);
   assert.doesNotMatch(JSON.stringify(messages), /textV2|mention/);
 });
 
