@@ -59,7 +59,8 @@ test("menu Flex uses two columns, grouped game labels, and the Top/Bottom comman
   assert.match(serialized, /เกมแฟนตาซี/);
   assert.match(serialized, /"color":"#D9FF58"/);
   assert.match(serialized, /"label":"เข้า App แฟนตาซี \+ ทายผลบอล","uri":"https:\/\/liff\.line\.me\/2010604800-Y9eFejTF"/);
-  assert.match(serialized, /"text":"เข้า App แฟนตาซี \+ ทายผลบอล","size":"xxl"/);
+  assert.match(serialized, /"text":"เข้า App แฟนตาซี \+ ทายผลบอล","size":"xl"/);
+  assert.match(serialized, /"height":"56px"/);
   assert.doesNotMatch(serialized, /"label":"กดเพื่อเข้าไป ทายผล","uri":"https:\/\/liff\.line\.me\/2010604800-Y9eFejTF"/);
   assert.doesNotMatch(serialized, /2010604800-Y9eFejTF\/dashboard\?tab=predictions/);
   assert.equal((serialized.match(/"type":"message"/g) ?? []).length, 8);

@@ -175,7 +175,7 @@ function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, ce
   };
 }
 
-function footerButton(uri = PREDICTION_APP_URI, label = PREDICTION_APP_BUTTON_LABEL) {
+function footerButton(uri = PREDICTION_APP_URI, label = PREDICTION_APP_BUTTON_LABEL, textSize = "xxl") {
   return {
     type: "box",
     layout: "horizontal",
@@ -185,7 +185,7 @@ function footerButton(uri = PREDICTION_APP_URI, label = PREDICTION_APP_BUTTON_LA
     justifyContent: "center",
     alignItems: "center",
     action: { type: "uri", label, uri },
-    contents: [{ ...text(label, "xxl", "bold", "#071525"), align: "center" }],
+    contents: [{ ...text(label, textSize, "bold", "#071525"), align: "center" }],
   };
 }
 
@@ -229,11 +229,11 @@ export function buildCommandMenuFlex(sections: CommandMenuSection[]): FlexMessag
     contents: bubble([
       header("เมนูคำสั่ง", "เลือกคำสั่งที่ต้องการ"),
       ...contents,
-    ], APP_URI, MENU_APP_BUTTON_LABEL),
+    ], APP_URI, MENU_APP_BUTTON_LABEL, "xl"),
   };
 }
 
-function bubble(contents: Record<string, unknown>[], footerUri = PREDICTION_APP_URI, footerLabel = PREDICTION_APP_BUTTON_LABEL) {
+function bubble(contents: Record<string, unknown>[], footerUri = PREDICTION_APP_URI, footerLabel = PREDICTION_APP_BUTTON_LABEL, footerTextSize = "xxl") {
   return {
     type: "bubble",
     size: "giga",
@@ -251,7 +251,7 @@ function bubble(contents: Record<string, unknown>[], footerUri = PREDICTION_APP_
       type: "box",
       layout: "vertical",
       spacing: "sm",
-      contents: [footerButton(footerUri, footerLabel)],
+      contents: [footerButton(footerUri, footerLabel, footerTextSize)],
     },
   };
 }

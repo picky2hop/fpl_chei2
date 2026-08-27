@@ -53,6 +53,7 @@ type PredictionAppProps = {
   leaderboardByGameweek: Record<number, LeaderboardEntry[]>;
   initialPredictionsByGameweek?: Record<number, PredictionMap>;
   initialGameweek?: number;
+  initialPredictionGameweek?: number;
   predictionBookByGameweek?: Record<number, Record<string, PredictionMap>>;
   onConfirmPredictions?: (gameweek: number, predictions: PredictionMap) => Promise<void>;
 };
@@ -230,13 +231,14 @@ function SharePrompt({ gameweek, completionLabel, errorMessage, onClose, onShare
   return <DetailModal eyebrow="Prediction saved" title="บันทึกคำทายแล้ว" onClose={onClose}><div className="space-y-4"><div className="flex items-center gap-3 rounded-2xl border border-[#47d7a0]/25 bg-[#47d7a0]/10 p-3"><span className="grid size-10 place-items-center rounded-full bg-[#47d7a0] text-[#06221a]"><Check size={20} /></span><p className="text-sm font-bold text-[#b7f5de]">บันทึกคำทาย {completionLabel} ใน GW {gameweek} แล้ว</p></div><p className="text-sm leading-6 text-white/65">อยากแชร์ผลทายลงกลุ่ม LINE ให้เพื่อนเห็นเลยไหม?</p>{errorMessage && <p role="alert" className="rounded-2xl border border-[#ff647c]/30 bg-[#ff647c]/10 px-3 py-2 text-xs leading-5 text-[#ffb0bc]">{errorMessage}</p>}<div className="grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-black text-white/70 transition hover:bg-white/10">ไม่แชร์</button><button type="button" onClick={onShare} className="flex items-center justify-center gap-2 rounded-2xl bg-[#d9ff58] py-3.5 text-sm font-black text-[#071525] transition hover:bg-[#e7ff8c]"><Share2 size={16} />แชร์เข้า LINE</button></div></div></DetailModal>;
 }
 
-export default function PredictionApp({ currentUser, gameweeks, fixturesByGameweek, leaderboardByGameweek, initialPredictionsByGameweek, initialGameweek, predictionBookByGameweek: livePredictionBookByGameweek, onConfirmPredictions }: PredictionAppProps) {
+export default function PredictionApp({ currentUser, gameweeks, fixturesByGameweek, leaderboardByGameweek, initialPredictionsByGameweek, initialGameweek, initialPredictionGameweek, predictionBookByGameweek: livePredictionBookByGameweek, onConfirmPredictions }: PredictionAppProps) {
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "leaderboard";
     const tab = new URLSearchParams(window.location.search).get("tab");
     return tab === "predictions" ? "predictions" : "leaderboard";
   });
   const [selectedGameweek, setSelectedGameweek] = useState(initialGameweek ?? gameweeks[0]?.id ?? 0);
+  const [selectedPredictionGameweek, setSelectedPredictionGameweek] = useState(initialPredictionGameweek ?? initialGameweek ?? gameweeks[0]?.id ?? 0);
   const [predictionsByGameweek, setPredictionsByGameweek] = useState<Record<number, PredictionMap>>(initialPredictionsByGameweek ?? {});
   const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
@@ -245,27 +247,28 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [fixtureShareStatus, setFixtureShareStatus] = useState<FixtureShareStatus>(null);
-  const fixtures = fixturesByGameweek[selectedGameweek] ?? [];
-  const entries = leaderboardByGameweek[selectedGameweek] ?? [];
+  const viewGameweek = activeTab === "predictions" ? selectedPredictionGameweek : selectedGameweek;
+  const fixtures = fixturesByGameweek[viewGameweek] ?? [];
+  const entries = leaderboardByGameweek[viewGameweek] ?? [];
   const currentGameweekId = getCurrentGameweekId(gameweeks);
   const selectedFixtureIds = fixtures.map((fixture) => fixture.id);
   const predictionBookByGameweek = livePredictionBookByGameweek ?? mockPredictionBookByGameweek;
   predictionBookByEntries.set(entries, predictionBookByGameweek);
-  const predictions = predictionsByGameweek[selectedGameweek] ?? {};
+  const predictions = predictionsByGameweek[viewGameweek] ?? {};
   const editableFixtures = fixtures.map((fixture) => ({ id: fixture.id, status: fixture.status, kickoffAt: fixture.kickoff }));
   const editableFixtureIds = getEditablePredictionIds(editableFixtures, new Date());
   const editablePredictions = getEditablePredictions(editableFixtures, predictions, new Date());
   const selectedCount = Object.keys(predictions).length;
   const complete = isPredictionComplete(editableFixtureIds, editablePredictions);
   const completionLabel = useMemo(() => `${selectedCount}/${fixtures.length} คู่`, [fixtures.length, selectedCount]);
-  const changeGameweek = (value: number) => { setSelectedGameweek(value); setSelectedPlayer(null); setSelectedFixture(null); setIsSharePromptOpen(false); setShareError(""); setSaveError(""); setFixtureShareStatus(null); };
-  const choosePrediction = (fixtureId: string, choice: PredictionChoice) => { setPredictionsByGameweek((current) => ({ ...current, [selectedGameweek]: applyPrediction(current[selectedGameweek] ?? {}, fixtureId, choice) })); };
+  const changeGameweek = (value: number) => { if (activeTab === "predictions") setSelectedPredictionGameweek(value); else setSelectedGameweek(value); setSelectedPlayer(null); setSelectedFixture(null); setIsSharePromptOpen(false); setShareError(""); setSaveError(""); setFixtureShareStatus(null); };
+  const choosePrediction = (fixtureId: string, choice: PredictionChoice) => { setPredictionsByGameweek((current) => ({ ...current, [viewGameweek]: applyPrediction(current[viewGameweek] ?? {}, fixtureId, choice) })); };
   const confirmPredictions = () => {
     if (!complete || Object.keys(editablePredictions).length === 0) return;
     if (onConfirmPredictions) {
       setSaveError("");
       setIsSaving(true);
-      void onConfirmPredictions(selectedGameweek, editablePredictions)
+      void onConfirmPredictions(viewGameweek, editablePredictions)
         .then(() => setIsSharePromptOpen(true))
         .catch((error: unknown) => setSaveError(error instanceof Error ? error.message : "บันทึกคำทายไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"))
         .finally(() => setIsSaving(false));
@@ -277,8 +280,8 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
   const shareFixturePredictions = async (fixture: Fixture) => {
     setFixtureShareStatus({ fixtureId: fixture.id, status: "sharing" });
     try {
-      const predictors = getFixturePredictors(entries, predictionBookByGameweek, selectedGameweek, fixture.id);
-      const message = buildFixturePredictionShareFlex({ fixture, gameweek: selectedGameweek, predictors });
+      const predictors = getFixturePredictors(entries, predictionBookByGameweek, viewGameweek, fixture.id);
+      const message = buildFixturePredictionShareFlex({ fixture, gameweek: viewGameweek, predictors });
       const result = await shareFlexMessage({
         isApiAvailable: (apiName) => liff.isApiAvailable(apiName),
         shareTargetPicker: (messages, options) => liff.shareTargetPicker(messages as never, options),
@@ -299,7 +302,7 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
       const message = buildPredictionShareFlex({
         currentUser,
         fixtures,
-        gameweek: selectedGameweek,
+        gameweek: viewGameweek,
         predictions,
       });
       const result = await shareFlexMessage({
@@ -322,5 +325,5 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
     }
   };
 
-  return <main className="app-shell min-h-screen bg-[#071525] text-white"><div className="mx-auto min-h-screen w-full max-w-[520px] pb-28"><header className="bg-[#071525] px-5 pb-6 pt-7"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Avatar user={currentUser} size={42} /><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">สวัสดีตอนเย็น</p><p className="mt-0.5 text-base font-black">{currentUser.displayName} 👋</p></div></div><div className="flex items-center gap-2"><Link href="/" className="rounded-full border border-[#d9ff58]/25 bg-[#d9ff58]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#d9ff58]">หน้าหลัก</Link><Link href="/fantasy" className="rounded-full border border-[#6da9ff]/30 bg-[#6da9ff]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#a9cbff]">ไป Fantasy</Link></div></div><div className="mt-6 flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8ca6bd]">This week&apos;s arena</p><h1 className="mt-1 text-3xl font-black tracking-[-0.04em]">เกมวีค {selectedGameweek}</h1></div><GameweekPicker gameweeks={gameweeks} value={selectedGameweek} currentGameweekId={currentGameweekId} onChange={changeGameweek} onJumpToCurrent={() => { if (currentGameweekId !== null) changeGameweek(currentGameweekId); }} /></div></header><div className="px-4 pt-5">{activeTab === "leaderboard" && <Leaderboard entries={entries} gameweek={selectedGameweek} fixtureIds={selectedFixtureIds} predictionBook={predictionBookByGameweek} onSelect={setSelectedPlayer} />}{activeTab === "predictions" && <Predictions fixtures={fixtures} predictions={predictions} editableFixtureIds={editableFixtureIds} onChoose={choosePrediction} onConfirm={confirmPredictions} isSaving={isSaving} saveError={saveError} />}{activeTab === "results" && <Results fixtures={fixtures} gameweek={selectedGameweek} onSelectFixture={setSelectedFixture} />}</div><p className="px-4 pt-6 text-center text-[10px] font-bold text-white/35">ข้อมูลจาก Production · เวลาแสดงประเทศไทย (ICT)</p></div><nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-[520px] -translate-x-1/2 border-t border-white/10 bg-[#0b1d31]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl"><div className="grid grid-cols-3 gap-1 rounded-2xl bg-white/5 p-1">{tabs.map((tab) => { const Icon = tab.icon; return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black transition ${activeTab === tab.id ? "bg-[#d9ff58] text-[#071525] shadow-[0_6px_20px_rgba(217,255,88,0.15)]" : "text-white/55 hover:text-white"}`}><Icon aria-hidden="true" size={15} strokeWidth={2.4} />{tab.label}</button>; })}</div></nav>{selectedPlayer && <DetailModal eyebrow="Player picks" title={`คำทายของ ${selectedPlayer.displayName}`} onClose={() => setSelectedPlayer(null)}><PlayerDetail player={selectedPlayer} fixtures={fixtures} gameweek={selectedGameweek} predictionMap={predictionBookByGameweek[selectedGameweek]?.[selectedPlayer.id] ?? {}} /></DetailModal>}{selectedFixture && <DetailModal eyebrow="Match details" title={`${selectedFixture.homeTeam.name} vs ${selectedFixture.awayTeam.name}`} hideTitle onClose={() => { setSelectedFixture(null); setFixtureShareStatus(null); }}><FixtureDetailWithShare fixture={selectedFixture} entries={entries} gameweek={selectedGameweek} predictionBook={predictionBookByGameweek} shareStatus={fixtureShareStatus} onShare={() => void shareFixturePredictions(selectedFixture)} /></DetailModal>}{isSharePromptOpen && <SharePrompt gameweek={selectedGameweek} completionLabel={completionLabel} errorMessage={shareError} onClose={finishShareFlow} onShare={() => void sharePredictionResult()} />}</main>;
+  return <main className="app-shell min-h-screen bg-[#071525] text-white"><div className="mx-auto min-h-screen w-full max-w-[520px] pb-28"><header className="bg-[#071525] px-5 pb-6 pt-7"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Avatar user={currentUser} size={42} /><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">สวัสดีตอนเย็น</p><p className="mt-0.5 text-base font-black">{currentUser.displayName} 👋</p></div></div><div className="flex items-center gap-2"><Link href="/" className="rounded-full border border-[#d9ff58]/25 bg-[#d9ff58]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#d9ff58]">หน้าหลัก</Link><Link href="/fantasy" className="rounded-full border border-[#6da9ff]/30 bg-[#6da9ff]/10 px-2.5 py-1.5 text-[10px] font-bold text-[#a9cbff]">ไป Fantasy</Link></div></div><div className="mt-6 flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8ca6bd]">This week&apos;s arena</p><h1 className="mt-1 text-3xl font-black tracking-[-0.04em]">เกมวีค {viewGameweek}</h1></div><GameweekPicker gameweeks={gameweeks} value={viewGameweek} currentGameweekId={currentGameweekId} onChange={changeGameweek} onJumpToCurrent={() => { if (currentGameweekId !== null) changeGameweek(currentGameweekId); }} /></div></header><div className="px-4 pt-5">{activeTab === "leaderboard" && <Leaderboard entries={entries} gameweek={viewGameweek} fixtureIds={selectedFixtureIds} predictionBook={predictionBookByGameweek} onSelect={setSelectedPlayer} />}{activeTab === "predictions" && <Predictions fixtures={fixtures} predictions={predictions} editableFixtureIds={editableFixtureIds} onChoose={choosePrediction} onConfirm={confirmPredictions} isSaving={isSaving} saveError={saveError} />}{activeTab === "results" && <Results fixtures={fixtures} gameweek={viewGameweek} onSelectFixture={setSelectedFixture} />}</div><p className="px-4 pt-6 text-center text-[10px] font-bold text-white/35">ข้อมูลจาก Production · เวลาแสดงประเทศไทย (ICT)</p></div><nav className="fixed bottom-0 left-1/2 z-20 w-full max-w-[520px] -translate-x-1/2 border-t border-white/10 bg-[#0b1d31]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl"><div className="grid grid-cols-3 gap-1 rounded-2xl bg-white/5 p-1">{tabs.map((tab) => { const Icon = tab.icon; return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black transition ${activeTab === tab.id ? "bg-[#d9ff58] text-[#071525] shadow-[0_6px_20px_rgba(217,255,88,0.15)]" : "text-white/55 hover:text-white"}`}><Icon aria-hidden="true" size={15} strokeWidth={2.4} />{tab.label}</button>; })}</div></nav>{selectedPlayer && <DetailModal eyebrow="Player picks" title={`คำทายของ ${selectedPlayer.displayName}`} onClose={() => setSelectedPlayer(null)}><PlayerDetail player={selectedPlayer} fixtures={fixtures} gameweek={viewGameweek} predictionMap={predictionBookByGameweek[viewGameweek]?.[selectedPlayer.id] ?? {}} /></DetailModal>}{selectedFixture && <DetailModal eyebrow="Match details" title={`${selectedFixture.homeTeam.name} vs ${selectedFixture.awayTeam.name}`} hideTitle onClose={() => { setSelectedFixture(null); setFixtureShareStatus(null); }}><FixtureDetailWithShare fixture={selectedFixture} entries={entries} gameweek={viewGameweek} predictionBook={predictionBookByGameweek} shareStatus={fixtureShareStatus} onShare={() => void shareFixturePredictions(selectedFixture)} /></DetailModal>}{isSharePromptOpen && <SharePrompt gameweek={viewGameweek} completionLabel={completionLabel} errorMessage={shareError} onClose={finishShareFlow} onShare={() => void sharePredictionResult()} />}</main>;
 }

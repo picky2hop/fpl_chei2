@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildDashboardLeaderboardRows, buildLeaderboardByGameweek } from "../../lib/data/dashboard-view.ts";
+import { buildDashboardLeaderboardRows, buildLeaderboardByGameweek, selectPredictionDefaultGameweek } from "../../lib/data/dashboard-view.ts";
 import { getLeaderboardEntriesWithPrediction } from "../../lib/predictions.ts";
 
 const users = [
@@ -52,4 +52,36 @@ test("does not show a player with no prediction in the selected gameweek", () =>
   const visible = getLeaderboardEntriesWithPrediction(entries, ["fixture-2"], { 2: { "user-b": { "fixture-2": "home" } } }, 2);
 
   assert.deepEqual(visible.map((entry) => entry.id), ["user-b"]);
+});
+
+test("defaults the prediction tab to the next gameweek after the current gameweek is closed", () => {
+  assert.equal(selectPredictionDefaultGameweek(1, [
+    { number: 1, status: "closed" },
+    { number: 2, status: "upcoming" },
+  ], [
+    { gameweekNumber: 1, status: "finished" },
+    { gameweekNumber: 1, status: "postponed" },
+  ]), 2);
+});
+
+test("keeps the current gameweek when a scheduled or live fixture remains", () => {
+  const gameweeks = [
+    { number: 1, status: "closed" },
+    { number: 2, status: "upcoming" },
+  ];
+
+  assert.equal(selectPredictionDefaultGameweek(1, gameweeks, [{ gameweekNumber: 1, status: "scheduled" }]), 1);
+  assert.equal(selectPredictionDefaultGameweek(1, gameweeks, [{ gameweekNumber: 1, status: "live" }]), 1);
+});
+
+test("keeps the current gameweek when it is not closed or there is no next gameweek", () => {
+  assert.equal(selectPredictionDefaultGameweek(1, [
+    { number: 1, status: "open" },
+    { number: 2, status: "upcoming" },
+  ], [{ gameweekNumber: 1, status: "finished" }]), 1);
+
+  assert.equal(selectPredictionDefaultGameweek(2, [
+    { number: 1, status: "closed" },
+    { number: 2, status: "closed" },
+  ], [{ gameweekNumber: 2, status: "finished" }]), 2);
 });

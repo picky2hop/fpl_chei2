@@ -3,7 +3,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { mapPredictionBook, type DashboardPredictionBook } from "@/lib/data/dashboard-core";
 import { sortFixturesForFplOrder } from "@/lib/data/fixture-order";
-import { buildDashboardLeaderboardRows } from "@/lib/data/dashboard-view";
+import { buildDashboardLeaderboardRows, selectPredictionDefaultGameweek } from "@/lib/data/dashboard-view";
 
 export type DashboardData = {
   season: { id: string; name: string };
@@ -22,6 +22,7 @@ export type DashboardData = {
   }>;
   predictions: Array<{ fixtureId: string; choice: string; status: string }>;
   predictionBookByGameweek: DashboardPredictionBook;
+  predictionDefaultGameweek: number;
   leaderboardByGameweek: Record<number, Array<{
     id: string;
     displayName: string;
@@ -74,6 +75,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const gameweekById = new Map(gameweeks.map((gameweek) => [gameweek.id, gameweek]));
   const currentGameweek = gameweeks.find((gameweek) => gameweek.is_current)?.number ?? gameweeks[0]?.number ?? 0;
+  const predictionDefaultGameweek = selectPredictionDefaultGameweek(
+    currentGameweek,
+    gameweeks.map((gameweek) => ({ number: gameweek.number, status: gameweek.status })),
+    fixtures.map((fixture) => ({
+      gameweekNumber: fixture.gameweek_id ? gameweekById.get(fixture.gameweek_id)?.number ?? 0 : 0,
+      status: fixture.status,
+    })),
+  );
   const leaderboardByGameweek = buildDashboardLeaderboardRows(gameweeks, participants, scores, users);
 
   return {
@@ -105,6 +114,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       }];
     }),
     predictions: predictions.filter((prediction) => prediction.user_id === userId).map((prediction) => ({ fixtureId: prediction.fixture_id, choice: prediction.outcome, status: prediction.status })),
+    predictionDefaultGameweek,
     predictionBookByGameweek: mapPredictionBook({
       gameweeks: gameweeks.map((gameweek) => ({ id: gameweek.id, number: gameweek.number })),
       fixtures: fixtures.map((fixture) => ({ id: fixture.id, gameweekId: fixture.gameweek_id })),

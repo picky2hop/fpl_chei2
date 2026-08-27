@@ -21,6 +21,7 @@ test("dashboard never falls back to mock fixtures", async () => {
   assert.equal(source.includes("AbortController"), true);
   assert.equal(source.includes("ข้อมูลอาจไม่ใช่ข้อมูลล่าสุด"), true);
   assert.equal(source.includes("setRefreshVersion"), true);
+  assert.equal(source.includes("initialPredictionGameweek={props.predictionDefaultGameweek}"), true);
 });
 
 test("landing copy does not advertise preview mode", async () => {
@@ -50,6 +51,14 @@ test("prediction app opens the requested prediction tab from a LIFF deep link", 
   assert.match(source, /new URLSearchParams\(window\.location\.search\)/);
   assert.match(source, /get\("tab"\)/);
   assert.match(source, /tab === "predictions"/);
+});
+
+test("prediction default is isolated from the leaderboard and results selection", async () => {
+  const source = await readFile(new URL("../app/components/prediction-app-final.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /initialPredictionGameweek\?: number/);
+  assert.match(source, /selectedPredictionGameweek/);
+  assert.match(source, /activeTab === "predictions" \? selectedPredictionGameweek : selectedGameweek/);
 });
 
 test("detail modal manages focus and body scroll for keyboard users", async () => {

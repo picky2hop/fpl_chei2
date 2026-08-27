@@ -21,7 +21,24 @@ export type DashboardPayload = {
   predictions: Array<{ fixtureId: string; choice: string; status: string }>;
   predictionBookByGameweek: DashboardPredictionBook;
   leaderboardByGameweek: Record<number, DashboardLeaderboardRow[]>;
+  predictionDefaultGameweek?: number;
 };
+
+export function selectPredictionDefaultGameweek(
+  currentGameweek: number,
+  gameweeks: Array<{ number: number; status: string }>,
+  fixtures: Array<{ gameweekNumber: number; status: string }>,
+): number {
+  const current = gameweeks.find((gameweek) => gameweek.number === currentGameweek);
+  if (!current || current.status !== "closed") return currentGameweek;
+
+  const hasOpenFixture = fixtures.some((fixture) => fixture.gameweekNumber === currentGameweek && (fixture.status === "scheduled" || fixture.status === "live"));
+  if (hasOpenFixture) return currentGameweek;
+
+  return [...gameweeks]
+    .filter((gameweek) => gameweek.number > currentGameweek)
+    .sort((a, b) => a.number - b.number)[0]?.number ?? currentGameweek;
+}
 
 export function buildDashboardLeaderboardRows(
   gameweeks: Array<{ id: string; number: number }>,
@@ -101,5 +118,14 @@ export function buildLiveProps(payload: DashboardPayload, profile: UserProfile) 
     }
   }
   const current = payload.gameweeks.find((gameweek) => gameweek.state === "current")?.number ?? gameweeks[0]?.id ?? 0;
-  return { current, gameweeks, fixturesByGameweek, leaderboardByGameweek, initialPredictionsByGameweek, profile, gameweekNumberById };
+  return {
+    current,
+    predictionDefaultGameweek: payload.predictionDefaultGameweek ?? current,
+    gameweeks,
+    fixturesByGameweek,
+    leaderboardByGameweek,
+    initialPredictionsByGameweek,
+    profile,
+    gameweekNumberById,
+  };
 }
