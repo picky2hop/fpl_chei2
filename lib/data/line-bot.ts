@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
 import { buildLeagueLeaderboard } from "@/lib/fantasy/league-scoring";
 import { getFantasyMyTeamData } from "./fantasy.ts";
-import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, type FantasyAwardsData, type FantasyMyTeamData, type FantasyTopBottomData, type PredictionAwardsData } from "./line-bot-core";
+import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, selectUserPredictionGameweek, type FantasyAwardsData, type FantasyMyTeamData, type FantasyTopBottomData, type PredictionAwardsData } from "./line-bot-core";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
 const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -267,28 +267,63 @@ export function createLineBotDataReader(): LineBotDataReader {
     },
 
     async getUserPredictions(lineUserId) {
-      const { admin, season, gameweek } = await activeContext();
+      const { admin, season } = await activeSeasonContext();
       const { data: user, error: userError } = await admin.from("app_users").select("id,display_name,avatar_url,status").eq("line_user_id", lineUserId).eq("status", "active").maybeSingle();
       if (userError) throw new Error("User prediction lookup is unavailable");
       if (!user) return null;
 
-      const [{ data: fixtures, error: fixtureError }, { data: predictions, error: predictionError }, { data: teams, error: teamError }] = await Promise.all([
-        admin.from("fixtures").select("id,external_fixture_id,kickoff_at,status,home_score,away_score,home_team_id,away_team_id").eq("season_id", season.id).eq("gameweek_id", gameweek.id).order("kickoff_at").order("external_fixture_id"),
+      const [{ data: gameweeks, error: gameweekError }, { data: fixtures, error: fixtureError }, { data: predictions, error: predictionError }, { data: teams, error: teamError }] = await Promise.all([
+        admin.from("gameweeks").select("id,number,status,is_current").eq("season_id", season.id).order("number"),
+        admin.from("fixtures").select("id,gameweek_id,external_fixture_id,kickoff_at,status,home_score,away_score,home_team_id,away_team_id").eq("season_id", season.id).order("kickoff_at").order("external_fixture_id"),
         admin.from("predictions").select("fixture_id,outcome,status").eq("user_id", user.id).eq("status", "active"),
         admin.from("teams").select("id,name,logo_url"),
       ]);
+      if (gameweekError) throw new Error("Gameweeks are unavailable");
       if (fixtureError || predictionError || teamError) throw new Error("User predictions are unavailable");
+
+      const currentGameweek = selectActiveGameweek((gameweeks ?? []).map((gameweek) => ({
+        id: gameweek.id,
+        number: gameweek.number,
+        isCurrent: gameweek.is_current,
+      })));
+      if (!currentGameweek) throw new Error("Current gameweek is unavailable");
+
+      const gameweekById = new Map((gameweeks ?? []).map((gameweek) => [gameweek.id, gameweek]));
+      const fixtureGameweekById = new Map((fixtures ?? []).flatMap((fixture) => {
+        if (!fixture.gameweek_id) return [];
+        const gameweekNumber = gameweekById.get(fixture.gameweek_id)?.number;
+        return gameweekNumber === undefined ? [] : [[fixture.id, gameweekNumber] as const];
+      }));
+      const predictionsByGameweek = new Map<number, string[]>();
+      for (const prediction of predictions ?? []) {
+        const gameweekNumber = fixtureGameweekById.get(prediction.fixture_id);
+        if (gameweekNumber === undefined) continue;
+        const fixtureIds = predictionsByGameweek.get(gameweekNumber) ?? [];
+        fixtureIds.push(prediction.fixture_id);
+        predictionsByGameweek.set(gameweekNumber, fixtureIds);
+      }
+      const selectedGameweekNumber = selectUserPredictionGameweek({
+        currentGameweek: currentGameweek.number,
+        gameweeks: (gameweeks ?? []).map((gameweek) => ({ number: gameweek.number, status: gameweek.status })),
+        fixtures: (fixtures ?? []).flatMap((fixture) => {
+          if (!fixture.gameweek_id) return [];
+          const gameweekNumber = gameweekById.get(fixture.gameweek_id)?.number;
+          return gameweekNumber === undefined ? [] : [{ id: fixture.id, gameweekNumber, status: fixture.status }];
+        }),
+        predictionsByGameweek: Object.fromEntries(predictionsByGameweek),
+      });
+      const selectedGameweek = (gameweeks ?? []).find((gameweek) => gameweek.number === selectedGameweekNumber) ?? currentGameweek;
 
       const teamsById = teamById(teams ?? []);
       const predictionsByFixture = new Map((predictions ?? []).map((prediction) => [prediction.fixture_id, prediction.outcome]));
-      const rows = (fixtures ?? []).flatMap((fixture) => {
+      const rows = (fixtures ?? []).filter((fixture) => fixture.gameweek_id === selectedGameweek.id).flatMap((fixture) => {
         const homeTeam = teamsById.get(fixture.home_team_id);
         const awayTeam = teamsById.get(fixture.away_team_id);
         const outcome = predictionsByFixture.get(fixture.id);
         if (!homeTeam || !awayTeam || !outcome) return [];
         return [{ externalFixtureId: fixture.external_fixture_id, kickoffAt: fixture.kickoff_at, homeTeam, awayTeam, outcome, status: fixture.status, homeScore: fixture.home_score, awayScore: fixture.away_score }];
       });
-      return mapUserPredictionRows({ gameweek: gameweek.number, displayName: user.display_name, avatarUrl: user.avatar_url, rows });
+      return mapUserPredictionRows({ gameweek: selectedGameweek.number, displayName: user.display_name, avatarUrl: user.avatar_url, rows });
     },
 
     async getPredictionAwards() {

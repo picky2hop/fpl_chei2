@@ -15,6 +15,7 @@ import {
   derivePredictionAwardSelections,
   mapPredictionAwards,
   mapFantasyAwards,
+  selectUserPredictionGameweek,
 } from "../../lib/data/line-bot-core.ts";
 
 test("selects the current gameweek and falls back when FPL has no current flag", () => {
@@ -224,6 +225,50 @@ test("maps a user's active predictions to the current gameweek", () => {
       awayScore: 0,
     }],
   });
+});
+
+test("selects the next gameweek when the user has completed every prediction", () => {
+  assert.equal(selectUserPredictionGameweek({
+    currentGameweek: 1,
+    gameweeks: [{ number: 1, status: "closed" }, { number: 2, status: "upcoming" }],
+    fixtures: [
+      { id: "gw1-f1", gameweekNumber: 1, status: "finished" },
+      { id: "gw2-f1", gameweekNumber: 2, status: "scheduled" },
+      { id: "gw2-f2", gameweekNumber: 2, status: "scheduled" },
+    ],
+    predictionsByGameweek: { 2: ["gw2-f1", "gw2-f2"] },
+  }), 2);
+});
+
+test("keeps the previous gameweek when the user has incomplete next-gameweek predictions", () => {
+  assert.equal(selectUserPredictionGameweek({
+    currentGameweek: 1,
+    gameweeks: [{ number: 1, status: "closed" }, { number: 2, status: "upcoming" }],
+    fixtures: [
+      { id: "gw1-f1", gameweekNumber: 1, status: "finished" },
+      { id: "gw2-f1", gameweekNumber: 2, status: "scheduled" },
+      { id: "gw2-f2", gameweekNumber: 2, status: "scheduled" },
+    ],
+    predictionsByGameweek: { 2: ["gw2-f1"] },
+  }), 1);
+});
+
+test("keeps the previous gameweek when the user has no predictions in the next gameweek", () => {
+  assert.equal(selectUserPredictionGameweek({
+    currentGameweek: 1,
+    gameweeks: [{ number: 1, status: "closed" }, { number: 2, status: "upcoming" }],
+    fixtures: [{ id: "gw1-f1", gameweekNumber: 1, status: "finished" }, { id: "gw2-f1", gameweekNumber: 2, status: "scheduled" }],
+    predictionsByGameweek: {},
+  }), 1);
+});
+
+test("does not fall back when the selected gameweek has no earlier gameweek", () => {
+  assert.equal(selectUserPredictionGameweek({
+    currentGameweek: 1,
+    gameweeks: [{ number: 1, status: "open" }],
+    fixtures: [{ id: "gw1-f1", gameweekNumber: 1, status: "scheduled" }],
+    predictionsByGameweek: {},
+  }), 1);
 });
 
 test("orders a user's predictions by FPL fixture id when kickoff times are identical", () => {

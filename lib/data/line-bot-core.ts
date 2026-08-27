@@ -1,5 +1,6 @@
 import type { PredictionChoice, FlexTeam } from "../line/flex.ts";
 import type { FantasyEntryCurrentSquad } from "../fantasy/types.ts";
+import { selectPredictionDefaultGameweek } from "./dashboard-view.ts";
 import { sortFixturesForFplOrder } from "./fixture-order.ts";
 
 const BANGKOK_TIME_ZONE = "Asia/Bangkok";
@@ -148,6 +149,30 @@ export function selectPreferredFantasyTeam<T extends FantasyTeamCandidate>(teams
 
 export function selectActiveGameweek(gameweeks: ActiveGameweek[]): ActiveGameweek | null {
   return gameweeks.find((gameweek) => gameweek.isCurrent) ?? [...gameweeks].sort((left, right) => left.number - right.number)[0] ?? null;
+}
+
+export function selectUserPredictionGameweek(input: {
+  currentGameweek: number;
+  gameweeks: readonly { number: number; status: string }[];
+  fixtures: readonly { id: string; gameweekNumber: number; status: string }[];
+  predictionsByGameweek: Readonly<Record<number, readonly string[]>>;
+}): number {
+  const defaultGameweek = selectPredictionDefaultGameweek(
+    input.currentGameweek,
+    [...input.gameweeks],
+    input.fixtures.map((fixture) => ({ gameweekNumber: fixture.gameweekNumber, status: fixture.status })),
+  );
+  const targetFixtureIds = input.fixtures
+    .filter((fixture) => fixture.gameweekNumber === defaultGameweek)
+    .map((fixture) => fixture.id);
+  const targetPredictionIds = new Set(input.predictionsByGameweek[defaultGameweek] ?? []);
+  const hasCompletePredictions = targetFixtureIds.length > 0
+    && targetFixtureIds.every((fixtureId) => targetPredictionIds.has(fixtureId));
+  if (hasCompletePredictions) return defaultGameweek;
+
+  return [...input.gameweeks]
+    .filter((gameweek) => gameweek.number < defaultGameweek)
+    .sort((left, right) => right.number - left.number)[0]?.number ?? defaultGameweek;
 }
 
 export function selectLatestAwardedGameweek(
