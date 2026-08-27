@@ -5,11 +5,12 @@ import type { FantasyPlayerStatInsert, FantasyFplProvider } from "./types.ts";
 
 type FantasyPlayerStatsSyncDependencies = {
   now: () => Date;
+  mode?: "manual" | "scheduled";
   seasonId: string;
   gameweeks: Array<{ id: string; number: number }>;
   provider: FantasyFplProvider;
   repository: Pick<FantasyLeagueRepository, "applyPlayerStatsSync">;
-  createJob: (input: { jobType: "fantasy_player_stats_sync"; seasonId: string; startedAt: string }) => Promise<{ id: string }>;
+  createJob: (input: { jobType: "fantasy_player_stats_sync"; mode: "manual" | "scheduled"; seasonId: string; startedAt: string }) => Promise<{ id: string }>;
   finishJob: (input: { id: string; status: "succeeded" | "failed"; finishedAt: string; details?: Record<string, unknown>; errorMessage?: string }) => Promise<void>;
 };
 
@@ -33,7 +34,7 @@ function safeReason(error: unknown): string {
 
 export async function runFantasyPlayerStatsSync(dependencies: FantasyPlayerStatsSyncDependencies): Promise<FantasyPlayerStatsSyncResult> {
   const startedAt = dependencies.now().toISOString();
-  const job = await dependencies.createJob({ jobType: "fantasy_player_stats_sync", seasonId: dependencies.seasonId, startedAt });
+  const job = await dependencies.createJob({ jobType: "fantasy_player_stats_sync", mode: dependencies.mode ?? "manual", seasonId: dependencies.seasonId, startedAt });
   const base = { jobRunId: job.id, currentGameweek: null, playersUpserted: 0, stale: true, message: "ยังไม่สามารถอัปเดตสถิตินักเตะล่าสุดได้" };
   try {
     const bootstrap = await dependencies.provider.getBootstrap();

@@ -65,3 +65,29 @@ test("scheduler authentication selects scheduled mode without requiring an admin
   assert.match(body.message ?? "", /fixtures 380/);
   assert.match(body.message ?? "", /2 GW/);
 });
+
+test("scheduler authentication routes Fantasy player-stat mode to the separate sync job", async () => {
+  const calls: string[] = [];
+  const handler = createSyncHandler({
+    hasSchedulerToken: () => true,
+    requireAdmin: async () => { throw new Error("admin auth must not run"); },
+    sync: async () => {
+      calls.push("fixtures");
+      throw new Error("fixture sync must not run");
+    },
+    syncFantasyPlayerStats: async () => {
+      calls.push("player-stats");
+      return { jobRunId: "fantasy-job-1", currentGameweek: 2, playersUpserted: 606, stale: false, message: "player stats ok" };
+    },
+  });
+
+  const response = await handler(new Request("https://example.test/api/sync", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ mode: "fantasy_player_stats" }),
+  }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls, ["player-stats"]);
+  assert.deepEqual(await response.json(), { jobRunId: "fantasy-job-1", currentGameweek: 2, playersUpserted: 606, stale: false, message: "player stats ok" });
+});

@@ -59,7 +59,7 @@ export async function runAdminFantasySync() {
   });
 }
 
-type FantasyAdminJobStart = { jobType: string; seasonId: string; startedAt: string };
+type FantasyAdminJobStart = { jobType: string; mode?: "manual" | "scheduled"; seasonId: string; startedAt: string };
 type FantasyAdminJobFinish = { id: string; status: "succeeded" | "failed"; finishedAt: string; details?: Record<string, unknown>; errorMessage?: string };
 
 async function createFantasyAdminJob(input: FantasyAdminJobStart): Promise<{ id: string }> {
@@ -70,7 +70,7 @@ async function createFantasyAdminJob(input: FantasyAdminJobStart): Promise<{ id:
     status: "running",
     started_at: input.startedAt,
     job_type: input.jobType,
-    mode: "manual",
+    mode: input.mode ?? "manual",
     source: "fpl_api",
   }).select("id").single();
   if (error || !data) throw new Error("Fantasy job could not start");
@@ -87,13 +87,14 @@ async function finishFantasyAdminJob(input: FantasyAdminJobFinish): Promise<void
   if (error) throw new Error("Fantasy job could not finish");
 }
 
-export async function runAdminFantasyPlayerStatsSync() {
+export async function runAdminFantasyPlayerStatsSync(mode: "manual" | "scheduled" = "manual") {
   const repository = getFantasyAdminRepository();
   const provider = getFantasyAdminProvider();
   const season = await repository.getActiveSeason();
   const dashboard = await repository.getDashboard({ seasonId: season.id });
   return runFantasyPlayerStatsSync({
     now: () => new Date(),
+    mode,
     seasonId: season.id,
     gameweeks: dashboard.gameweeks.map((gameweek) => ({ id: gameweek.id, number: gameweek.number })),
     provider,

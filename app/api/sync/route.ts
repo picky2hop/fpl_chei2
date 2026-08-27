@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth/guards";
 import { createSyncHandler } from "@/lib/api/sync-handler";
 import { getServerEnv } from "@/lib/env";
+import { runAdminFantasyPlayerStatsSync } from "@/lib/data/fantasy-admin";
 import { syncFplData } from "@/lib/sync/sync-service";
 
 function hasSchedulerToken(request: Request): boolean {
@@ -11,4 +12,5 @@ export const POST = createSyncHandler({
   hasSchedulerToken,
   requireAdmin,
   sync: syncFplData,
+  syncFantasyPlayerStats: () => runAdminFantasyPlayerStatsSync("scheduled"),
 });

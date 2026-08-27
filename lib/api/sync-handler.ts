@@ -5,6 +5,7 @@ export type SyncHandlerDependencies = {
   hasSchedulerToken: (request: Request) => boolean;
   requireAdmin: () => Promise<unknown>;
   sync: (mode: SyncMode) => Promise<SyncResult>;
+  syncFantasyPlayerStats?: () => Promise<{ currentGameweek: number | null; [key: string]: unknown }>;
 };
 
 export function createSyncHandler(dependencies: SyncHandlerDependencies) {
@@ -27,13 +28,26 @@ export function createSyncHandler(dependencies: SyncHandlerDependencies) {
       }
     }
 
-    let mode: SyncMode = scheduled ? "scheduled" : "manual";
+    let requestedMode: unknown;
     try {
       const body = await request.json() as { mode?: unknown };
-      if (!scheduled && body.mode === "scheduled") mode = "manual";
+      requestedMode = body.mode;
     } catch {
       // Empty request bodies are valid for both scheduler and manual calls.
     }
+
+    if (requestedMode === "fantasy_player_stats") {
+      if (!dependencies.syncFantasyPlayerStats) return Response.json({ error: "Sync mode unavailable" }, { status: 404 });
+      try {
+        const result = await dependencies.syncFantasyPlayerStats();
+        return Response.json(result, { status: result.currentGameweek === null ? 502 : 200 });
+      } catch {
+        return Response.json({ error: "Fantasy player stats sync failed" }, { status: 502 });
+      }
+    }
+
+    let mode: SyncMode = scheduled ? "scheduled" : "manual";
+    if (!scheduled && requestedMode === "scheduled") mode = "manual";
 
     try {
       const result = await dependencies.sync(mode);
