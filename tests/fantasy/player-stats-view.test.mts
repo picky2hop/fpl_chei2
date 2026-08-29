@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { rankVisiblePlayerStats, visiblePlayerStats } from "../../lib/fantasy/player-stats-view.ts";
+import { playerStatsPositionOptions, rankVisiblePlayerStats, visiblePlayerStats } from "../../lib/fantasy/player-stats-view.ts";
 
 const groups = {
   selected: { GK: [{ playerId: 1, position: "GK" }], DEF: [{ playerId: 2, position: "DEF" }], MID: [{ playerId: 3, position: "MID" }], FWD: [{ playerId: 4, position: "FWD" }] },
@@ -23,4 +23,10 @@ test("restarts visible player-stat ranks for each position", () => {
     ["MID", 1],
     ["FWD", 1],
   ]);
+});
+
+test("hides the goalkeeper filter only for DC and xGI90", () => {
+  assert.deepEqual(playerStatsPositionOptions("defensiveContribution"), ["ALL", "DEF", "MID", "FWD"]);
+  assert.deepEqual(playerStatsPositionOptions("expectedGoalInvolvementsPer90"), ["ALL", "DEF", "MID", "FWD"]);
+  assert.deepEqual(playerStatsPositionOptions("bps"), ["ALL", "GK", "DEF", "MID", "FWD"]);
 });

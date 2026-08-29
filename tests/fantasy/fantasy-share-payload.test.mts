@@ -281,6 +281,28 @@ test("shares all player positions as four ordered bubbles", () => {
   assert.equal(JSON.stringify(message).split("แชร์เมื่อ 24/08/2569 21:45 น.").length - 1, 4);
 });
 
+test("shares DC and xGI90 without a goalkeeper bubble", () => {
+  const message = buildFantasyPlayerStatsShareFlex({
+    gameweek: 3,
+    categoryLabel: "ค่าการป้องกัน(DC)",
+    categoryDescription: "ค่าการป้องกัน(DC) GW ล่าสุด",
+    excludeGoalkeeper: true,
+    positionLabel: "ทั้งหมด",
+    rows: [
+      { rank: 1, position: "GK", playerName: "Goalkeeper", clubName: "Club", metricValue: 99 },
+      { rank: 1, position: "FWD", playerName: "Forward", clubName: "Club", metricValue: 10 },
+      { rank: 1, position: "DEF", playerName: "Defender", clubName: "Club", metricValue: 8 },
+      { rank: 1, position: "MID", playerName: "Midfielder", clubName: "Club", metricValue: 7 },
+    ],
+  });
+
+  const contents = message.contents as Record<string, unknown>;
+  const bubbles = Array.isArray(contents.contents) ? contents.contents as Array<Record<string, unknown>> : [];
+  assert.equal(contents.type, "carousel");
+  assert.equal(bubbles.length, 3);
+  assert.doesNotMatch(JSON.stringify(message), /ตำแหน่ง: GK/);
+});
+
 test("shares one selected player position as one bubble", () => {
   const message = buildFantasyPlayerStatsShareFlex({
     gameweek: 3,

@@ -249,17 +249,20 @@ export function buildFantasyPlayerStatsShareFlex(input: {
   gameweek: number;
   categoryLabel: string;
   categoryDescription?: string;
+  excludeGoalkeeper?: boolean;
   positionLabel: string;
   rows: FantasyPlayerStatsShareRow[];
   sharedAt?: string;
 }): FlexMessage {
   const altText = `FPL Chei Chei · สถิตินักเตะ GW ${input.gameweek} · ${input.categoryLabel}`;
   const sharedAt = input.sharedAt ?? formatFantasyShareTimestamp();
-  if (input.positionLabel !== "ทั้งหมด") {
-    return flexMessage(altText, playerStatsBubble({ ...input, rows: input.rows.slice(0, 10), sharedAt }));
+  const positionLabel = input.excludeGoalkeeper && input.positionLabel === "GK" ? "ทั้งหมด" : input.positionLabel;
+  if (positionLabel !== "ทั้งหมด") {
+    return flexMessage(altText, playerStatsBubble({ ...input, positionLabel, rows: input.rows.slice(0, 10), sharedAt }));
   }
 
-  const bubbles = playerStatPositions.map(({ key, label }) =>
+  const positions = input.excludeGoalkeeper ? playerStatPositions.filter(({ key }) => key !== "GK") : playerStatPositions;
+  const bubbles = positions.map(({ key, label }) =>
     playerStatsBubble({
       gameweek: input.gameweek,
       categoryLabel: input.categoryLabel,

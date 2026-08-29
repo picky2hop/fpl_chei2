@@ -10,6 +10,14 @@ export type RankedVisiblePlayerStat = {
 
 const positions: FantasyPlayerPosition[] = ["GK", "DEF", "MID", "FWD"];
 
+export function isGoalkeeperExcluded(category: PlayerStatsCategory): boolean {
+  return category === "defensiveContribution" || category === "expectedGoalInvolvementsPer90";
+}
+
+export function playerStatsPositionOptions(category: PlayerStatsCategory): PlayerStatsPositionFilter[] {
+  return isGoalkeeperExcluded(category) ? ["ALL", "DEF", "MID", "FWD"] : ["ALL", ...positions];
+}
+
 export function visiblePlayerStats(groups: Pick<FantasyPlayerStatGroups, PlayerStatsCategory>, category: PlayerStatsCategory, position: PlayerStatsPositionFilter): FantasyPlayerStatEntry[] {
   const values = groups[category];
   return position === "ALL" ? positions.flatMap((item) => values[item]) : values[position];
