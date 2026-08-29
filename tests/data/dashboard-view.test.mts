@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildDashboardLeaderboardRows, buildLeaderboardByGameweek, selectPredictionDefaultGameweek } from "../../lib/data/dashboard-view.ts";
-import { getLeaderboardEntriesWithPrediction, getSeasonLeaderboardEntries } from "../../lib/predictions.ts";
+import { getCompleteLeaderboardEntries, getLeaderboardEntriesWithPrediction, getSeasonLeaderboardEntries } from "../../lib/predictions.ts";
 
 const users = [
   { id: "user-a", displayName: "ผู้เล่น A", avatarUrl: "" },
@@ -52,6 +52,20 @@ test("does not show a player with no prediction in the selected gameweek", () =>
   const visible = getLeaderboardEntriesWithPrediction(entries, ["fixture-2"], { 2: { "user-b": { "fixture-2": "home" } } }, 2);
 
   assert.deepEqual(visible.map((entry) => entry.id), ["user-b"]);
+});
+
+test("renumbers visible gameweek entries after incomplete predictions are filtered", () => {
+  const entries = [2, 4, 5, 6, 20].map((rank) => ({
+    id: `user-${rank}`,
+    rank,
+  }));
+  const predictions = Object.fromEntries(entries.map((entry) => [entry.id, { "fixture-2": "home" as const }]));
+
+  const visible = getCompleteLeaderboardEntries(entries, ["fixture-2"], {
+    2: predictions,
+  }, 2);
+
+  assert.deepEqual(visible.map((entry) => entry.rank), [1, 2, 3, 4, 5]);
 });
 
 test("season leaderboard keeps earlier scorers and users with any prediction through the selected gameweek", () => {

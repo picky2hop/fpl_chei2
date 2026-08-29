@@ -82,7 +82,9 @@ export function getCompleteLeaderboardEntries<T extends { id: string }>(
   predictionBook: Record<number, Record<string, PredictionMap>>,
   gameweek: number,
 ): T[] {
-  return entries.filter((entry) => isPredictionComplete(fixtureIds, predictionBook[gameweek]?.[entry.id] ?? {}));
+  return entries
+    .filter((entry) => isPredictionComplete(fixtureIds, predictionBook[gameweek]?.[entry.id] ?? {}))
+    .map((entry, index) => "rank" in entry ? { ...entry, rank: index + 1 } : entry);
 }
 
 export function getLeaderboardEntriesWithPrediction<T extends { id: string }>(
