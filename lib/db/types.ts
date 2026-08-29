@@ -989,6 +989,9 @@ export type Database = {
           bps: number
           expected_goal_involvements_per_90: number
           latest_finished_gameweek_points: number | null
+          latest_finished_gameweek_defensive_contribution: number | null
+          latest_finished_gameweek_bps: number | null
+          latest_finished_gameweek_number: number | null
           photo_key: string | null
           player_name: string
           position: string
@@ -1015,6 +1018,9 @@ export type Database = {
           bps?: number
           expected_goal_involvements_per_90?: number
           latest_finished_gameweek_points?: number | null
+          latest_finished_gameweek_defensive_contribution?: number | null
+          latest_finished_gameweek_bps?: number | null
+          latest_finished_gameweek_number?: number | null
           photo_key?: string | null
           player_name: string
           position: string
@@ -1041,6 +1047,9 @@ export type Database = {
           bps?: number
           expected_goal_involvements_per_90?: number
           latest_finished_gameweek_points?: number | null
+          latest_finished_gameweek_defensive_contribution?: number | null
+          latest_finished_gameweek_bps?: number | null
+          latest_finished_gameweek_number?: number | null
           photo_key?: string | null
           player_name?: string
           position?: string

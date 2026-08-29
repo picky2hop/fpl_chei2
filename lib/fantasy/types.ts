@@ -83,6 +83,8 @@ export type FplGameweekSummary = {
 export type FplEventLivePlayer = {
   playerId: number;
   points: number;
+  defensiveContribution?: number;
+  bps?: number;
 };
 
 export type FplDreamTeamPlayer = {
@@ -147,6 +149,9 @@ export type FantasyPlayerStatInsert = {
   points_per_game: number;
   expected_goal_involvements_per_90: number;
   latest_finished_gameweek_points: number | null;
+  latest_finished_gameweek_defensive_contribution: number | null;
+  latest_finished_gameweek_bps: number | null;
+  latest_finished_gameweek_number: number | null;
   is_global_captain?: boolean;
   is_global_vice_captain?: boolean;
   source_synced_at: string;

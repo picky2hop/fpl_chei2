@@ -57,6 +57,8 @@ test("normalizes API player metrics and latest finished GW points into the snaps
     gameweekId: "gw-2",
     snapshot: { ...bootstrapWithPlayers(1), currentGameweek: 2, latestFinishedGameweek: 1 },
     latestFinishedGameweekPoints: new Map([[1, 18]]),
+    latestFinishedGameweekNumber: 1,
+    latestFinishedGameweekStats: new Map([[1, { defensiveContribution: 22, bps: 33 }]]),
     syncedAt: "2026-08-17T00:00:00.000Z",
   });
 
@@ -79,6 +81,9 @@ test("normalizes API player metrics and latest finished GW points into the snaps
     points_per_game: 0.1,
     expected_goal_involvements_per_90: 0.05,
     latest_finished_gameweek_points: 18,
+    latest_finished_gameweek_defensive_contribution: 22,
+    latest_finished_gameweek_bps: 33,
+    latest_finished_gameweek_number: 1,
     is_global_captain: true,
     is_global_vice_captain: false,
     source_synced_at: "2026-08-17T00:00:00.000Z",

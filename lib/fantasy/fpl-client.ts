@@ -128,6 +128,8 @@ function normalizeEventLive(value: unknown): FplEventLivePlayer[] {
     return {
       playerId: numberValue(row.id, "event live player id"),
       points: numberValue(stats.total_points, "event live total points"),
+      ...(stats.defensive_contribution == null ? {} : { defensiveContribution: numberValue(stats.defensive_contribution, "event live defensive contribution") }),
+      ...(stats.bps == null ? {} : { bps: numberValue(stats.bps, "event live bps") }),
     } satisfies FplEventLivePlayer;
   });
 }

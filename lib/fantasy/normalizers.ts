@@ -4,6 +4,7 @@ import type {
   FantasyEntryCurrentSquad,
   FantasySquadPlayer,
   FplBootstrapSnapshot,
+  FplEventLivePlayer,
   FplEntryHistoryEvent,
 } from "./types.ts";
 
@@ -42,6 +43,8 @@ export function normalizePlayerSnapshot(input: {
   gameweekId: string;
   snapshot: FplBootstrapSnapshot;
   latestFinishedGameweekPoints?: ReadonlyMap<number, number>;
+  latestFinishedGameweekStats?: ReadonlyMap<number, Pick<FplEventLivePlayer, "defensiveContribution" | "bps">>;
+  latestFinishedGameweekNumber?: number | null;
   syncedAt: string;
 }): FantasyPlayerStatInsert[] {
   return input.snapshot.players.map((player) => ({
@@ -63,6 +66,9 @@ export function normalizePlayerSnapshot(input: {
       points_per_game: player.pointsPerGame,
       expected_goal_involvements_per_90: player.expectedGoalInvolvementsPer90,
       latest_finished_gameweek_points: input.latestFinishedGameweekPoints?.get(player.playerId) ?? null,
+      latest_finished_gameweek_defensive_contribution: input.latestFinishedGameweekStats?.get(player.playerId)?.defensiveContribution ?? null,
+      latest_finished_gameweek_bps: input.latestFinishedGameweekStats?.get(player.playerId)?.bps ?? null,
+      latest_finished_gameweek_number: input.latestFinishedGameweekNumber ?? null,
       is_global_captain: player.playerId === input.snapshot.mostCaptainedPlayerId,
       is_global_vice_captain: player.playerId === input.snapshot.mostViceCaptainedPlayerId,
       source_synced_at: input.syncedAt,

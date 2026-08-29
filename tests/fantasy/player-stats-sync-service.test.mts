@@ -25,7 +25,7 @@ test("syncs only current-gameweek player statistics", async () => {
     getEntryHistory: async () => { historyCalls += 1; throw new Error("must not call history"); },
     getEntryPicks: async () => { picksCalls += 1; throw new Error("must not call picks"); },
     getEntrySummary: async (entryId) => ({ entryId, teamName: "Team", managerName: "Manager" }),
-    getEventLive: async (gameweek) => { eventLiveCalls.push(gameweek); return [{ playerId: 7, points: 14 }]; },
+    getEventLive: async (gameweek) => { eventLiveCalls.push(gameweek); return [{ playerId: 7, points: 14, defensiveContribution: 21, bps: 88 }]; },
     getDreamTeam: async () => ({ topPlayerId: null, topPoints: null, players: [] }),
     getLeague: async (leagueId) => ({ leagueId, officialName: "League" }),
     getLeagueMembers: async () => [],
@@ -52,6 +52,9 @@ test("syncs only current-gameweek player statistics", async () => {
   assert.equal(picksCalls, 0);
   assert.equal(savedPlayers.length, 1);
   assert.equal((savedPlayers[0] as { latest_finished_gameweek_points: number }).latest_finished_gameweek_points, 14);
+  assert.equal((savedPlayers[0] as { latest_finished_gameweek_defensive_contribution: number }).latest_finished_gameweek_defensive_contribution, 21);
+  assert.equal((savedPlayers[0] as { latest_finished_gameweek_bps: number }).latest_finished_gameweek_bps, 88);
+  assert.equal((savedPlayers[0] as { latest_finished_gameweek_number: number }).latest_finished_gameweek_number, 2);
   assert.equal(result.playersUpserted, 1);
   assert.equal(result.currentGameweek, 3);
   assert.equal(result.stale, false);

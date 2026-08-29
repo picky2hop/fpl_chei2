@@ -215,7 +215,7 @@ test("normalizes FPL event-live points and Dream Team players", async () => {
     fetchImpl: async (input) => {
       const url = String(input);
       if (url.endsWith("/api/event/3/live/")) {
-        return Response.json({ elements: [{ id: 10, stats: { total_points: 18 } }] });
+        return Response.json({ elements: [{ id: 10, stats: { total_points: 18, bps: 42, defensive_contribution: 7 } }] });
       }
       if (url.endsWith("/api/dream-team/3/")) {
         return Response.json({ top_player: { id: 10, points: 18 }, team: [{ element: 10, points: 18, position: 1 }] });
@@ -224,7 +224,7 @@ test("normalizes FPL event-live points and Dream Team players", async () => {
     },
   });
 
-  assert.deepEqual(await provider.getEventLive(3), [{ playerId: 10, points: 18 }]);
+  assert.deepEqual(await provider.getEventLive(3), [{ playerId: 10, points: 18, bps: 42, defensiveContribution: 7 }]);
   assert.deepEqual(await provider.getDreamTeam(3), {
     topPlayerId: 10,
     topPoints: 18,

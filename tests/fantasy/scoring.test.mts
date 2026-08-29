@@ -83,6 +83,9 @@ test("ranks the five new player-stat categories independently by position", () =
     points_per_game: 7 - index / 10,
     expected_goal_involvements_per_90: 1.5 - index / 100,
     latest_finished_gameweek_points: 20 - index,
+    latest_finished_gameweek_defensive_contribution: 70 - index,
+    latest_finished_gameweek_bps: 60 - index,
+    latest_finished_gameweek_number: 2,
   }));
 
   const stats = rankPlayerStats({ players, currentGameweekId: "gw2" });
@@ -92,13 +95,15 @@ test("ranks the five new player-stat categories independently by position", () =
   assert.deepEqual(stats.pointsPerGame.MID.slice(0, 2).map((entry) => entry.playerId), [1, 2]);
   assert.deepEqual(stats.expectedGoalInvolvementsPer90.MID.slice(0, 2).map((entry) => entry.playerId), [1, 2]);
   assert.deepEqual(stats.latestGameweekPoints.MID.slice(0, 2).map((entry) => entry.playerId), [1, 2]);
+  assert.equal(stats.defensiveContribution.MID[0]?.metricValue, 70);
+  assert.equal(stats.bps.MID[0]?.metricValue, 60);
 });
 
 test("excludes goalkeepers from DC and xGI90 rankings only", () => {
   const stats = rankPlayerStats({
     players: [
-      { fpl_player_id: 1, player_name: "Goalkeeper", position: "GK", club_id: 1, club_name: "Club", status: "a", selected_by_percent: 10, transfers_in_event: 10, transfers_out_event: 10, form: 10, defensive_contribution: 999, bps: 999, points_per_game: 9, expected_goal_involvements_per_90: 9, latest_finished_gameweek_points: 9 },
-      { fpl_player_id: 2, player_name: "Defender", position: "DEF", club_id: 1, club_name: "Club", status: "a", selected_by_percent: 10, transfers_in_event: 10, transfers_out_event: 10, form: 10, defensive_contribution: 100, bps: 100, points_per_game: 8, expected_goal_involvements_per_90: 8, latest_finished_gameweek_points: 8 },
+      { fpl_player_id: 1, player_name: "Goalkeeper", position: "GK", club_id: 1, club_name: "Club", status: "a", selected_by_percent: 10, transfers_in_event: 10, transfers_out_event: 10, form: 10, defensive_contribution: 999, bps: 999, points_per_game: 9, expected_goal_involvements_per_90: 9, latest_finished_gameweek_points: 9, latest_finished_gameweek_defensive_contribution: 999, latest_finished_gameweek_bps: 999, latest_finished_gameweek_number: 2 },
+      { fpl_player_id: 2, player_name: "Defender", position: "DEF", club_id: 1, club_name: "Club", status: "a", selected_by_percent: 10, transfers_in_event: 10, transfers_out_event: 10, form: 10, defensive_contribution: 100, bps: 100, points_per_game: 8, expected_goal_involvements_per_90: 8, latest_finished_gameweek_points: 8, latest_finished_gameweek_defensive_contribution: 100, latest_finished_gameweek_bps: 100, latest_finished_gameweek_number: 2 },
     ],
     currentGameweekId: "gw2",
   });

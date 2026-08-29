@@ -41,10 +41,12 @@ export async function runFantasyPlayerStatsSync(dependencies: FantasyPlayerStats
     const currentGameweek = dependencies.gameweeks.find((gameweek) => gameweek.number === bootstrap.currentGameweek);
     if (!currentGameweek) throw new Error("Fantasy current gameweek is unavailable");
     const syncedAt = dependencies.now().toISOString();
-    const latestFinishedGameweekPoints = bootstrap.latestFinishedGameweek === null
-      ? new Map<number, number>()
-      : new Map((await dependencies.provider.getEventLive(bootstrap.latestFinishedGameweek)).map((player) => [player.playerId, player.points]));
-    const players: FantasyPlayerStatInsert[] = normalizePlayerSnapshot({ seasonId: dependencies.seasonId, gameweekId: currentGameweek.id, snapshot: bootstrap, latestFinishedGameweekPoints, syncedAt });
+    const latestFinishedGameweekLive = bootstrap.latestFinishedGameweek === null
+      ? []
+      : await dependencies.provider.getEventLive(bootstrap.latestFinishedGameweek);
+    const latestFinishedGameweekPoints = new Map(latestFinishedGameweekLive.map((player) => [player.playerId, player.points]));
+    const latestFinishedGameweekStats = new Map(latestFinishedGameweekLive.map((player) => [player.playerId, player]));
+    const players: FantasyPlayerStatInsert[] = normalizePlayerSnapshot({ seasonId: dependencies.seasonId, gameweekId: currentGameweek.id, snapshot: bootstrap, latestFinishedGameweekPoints, latestFinishedGameweekStats, latestFinishedGameweekNumber: bootstrap.latestFinishedGameweek, syncedAt });
     const writeResult = await dependencies.repository.applyPlayerStatsSync({ jobRunId: job.id, syncedAt, players });
     const result = { jobRunId: job.id, currentGameweek: bootstrap.currentGameweek, playersUpserted: writeResult.playersUpserted, stale: false, message: `ซิงก์สถิตินักเตะสำเร็จ ${writeResult.playersUpserted} รายการ` };
     await dependencies.finishJob({ id: job.id, status: "succeeded", finishedAt: dependencies.now().toISOString(), details: result });

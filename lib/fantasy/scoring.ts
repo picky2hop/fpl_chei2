@@ -47,6 +47,9 @@ export type FantasyPlayerStatRow = {
   points_per_game?: number;
   expected_goal_involvements_per_90?: number;
   latest_finished_gameweek_points?: number | null;
+  latest_finished_gameweek_defensive_contribution?: number | null;
+  latest_finished_gameweek_bps?: number | null;
+  latest_finished_gameweek_number?: number | null;
 };
 
 export type FantasyPlayerStatEntry = {
@@ -156,8 +159,8 @@ export function rankPlayerStats(input: {
     transfersIn: grouped(currentPlayers, (row) => row.transfers_in_event),
     transfersOut: grouped(currentPlayers, (row) => row.transfers_out_event),
     form: grouped(currentPlayers, (row) => row.form),
-    defensiveContribution: grouped(currentPlayers.filter((player) => player.position !== "GK"), (row) => row.defensive_contribution),
-    bps: grouped(currentPlayers, (row) => row.bps),
+    defensiveContribution: grouped(currentPlayers.filter((player) => player.position !== "GK"), (row) => row.latest_finished_gameweek_defensive_contribution),
+    bps: grouped(currentPlayers, (row) => row.latest_finished_gameweek_bps),
     pointsPerGame: grouped(currentPlayers, (row) => row.points_per_game),
     expectedGoalInvolvementsPer90: grouped(currentPlayers.filter((player) => player.position !== "GK"), (row) => row.expected_goal_involvements_per_90),
     latestGameweekPoints: grouped(currentPlayers, (row) => row.latest_finished_gameweek_points),
