@@ -89,6 +89,31 @@ export function getLeaderboardEntriesWithPrediction<T extends { id: string }>(
   return entries.filter((entry) => fixtureIds.some((fixtureId) => Boolean(predictions[entry.id]?.[fixtureId])));
 }
 
+export function getSeasonLeaderboardEntries<T extends { id: string; displayName: string; gameweekPoints: number; seasonPoints: number; rank: number }>(
+  entriesByGameweek: Record<number, T[]>,
+  predictionBook: Record<number, Record<string, PredictionMap>>,
+  selectedGameweek: number,
+): T[] {
+  const latestEntries = new Map<string, { gameweek: number; entry: T }>();
+  for (const [gameweekValue, entries] of Object.entries(entriesByGameweek)) {
+    const gameweek = Number(gameweekValue);
+    if (!Number.isFinite(gameweek) || gameweek > selectedGameweek) continue;
+    for (const entry of entries) {
+      const previous = latestEntries.get(entry.id);
+      if (!previous || gameweek >= previous.gameweek) latestEntries.set(entry.id, { gameweek, entry });
+    }
+  }
+
+  const hasPredictionThroughSelectedGameweek = (entryId: string): boolean => Object.entries(predictionBook)
+    .some(([gameweekValue, users]) => Number(gameweekValue) <= selectedGameweek && Object.keys(users[entryId] ?? {}).length > 0);
+
+  return [...latestEntries.values()]
+    .map(({ entry }) => entry)
+    .filter((entry) => entry.seasonPoints > 0 || hasPredictionThroughSelectedGameweek(entry.id))
+    .sort((left, right) => right.seasonPoints - left.seasonPoints || right.gameweekPoints - left.gameweekPoints || left.displayName.localeCompare(right.displayName))
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
 export function normalizePredictionPercentage(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }

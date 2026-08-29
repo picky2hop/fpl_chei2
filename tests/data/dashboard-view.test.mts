@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildDashboardLeaderboardRows, buildLeaderboardByGameweek, selectPredictionDefaultGameweek } from "../../lib/data/dashboard-view.ts";
-import { getLeaderboardEntriesWithPrediction } from "../../lib/predictions.ts";
+import { getLeaderboardEntriesWithPrediction, getSeasonLeaderboardEntries } from "../../lib/predictions.ts";
 
 const users = [
   { id: "user-a", displayName: "ผู้เล่น A", avatarUrl: "" },
@@ -52,6 +52,29 @@ test("does not show a player with no prediction in the selected gameweek", () =>
   const visible = getLeaderboardEntriesWithPrediction(entries, ["fixture-2"], { 2: { "user-b": { "fixture-2": "home" } } }, 2);
 
   assert.deepEqual(visible.map((entry) => entry.id), ["user-b"]);
+});
+
+test("season leaderboard keeps earlier scorers and users with any prediction through the selected gameweek", () => {
+  const entriesByGameweek = {
+    1: [
+      { ...users[0], rank: 1, gameweekPoints: 10, seasonPoints: 10, trend: "same" as const, form: [] },
+      { ...users[1], rank: 2, gameweekPoints: 0, seasonPoints: 0, trend: "same" as const, form: [] },
+    ],
+    2: [
+      { ...users[1], rank: 1, gameweekPoints: 4, seasonPoints: 4, trend: "same" as const, form: [] },
+    ],
+  };
+
+  const visible = getSeasonLeaderboardEntries(
+    entriesByGameweek,
+    { 1: { "user-b": { "fixture-1": "home" } } },
+    2,
+  );
+
+  assert.deepEqual(visible.map((entry) => [entry.id, entry.seasonPoints, entry.rank]), [
+    ["user-a", 10, 1],
+    ["user-b", 4, 2],
+  ]);
 });
 
 test("defaults the prediction tab to the next gameweek after the current gameweek is closed", () => {

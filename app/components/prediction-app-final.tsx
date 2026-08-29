@@ -33,6 +33,7 @@ import {
   getUserPredictionDetails,
   isPredictionComplete,
   normalizePredictionPercentage,
+  getSeasonLeaderboardEntries,
   type PredictionChoice,
   type PredictionMap,
 } from "@/lib/predictions";
@@ -59,6 +60,7 @@ type PredictionAppProps = {
 };
 
 const predictionBookByEntries = new WeakMap<LeaderboardEntry[], Record<number, Record<string, PredictionMap>>>();
+const leaderboardByEntries = new WeakMap<LeaderboardEntry[], Record<number, LeaderboardEntry[]>>();
 
 const tabs: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "leaderboard", label: "ตารางคะแนน", icon: ArrowUpRight },
@@ -108,7 +110,7 @@ function Leaderboard({ entries, gameweek, fixtureIds, predictionBook, onSelect }
   const [mode, setMode] = useState<"gameweek" | "season">("gameweek");
   const [shareMessage, setShareMessage] = useState("");
   const entriesWithPrediction = getLeaderboardEntriesWithPrediction(entries, fixtureIds, predictionBook, gameweek);
-  const visibleEntries = mode === "gameweek" ? getCompleteLeaderboardEntries(entriesWithPrediction, fixtureIds, predictionBook, gameweek) : entriesWithPrediction;
+  const visibleEntries = mode === "gameweek" ? getCompleteLeaderboardEntries(entriesWithPrediction, fixtureIds, predictionBook, gameweek) : getSeasonLeaderboardEntries(leaderboardByEntries.get(entries) ?? { [gameweek]: entries }, predictionBook, gameweek);
   const share = async () => {
     setShareMessage("");
     try {
@@ -254,6 +256,7 @@ export default function PredictionApp({ currentUser, gameweeks, fixturesByGamewe
   const selectedFixtureIds = fixtures.map((fixture) => fixture.id);
   const predictionBookByGameweek = livePredictionBookByGameweek ?? mockPredictionBookByGameweek;
   predictionBookByEntries.set(entries, predictionBookByGameweek);
+  leaderboardByEntries.set(entries, leaderboardByGameweek);
   const predictions = predictionsByGameweek[viewGameweek] ?? {};
   const editableFixtures = fixtures.map((fixture) => ({ id: fixture.id, status: fixture.status, kickoffAt: fixture.kickoff }));
   const editableFixtureIds = getEditablePredictionIds(editableFixtures, new Date());

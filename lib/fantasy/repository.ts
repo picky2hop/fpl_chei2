@@ -74,6 +74,7 @@ export type FantasyLeagueRepository = {
   }): Promise<FantasyLeagueSyncWriteResult>;
   applyScoreRecalculation(input: {
     jobRunId: string;
+    memberships: FantasyLeagueMembershipInsert[];
     scores: FantasyEntryGameweekScoreInsert[];
   }): Promise<{ jobRunId: string; scoresUpserted: number }>;
   applyPlayerStatsSync(input: {
@@ -544,6 +545,7 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
     async applyScoreRecalculation(input) {
       const { data, error } = await client.rpc("apply_fantasy_score_recalculation", {
         p_job_run_id: input.jobRunId,
+        p_memberships: input.memberships,
         p_scores: input.scores,
       });
       if (error || !data || typeof data !== "object") throw new Error("Fantasy database operation failed");

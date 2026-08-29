@@ -1102,6 +1102,7 @@ export type Database = {
       apply_fantasy_score_recalculation: {
         Args: {
           p_job_run_id: string
+          p_memberships: Json
           p_scores: Json
         }
         Returns: Json

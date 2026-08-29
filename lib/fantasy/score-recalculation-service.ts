@@ -1,7 +1,7 @@
 import { calculateStartingXiCaptainScore } from "./fantasy-score-calculator.ts";
 import { FantasyFplError } from "./fpl-client.ts";
 import type { FantasyLeagueRepository } from "./repository.ts";
-import type { FantasyEntryGameweekScoreInsert } from "./league-types.ts";
+import type { FantasyEntryGameweekScoreInsert, FantasyLeagueMembershipInsert } from "./league-types.ts";
 import type { FantasyFplProvider, FplEntryHistoryEvent, FplEntrySummary } from "./types.ts";
 
 type ScoreRecalculationDependencies = {
@@ -26,6 +26,43 @@ export type FantasyScoreRecalculationResult = {
 };
 
 type Target = { entryId: number; gameweek: number; gameweekId: string };
+
+function buildHistoricalMemberships(input: {
+  seasonId: string;
+  syncedAt: string;
+  leagues: Array<{ id: string }>;
+  entryIdsByLeague: Array<{ leagueId: string; entryIds: number[] }>;
+  histories: Map<number, FplEntryHistoryEvent[]>;
+  summaries: Map<number, FplEntrySummary>;
+  gameweekIds: Map<number, string>;
+}): FantasyLeagueMembershipInsert[] {
+  const rows: FantasyLeagueMembershipInsert[] = [];
+  const seen = new Set<string>();
+  for (const league of input.leagues) {
+    const entryIds = input.entryIdsByLeague.find((item) => item.leagueId === league.id)?.entryIds ?? [];
+    for (const entryId of entryIds) {
+      const summary = input.summaries.get(entryId);
+      if (!summary) continue;
+      for (const event of input.histories.get(entryId) ?? []) {
+        const gameweekId = input.gameweekIds.get(event.event);
+        if (!gameweekId) continue;
+        const key = `${league.id}:${gameweekId}:${entryId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        rows.push({
+          season_id: input.seasonId,
+          league_id: league.id,
+          gameweek_id: gameweekId,
+          fpl_entry_id: entryId,
+          fpl_team_name: summary.teamName,
+          fpl_manager_name: summary.managerName,
+          source_synced_at: input.syncedAt,
+        });
+      }
+    }
+  }
+  return rows;
+}
 
 function failureReason(error: unknown): string {
   const code = error instanceof FantasyFplError ? error.code : null;
@@ -102,14 +139,18 @@ export async function runFantasyScoreRecalculation(dependencies: ScoreRecalculat
     const currentGameweek = dependencies.gameweeks.find((gameweek) => gameweek.number === bootstrap.currentGameweek);
     if (!currentGameweek) throw new Error("Fantasy current gameweek is unavailable");
     const leagues = await dependencies.repository.listActiveLeagues(dependencies.seasonId);
-    const leagueEntryIds = await mapWithConcurrency(leagues, 4, (league) => dependencies.repository.listLeagueEntryIds({ seasonId: dependencies.seasonId, leagueId: league.id, gameweekId: currentGameweek.id }));
+    const entryIdsByLeague = await mapWithConcurrency(leagues, 4, async (league) => ({
+      leagueId: league.id,
+      entryIds: await dependencies.repository.listLeagueEntryIds({ seasonId: dependencies.seasonId, leagueId: league.id, gameweekId: currentGameweek.id }),
+    }));
     const existing = await dependencies.repository.listEntryGameweekScores(dependencies.seasonId);
-    const entryIds = [...new Set([...existing.map((row) => row.fpl_entry_id), ...leagueEntryIds.flat()])];
+    const entryIds = [...new Set([...existing.map((row) => row.fpl_entry_id), ...entryIdsByLeague.flatMap((item) => item.entryIds)])];
     const historyResults = await mapWithConcurrency(entryIds, 4, async (entryId) => ({ entryId, history: await dependencies.provider.getEntryHistory(entryId) }));
     const histories = new Map(historyResults.map((result) => [result.entryId, result.history]));
     const gameweekIds = new Map(dependencies.gameweeks.map((gameweek) => [gameweek.number, gameweek.id]));
     const targets = buildTargets({ entryIds, histories, existing, gameweekIds });
     const summaries = new Map(await mapWithConcurrency(entryIds, 4, async (entryId) => [entryId, await dependencies.provider.getEntrySummary(entryId)] as const));
+    const memberships = buildHistoricalMemberships({ seasonId: dependencies.seasonId, syncedAt: dependencies.now().toISOString(), leagues, entryIdsByLeague, histories, summaries, gameweekIds });
     const results = await mapWithConcurrency(targets, 4, async (target) => {
       try {
         const getEntryPicks = dependencies.provider.getEntryPicks;
@@ -124,7 +165,7 @@ export async function runFantasyScoreRecalculation(dependencies: ScoreRecalculat
     });
     const scores = results.filter((result): result is { target: Target; row: FantasyEntryGameweekScoreInsert } => "row" in result).map((result) => result.row);
     const failures = results.filter((result): result is { target: Target; failure: FantasyScoreRecalculationFailure } => "failure" in result).map((result) => result.failure);
-    const writeResult = await dependencies.repository.applyScoreRecalculation({ jobRunId: job.id, scores });
+    const writeResult = await dependencies.repository.applyScoreRecalculation({ jobRunId: job.id, memberships, scores });
     const result = { jobRunId: job.id, currentGameweek: bootstrap.currentGameweek, scoresUpserted: writeResult.scoresUpserted, stale: false, message: `คำนวณคะแนนสำเร็จ ${writeResult.scoresUpserted} รายการ${failures.length > 0 ? `, ล้มเหลว ${failures.length} รายการ` : ""}`, failedScoreTargets: failures };
     await dependencies.finishJob({ id: job.id, status: "succeeded", finishedAt: dependencies.now().toISOString(), details: result });
     return result;

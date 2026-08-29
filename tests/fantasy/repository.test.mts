@@ -220,6 +220,7 @@ test("passes score-only recalculation rows through its dedicated RPC", async () 
 
   const result = await repository.applyScoreRecalculation!({
     jobRunId: "job-2",
+    memberships: [],
     scores: [{
       season_id: "season-1",
       gameweek_id: "gw-1",
@@ -236,7 +237,7 @@ test("passes score-only recalculation rows through its dedicated RPC", async () 
   });
 
   assert.equal(rpcName, "apply_fantasy_score_recalculation");
-  assert.deepEqual(rpcArgs, { p_job_run_id: "job-2", p_scores: [{
+  assert.deepEqual(rpcArgs, { p_job_run_id: "job-2", p_memberships: [], p_scores: [{
     season_id: "season-1",
     gameweek_id: "gw-1",
     fpl_entry_id: 101,

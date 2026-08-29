@@ -21,6 +21,7 @@ function squad(entryId: number, gameweekNumber: number) {
 
 function dependencies() {
   const saved: Array<{ entryId: number; gameweekId: string; points: number }> = [];
+  let recalculationInput: unknown;
   const provider: FantasyFplProvider = {
     getBootstrap: async () => ({ currentGameweek: 2, latestFinishedGameweek: 2, gameweeks: [], players: [], mostCaptainedPlayerId: null, mostViceCaptainedPlayerId: null }),
     getEntryHistory: async () => [
@@ -46,12 +47,14 @@ function dependencies() {
       { fpl_entry_id: 20, gameweek_id: "gw-1", calculation_method: "legacy_fpl_history" },
     ],
     applyScoreRecalculation: async (input) => {
+      recalculationInput = input;
       saved.push(...input.scores.map((score) => ({ entryId: score.fpl_entry_id, gameweekId: score.gameweek_id, points: score.points })));
       return { jobRunId: input.jobRunId, scoresUpserted: input.scores.length };
     },
   };
   return {
     saved,
+    getRecalculationInput: () => recalculationInput,
     dependencies: {
       now: () => new Date("2026-08-25T00:00:00.000Z"),
       seasonId: "season-1",
@@ -77,4 +80,18 @@ test("recalculates legacy and missing scores, skips formula rows, and keeps fail
   assert.deepEqual(result.failedScoreTargets, [{ entryId: 20, gameweek: 1, reason: "ไม่สามารถอ่าน Picks ของ Entry/GW นี้ได้" }]);
   assert.equal(base.saved.some((row) => row.points === 0), false);
   assert.match(result.message ?? "", /ล้มเหลว 1 รายการ/);
+});
+
+test("backfills historical league memberships for every current league Entry", async () => {
+  const base = dependencies();
+
+  await runFantasyScoreRecalculation(base.dependencies);
+
+  const input = base.getRecalculationInput() as { memberships: Array<{ league_id: string; gameweek_id: string; fpl_entry_id: number; fpl_team_name: string; fpl_manager_name: string }> };
+  assert.deepEqual(input.memberships.map((membership) => [membership.league_id, membership.gameweek_id, membership.fpl_entry_id]), [
+    ["league-1", "gw-1", 10],
+    ["league-1", "gw-2", 10],
+    ["league-1", "gw-1", 20],
+    ["league-1", "gw-2", 20],
+  ]);
 });
