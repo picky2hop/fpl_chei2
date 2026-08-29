@@ -34,6 +34,8 @@ test("prediction app preserves editable picks and exposes the fantasy switch", a
   const source = await readFile(new URL("../app/components/prediction-app-final.tsx", import.meta.url), "utf8");
 
   assert.equal(source.includes("getEditablePredictions"), true);
+  assert.equal(source.includes("getEditablePredictionIds(editableFixtures, new Date(), predictions)"), true);
+  assert.equal(source.includes("editable={editableFixtureIds.includes(fixture.id)}"), true);
   assert.equal(source.includes("href=\"/fantasy\""), true);
   assert.equal(source.includes("setIsSharePromptOpen(true)"), true);
   assert.equal(source.includes("Preview / LIFF"), false);

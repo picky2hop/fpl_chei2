@@ -101,3 +101,23 @@ test("prediction API saves a gameweek batch through one atomic persistence call"
     ],
   });
 });
+
+test("prediction API returns a safe message when the first fixture was missed", async () => {
+  const handler = createPredictionsHandler({
+    requireUser: async () => ({ id: "user-1" }),
+    savePrediction: async () => ({ fixtureId: "fixture-1", choice: "home", status: "active" }),
+    savePredictions: async () => {
+      throw Object.assign(new Error("internal rule detail"), { status: 409, reason: "first_fixture_missed" });
+    },
+    listPredictions: async () => [],
+  });
+
+  const response = await handler(new Request("https://example.test/api/predictions", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ predictions: [{ fixtureId: "fixture-2", choice: "home" }] }),
+  }));
+
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), { error: "First fixture was missed" });
+});

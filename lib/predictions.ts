@@ -36,7 +36,13 @@ export function canEditPrediction(fixture: PredictionEditableFixture, now: Date)
     && now.getTime() < kickoffAt.getTime();
 }
 
-export function getEditablePredictionIds(fixtures: PredictionEditableFixture[], now: Date): string[] {
+export function getEditablePredictionIds(
+  fixtures: PredictionEditableFixture[],
+  now: Date,
+  predictions: PredictionMap = {},
+): string[] {
+  const firstFixture = fixtures.find((fixture) => fixture.status !== "postponed");
+  if (firstFixture && !canEditPrediction(firstFixture, now) && !predictions[firstFixture.id]) return [];
   return fixtures.filter((fixture) => canEditPrediction(fixture, now)).map((fixture) => fixture.id);
 }
 
@@ -45,7 +51,7 @@ export function getEditablePredictions(
   predictions: PredictionMap,
   now: Date,
 ): PredictionMap {
-  const editableIds = new Set(getEditablePredictionIds(fixtures, now));
+  const editableIds = new Set(getEditablePredictionIds(fixtures, now, predictions));
   return Object.fromEntries(Object.entries(predictions).filter(([fixtureId]) => editableIds.has(fixtureId)));
 }
 

@@ -40,3 +40,42 @@ test("prediction service maps the atomic batch RPC response", async () => {
     { fixtureId: "fixture-2", choice: "draw", status: "active" },
   ]);
 });
+
+test("prediction service maps the first-fixture gate error without exposing database details", async () => {
+  const service = createPredictionService({
+    rpc: async () => ({
+      data: null,
+      error: { code: "P0001", message: "internal rule detail", hint: "FIRST_FIXTURE_MISSED" },
+    }),
+  } as never);
+
+  await assert.rejects(
+    () => service.savePrediction({ userId: "user-1", fixtureId: "fixture-2", choice: "home" }),
+    (error: unknown) => {
+      assert.equal(error instanceof Error, true);
+      assert.equal((error as { name: string }).name, "PredictionWriteError");
+      assert.equal((error as { status: number }).status, 409);
+      assert.equal((error as { reason: string }).reason, "first_fixture_missed");
+      return true;
+    },
+  );
+});
+
+test("prediction service maps the first-fixture gate error for atomic batches", async () => {
+  const service = createPredictionService({
+    rpc: async () => ({
+      data: null,
+      error: { code: "P0001", message: "internal rule detail", hint: "FIRST_FIXTURE_MISSED" },
+    }),
+  } as never);
+
+  await assert.rejects(
+    () => service.savePredictions({ userId: "user-1", predictions: [{ fixtureId: "fixture-2", choice: "home" }] }),
+    (error: unknown) => {
+      assert.equal((error as { name: string }).name, "PredictionWriteError");
+      assert.equal((error as { status: number }).status, 409);
+      assert.equal((error as { reason: string }).reason, "first_fixture_missed");
+      return true;
+    },
+  );
+});

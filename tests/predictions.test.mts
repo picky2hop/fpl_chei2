@@ -44,8 +44,31 @@ describe("prediction helpers", () => {
       { id: "future", status: "scheduled" as const, kickoffAt: "2026-08-22T13:00:00.000Z" },
     ];
 
-    assert.deepEqual(getEditablePredictionIds(fixtures, now), ["future"]);
+    assert.deepEqual(getEditablePredictionIds(fixtures, now, { started: "home", future: "away" }), ["future"]);
     assert.deepEqual(getEditablePredictions(fixtures, { started: "home", future: "away" }, now), { future: "away" });
+  });
+
+  it("locks every remaining fixture when the user missed the first fixture", () => {
+    const now = new Date("2026-08-22T12:00:00.000Z");
+    const fixtures = [
+      { id: "started", status: "live" as const, kickoffAt: "2026-08-22T11:00:00.000Z" },
+      { id: "future", status: "scheduled" as const, kickoffAt: "2026-08-22T13:00:00.000Z" },
+    ];
+
+    assert.deepEqual(getEditablePredictionIds(fixtures, now, {}), []);
+    assert.deepEqual(getEditablePredictions(fixtures, {}, now), {});
+  });
+
+  it("uses the next non-postponed fixture as the first-fixture gate", () => {
+    const now = new Date("2026-08-22T12:00:00.000Z");
+    const fixtures = [
+      { id: "postponed", status: "postponed" as const, kickoffAt: "2026-08-22T10:00:00.000Z" },
+      { id: "started", status: "live" as const, kickoffAt: "2026-08-22T11:00:00.000Z" },
+      { id: "future", status: "scheduled" as const, kickoffAt: "2026-08-22T13:00:00.000Z" },
+    ];
+
+    assert.deepEqual(getEditablePredictionIds(fixtures, now, {}), []);
+    assert.deepEqual(getEditablePredictionIds(fixtures, now, { started: "draw" }), ["future"]);
   });
 
   it("keeps only players who predicted every fixture in the selected gameweek", () => {

@@ -28,6 +28,19 @@ function isPredictionBatch(value: unknown): value is Array<{ fixtureId: string; 
       && isPredictionChoice(item.choice));
 }
 
+function getPredictionWriteErrorResponse(error: unknown, fallback: string): { status: number; message: string } {
+  const status = typeof error === "object" && error !== null && "status" in error && (error.status === 409 || error.status === 422)
+    ? error.status
+    : 500;
+  const reason = typeof error === "object" && error !== null && "reason" in error && error.reason === "first_fixture_missed"
+    ? error.reason
+    : null;
+  return {
+    status,
+    message: reason ? "First fixture was missed" : status === 409 ? "Prediction is locked" : fallback,
+  };
+}
+
 export function createPredictionsHandler(dependencies: PredictionsHandlerDependencies) {
   return async function handler(request: Request): Promise<Response> {
     let user: { id: string };
@@ -75,10 +88,8 @@ export function createPredictionsHandler(dependencies: PredictionsHandlerDepende
       try {
         return Response.json({ predictions: await dependencies.savePredictions({ userId: user.id, predictions: body.predictions }) });
       } catch (error) {
-        const status = typeof error === "object" && error !== null && "status" in error && (error.status === 409 || error.status === 422)
-          ? error.status
-          : 500;
-        return Response.json({ error: status === 409 ? "Prediction is locked" : "Unable to save predictions" }, { status });
+        const result = getPredictionWriteErrorResponse(error, "Unable to save predictions");
+        return Response.json({ error: result.message }, { status: result.status });
       }
     }
 
@@ -97,10 +108,8 @@ export function createPredictionsHandler(dependencies: PredictionsHandlerDepende
       const prediction = await dependencies.savePrediction({ userId: user.id, fixtureId: body.fixtureId, choice: body.choice });
       return Response.json({ prediction });
     } catch (error) {
-      const status = typeof error === "object" && error !== null && "status" in error && (error.status === 409 || error.status === 422)
-        ? error.status
-        : 500;
-      return Response.json({ error: status === 409 ? "Prediction is locked" : "Unable to save prediction" }, { status });
+      const result = getPredictionWriteErrorResponse(error, "Unable to save prediction");
+      return Response.json({ error: result.message }, { status: result.status });
     }
   };
 }

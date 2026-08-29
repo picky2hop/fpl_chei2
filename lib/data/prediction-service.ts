@@ -5,11 +5,17 @@ import type { Database } from "../db/types.ts";
 
 export class PredictionWriteError extends Error {
   public readonly status: 409 | 422;
+  public readonly reason: "locked" | "first_fixture_missed" | "not_active_participant";
 
-  constructor(status: 409 | 422, message: string) {
+  constructor(
+    status: 409 | 422,
+    message: string,
+    reason: "locked" | "first_fixture_missed" | "not_active_participant" = status === 409 ? "locked" : "not_active_participant",
+  ) {
     super(message);
     this.name = "PredictionWriteError";
     this.status = status;
+    this.reason = reason;
   }
 }
 
@@ -34,6 +40,9 @@ export function createPredictionService(admin: SupabaseClient<Database>) {
 
       if (error) {
         if (error.code === "55P03") throw new PredictionWriteError(409, "Prediction is locked");
+        if (error.code === "P0001" && error.hint === "FIRST_FIXTURE_MISSED") {
+          throw new PredictionWriteError(409, "First fixture was missed", "first_fixture_missed");
+        }
         if (error.code === "42501") throw new PredictionWriteError(422, "User is not an active participant");
         throw new Error(`Unable to save prediction: ${error.message}`);
       }
@@ -57,6 +66,9 @@ export function createPredictionService(admin: SupabaseClient<Database>) {
 
       if (error) {
         if (error.code === "55P03") throw new PredictionWriteError(409, "Prediction is locked");
+        if (error.code === "P0001" && error.hint === "FIRST_FIXTURE_MISSED") {
+          throw new PredictionWriteError(409, "First fixture was missed", "first_fixture_missed");
+        }
         if (error.code === "42501") throw new PredictionWriteError(422, "User is not an active participant");
         throw new Error(`Unable to save predictions: ${error.message}`);
       }

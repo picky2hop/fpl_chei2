@@ -59,7 +59,11 @@ export default function LiveDashboard({ profile }: { profile: UserProfile }) {
     const response = await fetch("/api/predictions", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ predictions: Object.entries(predictions).map(([fixtureId, choice]) => ({ fixtureId, choice })) }) });
     if (!response.ok) {
       const body = await response.json().catch(() => null) as { error?: string } | null;
-      throw new Error(body?.error === "Prediction is locked" ? "มีคู่ที่เริ่มแข่งแล้ว กรุณาตรวจสอบคำทายอีกครั้ง" : "บันทึกคำทายไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      throw new Error(body?.error === "Prediction is locked"
+        ? "มีคู่ที่เริ่มแข่งแล้ว กรุณาตรวจสอบคำทายอีกครั้ง"
+        : body?.error === "First fixture was missed"
+          ? "ไม่ได้ทายคู่แรก จึงไม่สามารถทายคู่ที่เหลือของ GW นี้ได้"
+          : "บันทึกคำทายไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     }
   }} /></>;
 }
