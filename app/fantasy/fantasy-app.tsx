@@ -114,7 +114,17 @@ function LegacyPlayerStats({ data, onOpenTeamOfWeek }: { data: FantasyLeagueDash
   const [position, setPosition] = useState<PlayerStatsPositionFilter>("ALL");
   const [isSharing, setIsSharing] = useState(false);
   const [shareStatus, setShareStatus] = useState<FantasyShareStatus | null>(null);
-  const categories: Array<{ key: PlayerStatsCategory; label: string }> = [{ key: "selected", label: "เลือกติดทีมมากสุด" }, { key: "form", label: "ฟอร์มสูงสุด" }, { key: "transfersIn", label: "ย้ายเข้ามากสุด" }, { key: "transfersOut", label: "ย้ายออกมากสุด" }];
+  const categories: Array<{ key: PlayerStatsCategory; label: string; description: string }> = [
+    { key: "selected", label: "เลือกติดทีมมากสุด", description: "เลือกติดทีมมากสุด" },
+    { key: "form", label: "ฟอร์มสูงสุด", description: "ฟอร์มสูงสุด" },
+    { key: "transfersIn", label: "ย้ายเข้ามากสุด", description: "ย้ายเข้ามากสุด" },
+    { key: "transfersOut", label: "ย้ายออกมากสุด", description: "ย้ายออกมากสุด" },
+    { key: "defensiveContribution", label: "ค่าการป้องกัน(DC)", description: "ค่าการป้องกัน(DC) GW ล่าสุด" },
+    { key: "bps", label: "% การได้โบนัส", description: "% ที่นักเตะจะได้คะแนนโบนัส(BPS) ใน Match ล่าสุด" },
+    { key: "pointsPerGame", label: "แต้มเฉลี่ยทั้งฤดูกาล", description: "แต้มเฉลี่ยทั้งฤดูกาล" },
+    { key: "expectedGoalInvolvementsPer90", label: "โอกาส ยิง + แอสซิส", description: "โอกาส ยิง+แอสซิส ใน 90 นาที (xGI90)" },
+    { key: "latestGameweekPoints", label: "คะแนน GW ล่าสุด", description: "คะแนนสัปดาห์ที่แล้ว" },
+  ];
   const positions: Array<{ key: PlayerStatsPositionFilter; label: string }> = [{ key: "ALL", label: "ทั้งหมด" }, { key: "GK", label: "GK" }, { key: "DEF", label: "กองหลัง" }, { key: "MID", label: "กองกลาง" }, { key: "FWD", label: "กองหน้า" }];
   const visible = rankVisiblePlayerStats(data.playerStats, category, position);
   const popular: Array<{ label: string; entry: NonNullable<typeof data.playerStats.globalCaptain> | null }> = [{ label: "กัปตันยอดนิยม", entry: data.playerStats.globalCaptain }, { label: "รองกัปตันยอดนิยม", entry: data.playerStats.globalViceCaptain }];
@@ -128,9 +138,11 @@ function LegacyPlayerStats({ data, onOpenTeamOfWeek }: { data: FantasyLeagueDash
   async function shareStats() {
     setIsSharing(true);
     setShareStatus(null);
+    const selectedCategory = categories.find((item) => item.key === category);
     const result = await shareFantasyPlayerStats(liffShareApi(), {
-      gameweek: data.currentGameweek,
-      categoryLabel: categories.find((item) => item.key === category)?.label ?? category,
+      gameweek: category === "latestGameweekPoints" ? data.latestFinishedGameweek ?? data.currentGameweek : data.currentGameweek,
+      categoryLabel: selectedCategory?.label ?? category,
+      categoryDescription: selectedCategory?.description,
       positionLabel: positions.find((item) => item.key === position)?.label ?? position,
       rows: visible.map(({ player, rank }) => ({
         rank,

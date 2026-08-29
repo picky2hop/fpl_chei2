@@ -27,6 +27,7 @@ export type FantasyDashboardInput = {
 export type FantasyDashboardResponse = {
   season: { id: string; name: string };
   currentGameweek: number;
+  latestFinishedGameweek: number | null;
   selectedLeaderboardGameweek: number;
   sync: FantasyDashboardInput["sync"];
   leaderboard: { gameweek: FantasyLeaderboardEntry[]; season: FantasyLeaderboardEntry[] };
@@ -44,6 +45,12 @@ function currentGameweek(gameweeks: FantasyDashboardInput["gameweeks"]): number 
       .sort((left, right) => right.number - left.number)[0]?.number
     ?? gameweeks[0]?.number
     ?? 0;
+}
+
+function latestFinishedGameweek(gameweeks: FantasyDashboardInput["gameweeks"]): number | null {
+  return [...gameweeks]
+    .filter((gameweek) => gameweek.status === "closed" || gameweek.status === "reopened")
+    .sort((left, right) => right.number - left.number)[0]?.number ?? null;
 }
 
 export function buildFantasyDashboard(input: FantasyDashboardInput): FantasyDashboardResponse {
@@ -64,6 +71,7 @@ export function buildFantasyDashboard(input: FantasyDashboardInput): FantasyDash
   return {
     season: input.season,
     currentGameweek: current,
+    latestFinishedGameweek: latestFinishedGameweek(input.gameweeks),
     selectedLeaderboardGameweek: selected,
     sync: input.sync,
     leaderboard: {

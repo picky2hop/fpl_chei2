@@ -197,6 +197,18 @@ test("builds filtered player-stat share with category and position", () => {
   assert.match(serialized, /Bournemouth/);
 });
 
+test("includes the requested player-stat explanation in the Flex share", () => {
+  const message = buildFantasyPlayerStatsShareFlex({
+    gameweek: 2,
+    categoryLabel: "ค่าการป้องกัน(DC)",
+    categoryDescription: "ค่าการป้องกัน(DC) GW ล่าสุด",
+    positionLabel: "กองกลาง",
+    rows: [{ rank: 1, position: "MID", playerName: "Semenyo", clubName: "Bournemouth", metricValue: 12 }],
+  });
+
+  assert.match(JSON.stringify(message), /ค่าการป้องกัน\(DC\) GW ล่าสุด/);
+});
+
 test("fantasy player-stat share removes the branding header and uses a full-width bubble", () => {
   const message = buildFantasyPlayerStatsShareFlex({
     gameweek: 3,

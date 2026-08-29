@@ -1,6 +1,6 @@
 import type { FantasyPlayerPosition, FantasyPlayerStatGroups, FantasyPlayerStatEntry } from "./scoring.ts";
 
-export type PlayerStatsCategory = "selected" | "form" | "transfersIn" | "transfersOut";
+export type PlayerStatsCategory = "selected" | "form" | "transfersIn" | "transfersOut" | "defensiveContribution" | "bps" | "pointsPerGame" | "expectedGoalInvolvementsPer90" | "latestGameweekPoints";
 export type PlayerStatsPositionFilter = FantasyPlayerPosition | "ALL";
 
 export type RankedVisiblePlayerStat = {

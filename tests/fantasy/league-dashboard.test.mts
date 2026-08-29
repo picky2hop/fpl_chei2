@@ -34,6 +34,7 @@ const baseInput = {
 test("league dashboard includes unmapped members and keeps player stats global", () => {
   const result = buildFantasyLeagueDashboard(baseInput);
   assert.deepEqual(result.leaderboard.gameweek.map((row) => [row.fplEntryId, row.points, row.mapped]), [[10, 40, true], [20, 40, false]]);
+  assert.equal(result.latestFinishedGameweek, 1);
   assert.equal(result.leaderboard.gameweek[0].rank, 1);
   assert.equal(result.leaderboard.gameweek[1].rank, 1);
   assert.deepEqual(result.playerStats.selected.MID.map((player) => player.playerId), [1]);

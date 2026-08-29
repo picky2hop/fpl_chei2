@@ -229,10 +229,10 @@ const playerStatPositions: Array<{ key: FantasyPlayerStatsShareRow["position"]; 
   { key: "GK", label: "GK" },
 ];
 
-function playerStatsBubble(input: { gameweek: number; categoryLabel: string; positionLabel: string; rows: FantasyPlayerStatsShareRow[]; sharedAt: string }) {
+function playerStatsBubble(input: { gameweek: number; categoryLabel: string; categoryDescription?: string; positionLabel: string; rows: FantasyPlayerStatsShareRow[]; sharedAt: string }) {
   return bubble([
     text("สถิตินักเตะ Fantasy", "lg", "bold", ACCENT),
-    text(`GW ${input.gameweek} · ${input.categoryLabel}`, "sm", "bold"),
+    text(`GW ${input.gameweek} · ${input.categoryLabel}${input.categoryDescription ? ` · ${input.categoryDescription}` : ""}`, "sm", "bold"),
     text(`ตำแหน่ง: ${input.positionLabel}`, "xs", "regular", MUTED_TEXT),
     {
       type: "box",
@@ -248,6 +248,7 @@ function playerStatsBubble(input: { gameweek: number; categoryLabel: string; pos
 export function buildFantasyPlayerStatsShareFlex(input: {
   gameweek: number;
   categoryLabel: string;
+  categoryDescription?: string;
   positionLabel: string;
   rows: FantasyPlayerStatsShareRow[];
   sharedAt?: string;
@@ -262,6 +263,7 @@ export function buildFantasyPlayerStatsShareFlex(input: {
     playerStatsBubble({
       gameweek: input.gameweek,
       categoryLabel: input.categoryLabel,
+      categoryDescription: input.categoryDescription,
       positionLabel: label,
       rows: input.rows.filter((row) => row.position === key).slice(0, 10),
       sharedAt,

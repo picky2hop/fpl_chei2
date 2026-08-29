@@ -54,6 +54,10 @@ export type FplPlayerSnapshot = {
   transfersInEvent: number;
   transfersOutEvent: number;
   form: number;
+  defensiveContribution: number;
+  bps: number;
+  pointsPerGame: number;
+  expectedGoalInvolvementsPer90: number;
   eventPoints?: number;
   is_global_captain?: boolean;
   is_global_vice_captain?: boolean;
@@ -138,6 +142,11 @@ export type FantasyPlayerStatInsert = {
   transfers_in_event: number;
   transfers_out_event: number;
   form: number;
+  defensive_contribution: number;
+  bps: number;
+  points_per_game: number;
+  expected_goal_involvements_per_90: number;
+  latest_finished_gameweek_points: number | null;
   is_global_captain?: boolean;
   is_global_vice_captain?: boolean;
   source_synced_at: string;

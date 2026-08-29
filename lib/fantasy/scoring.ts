@@ -42,6 +42,11 @@ export type FantasyPlayerStatRow = {
   transfers_in_event: number;
   transfers_out_event: number;
   form: number;
+  defensive_contribution?: number;
+  bps?: number;
+  points_per_game?: number;
+  expected_goal_involvements_per_90?: number;
+  latest_finished_gameweek_points?: number | null;
 };
 
 export type FantasyPlayerStatEntry = {
@@ -60,6 +65,11 @@ export type FantasyPlayerStatGroups = {
   transfersIn: Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]>;
   transfersOut: Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]>;
   form: Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]>;
+  defensiveContribution: Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]>;
+  bps: Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]>;
+  pointsPerGame: Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]>;
+  expectedGoalInvolvementsPer90: Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]>;
+  latestGameweekPoints: Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]>;
   globalCaptain: FantasyPlayerStatEntry | null;
   globalViceCaptain: FantasyPlayerStatEntry | null;
 };
@@ -113,10 +123,11 @@ function toEntry(row: FantasyPlayerStatRow, metricValue: number): FantasyPlayerS
   };
 }
 
-function rankTopFive(rows: FantasyPlayerStatRow[], metric: (row: FantasyPlayerStatRow) => number): FantasyPlayerStatEntry[] {
+function rankTopFive(rows: FantasyPlayerStatRow[], metric: (row: FantasyPlayerStatRow) => number | null | undefined): FantasyPlayerStatEntry[] {
   const sorted = rows
     .filter((row) => isSelectable(row.status))
     .map((row) => ({ row, value: metric(row) }))
+    .filter((item): item is { row: FantasyPlayerStatRow; value: number } => typeof item.value === "number" && Number.isFinite(item.value))
     .sort((left, right) => right.value - left.value || left.row.fpl_player_id - right.row.fpl_player_id);
   const cutoff = sorted[4]?.value;
   return sorted
@@ -124,7 +135,7 @@ function rankTopFive(rows: FantasyPlayerStatRow[], metric: (row: FantasyPlayerSt
     .map((item) => toEntry(item.row, item.value));
 }
 
-function grouped(rows: FantasyPlayerStatRow[], metric: (row: FantasyPlayerStatRow) => number): Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]> {
+function grouped(rows: FantasyPlayerStatRow[], metric: (row: FantasyPlayerStatRow) => number | null | undefined): Record<FantasyPlayerPosition, FantasyPlayerStatEntry[]> {
   return Object.fromEntries(positions.map((position) => [
     position,
     rankTopFive(rows.filter((row) => row.position === position), metric),
@@ -145,6 +156,11 @@ export function rankPlayerStats(input: {
     transfersIn: grouped(currentPlayers, (row) => row.transfers_in_event),
     transfersOut: grouped(currentPlayers, (row) => row.transfers_out_event),
     form: grouped(currentPlayers, (row) => row.form),
+    defensiveContribution: grouped(currentPlayers, (row) => row.defensive_contribution),
+    bps: grouped(currentPlayers, (row) => row.bps),
+    pointsPerGame: grouped(currentPlayers, (row) => row.points_per_game),
+    expectedGoalInvolvementsPer90: grouped(currentPlayers, (row) => row.expected_goal_involvements_per_90),
+    latestGameweekPoints: grouped(currentPlayers, (row) => row.latest_finished_gameweek_points),
     globalCaptain: captain ? toEntry(captain, captain.selected_by_percent) : null,
     globalViceCaptain: viceCaptain ? toEntry(viceCaptain, viceCaptain.selected_by_percent) : null,
   };

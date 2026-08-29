@@ -27,6 +27,10 @@ const bootstrap = {
     transfers_out_event: 20,
     form: "6.2",
     event_points: 3,
+    defensive_contribution: 12,
+    bps: 84,
+    points_per_game: "5.7",
+    expected_goal_involvements_per_90: "0.64",
     photo: "154561.jpg",
   }],
 };
@@ -54,6 +58,11 @@ test("fetches and normalizes entry summary, history, and bootstrap data", async 
   assert.equal((await provider.getBootstrap()).players[0].position, "MID");
   assert.equal((await provider.getBootstrap()).players[0].clubShortName, "HOM");
   assert.equal((await provider.getBootstrap()).mostCaptainedPlayerId, 4);
+  const normalizedPlayer = (await provider.getBootstrap()).players[0];
+  assert.equal(normalizedPlayer.defensiveContribution, 12);
+  assert.equal(normalizedPlayer.bps, 84);
+  assert.equal(normalizedPlayer.pointsPerGame, 5.7);
+  assert.equal(normalizedPlayer.expectedGoalInvolvementsPer90, 0.64);
 });
 
 test("fetches and normalizes the current Entry picks with player metadata", async () => {

@@ -21,3 +21,19 @@ test("leaderboard warns that displayed scores exclude bench boost and triple cap
 
   assert.match(source, /text-\[#d9ff58\][^>]*>คะแนนที่เห็น คือ ไม่รวม Bench boost และ Triple Captain/);
 });
+
+test("player stats exposes the original four and five new category labels", async () => {
+  const source = await readFile(new URL("../../app/fantasy/fantasy-app.tsx", import.meta.url), "utf8");
+
+  for (const label of [
+    "เลือกติดทีมมากสุด",
+    "ฟอร์มสูงสุด",
+    "ย้ายเข้ามากสุด",
+    "ย้ายออกมากสุด",
+    "ค่าการป้องกัน(DC)",
+    "% การได้โบนัส",
+    "แต้มเฉลี่ยทั้งฤดูกาล",
+    "โอกาส ยิง + แอสซิส",
+    "คะแนน GW ล่าสุด",
+  ]) assert.match(source, new RegExp(label.replace(/[()+%]/g, "\\$&")));
+});

@@ -22,6 +22,7 @@ test("dashboard defaults to current GW while player stats stay current-only", ()
   });
 
   assert.equal(result.currentGameweek, 2);
+  assert.equal(result.latestFinishedGameweek, 1);
   assert.equal(result.selectedLeaderboardGameweek, 2);
   assert.deepEqual(result.leaderboard.gameweek.map((entry) => entry.points), [45]);
   assert.deepEqual(result.leaderboard.season.map((entry) => entry.points), [117]);
@@ -68,6 +69,7 @@ test("dashboard can select historical leaderboard GW without changing current pl
   });
 
   assert.equal(result.selectedLeaderboardGameweek, 1);
+  assert.equal(result.latestFinishedGameweek, 1);
   assert.equal(result.leaderboard.gameweek[0].points, 72);
   assert.equal(result.playerStats.selected.MID[0].playerId, 2);
   assert.equal(result.awards.champions[0].mappingId, "m1");

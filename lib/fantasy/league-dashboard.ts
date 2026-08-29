@@ -25,6 +25,7 @@ export type FantasyLeagueDashboardResponse = {
   leagues: FantasyLeagueRecord[];
   selectedLeagueId: string;
   currentGameweek: number;
+  latestFinishedGameweek: number | null;
   selectedLeaderboardGameweek: number;
   sync: FantasyLeagueDashboardInput["sync"];
   leaderboard: { gameweek: LeagueLeaderboardRow[]; season: LeagueLeaderboardRow[] };
@@ -41,6 +42,12 @@ function currentGameweek(gameweeks: FantasyLeagueDashboardInput["gameweeks"]): n
     ?? [...gameweeks].filter((gameweek) => gameweek.status === "closed" || gameweek.status === "reopened").sort((left, right) => right.number - left.number)[0]?.number
     ?? gameweeks[0]?.number
     ?? 0;
+}
+
+function latestFinishedGameweek(gameweeks: FantasyLeagueDashboardInput["gameweeks"]): number | null {
+  return [...gameweeks]
+    .filter((gameweek) => gameweek.status === "closed" || gameweek.status === "reopened")
+    .sort((left, right) => right.number - left.number)[0]?.number ?? null;
 }
 
 export function buildFantasyLeagueDashboard(input: FantasyLeagueDashboardInput): FantasyLeagueDashboardResponse {
@@ -72,6 +79,7 @@ export function buildFantasyLeagueDashboard(input: FantasyLeagueDashboardInput):
     leagues: input.leagues,
     selectedLeagueId: input.selectedLeagueId,
     currentGameweek: current,
+    latestFinishedGameweek: latestFinishedGameweek(input.gameweeks),
     selectedLeaderboardGameweek: selected,
     sync: input.sync,
     leaderboard: {

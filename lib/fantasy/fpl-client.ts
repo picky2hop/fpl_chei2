@@ -237,6 +237,10 @@ function normalizeBootstrap(value: unknown): FplBootstrapSnapshot {
       transfersInEvent: numberValue(player.transfers_in_event, "transfers_in_event"),
       transfersOutEvent: numberValue(player.transfers_out_event, "transfers_out_event"),
       form: numberValue(player.form, "form"),
+      defensiveContribution: numberValue(player.defensive_contribution ?? 0, "defensive_contribution"),
+      bps: numberValue(player.bps ?? 0, "bps"),
+      pointsPerGame: numberValue(player.points_per_game ?? 0, "points_per_game"),
+      expectedGoalInvolvementsPer90: numberValue(player.expected_goal_involvements_per_90 ?? 0, "expected_goal_involvements_per_90"),
       eventPoints: numberValue(player.event_points, "event_points"),
     } satisfies FplPlayerSnapshot;
   });

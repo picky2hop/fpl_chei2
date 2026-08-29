@@ -15,6 +15,11 @@ function player(index: number) {
     transfersInEvent: index * 2,
     transfersOutEvent: index,
     form: index / 100,
+    defensiveContribution: index * 3,
+    bps: index * 4,
+    pointsPerGame: index / 10,
+    expectedGoalInvolvementsPer90: index / 20,
+    eventPoints: index,
     photoKey: String(index),
   };
 }
@@ -44,6 +49,40 @@ test("normalizes every player into a GW snapshot row", () => {
   assert.equal(rows[0].photo_key, "1");
   assert.equal(rows[0].is_global_captain, true);
   assert.equal(rows[1].is_global_vice_captain, true);
+});
+
+test("normalizes API player metrics and latest finished GW points into the snapshot", () => {
+  const rows = normalizePlayerSnapshot({
+    seasonId: "season-1",
+    gameweekId: "gw-2",
+    snapshot: { ...bootstrapWithPlayers(1), currentGameweek: 2, latestFinishedGameweek: 1 },
+    latestFinishedGameweekPoints: new Map([[1, 18]]),
+    syncedAt: "2026-08-17T00:00:00.000Z",
+  });
+
+  assert.deepEqual(rows[0], {
+    season_id: "season-1",
+    gameweek_id: "gw-2",
+    fpl_player_id: 1,
+    photo_key: "1",
+    player_name: "Player 1",
+    position: "DEF",
+    club_id: 1,
+    club_name: "Home",
+    status: "a",
+    selected_by_percent: 0.1,
+    transfers_in_event: 2,
+    transfers_out_event: 1,
+    form: 0.01,
+    defensive_contribution: 3,
+    bps: 4,
+    points_per_game: 0.1,
+    expected_goal_involvements_per_90: 0.05,
+    latest_finished_gameweek_points: 18,
+    is_global_captain: true,
+    is_global_vice_captain: false,
+    source_synced_at: "2026-08-17T00:00:00.000Z",
+  });
 });
 
 test("normalizes entry history points without applying transfer cost", () => {

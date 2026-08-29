@@ -981,10 +981,14 @@ export type Database = {
           club_id: number
           club_name: string
           created_at: string
+          defensive_contribution: number
           fpl_player_id: number
           form: number
           gameweek_id: string
           id: string
+          bps: number
+          expected_goal_involvements_per_90: number
+          latest_finished_gameweek_points: number | null
           photo_key: string | null
           player_name: string
           position: string
@@ -997,15 +1001,20 @@ export type Database = {
           is_global_captain: boolean
           is_global_vice_captain: boolean
           updated_at: string
+          points_per_game: number
         }
         Insert: {
           club_id: number
           club_name: string
           created_at?: string
+          defensive_contribution?: number
           fpl_player_id: number
           form?: number
           gameweek_id: string
           id?: string
+          bps?: number
+          expected_goal_involvements_per_90?: number
+          latest_finished_gameweek_points?: number | null
           photo_key?: string | null
           player_name: string
           position: string
@@ -1018,15 +1027,20 @@ export type Database = {
           is_global_captain?: boolean
           is_global_vice_captain?: boolean
           updated_at?: string
+          points_per_game?: number
         }
         Update: {
           club_id?: number
           club_name?: string
           created_at?: string
+          defensive_contribution?: number
           fpl_player_id?: number
           form?: number
           gameweek_id?: string
           id?: string
+          bps?: number
+          expected_goal_involvements_per_90?: number
+          latest_finished_gameweek_points?: number | null
           photo_key?: string | null
           player_name?: string
           position?: string
@@ -1039,6 +1053,7 @@ export type Database = {
           is_global_captain?: boolean
           is_global_vice_captain?: boolean
           updated_at?: string
+          points_per_game?: number
         }
         Relationships: [
           { foreignKeyName: "fantasy_player_gameweek_stats_gameweek_id_fkey"; columns: ["gameweek_id"]; isOneToOne: false; referencedRelation: "gameweeks"; referencedColumns: ["id"] },

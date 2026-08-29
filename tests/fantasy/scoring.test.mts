@@ -65,3 +65,31 @@ test("player stats group four positions and include every tie at fifth place", (
   assert.equal(stats.globalCaptain?.playerId, 1);
   assert.equal(stats.globalViceCaptain?.playerId, 2);
 });
+
+test("ranks the five new player-stat categories independently by position", () => {
+  const players: FantasyPlayerStatRow[] = Array.from({ length: 7 }, (_, index) => ({
+    fpl_player_id: index + 1,
+    player_name: `Player ${index + 1}`,
+    position: "MID" as const,
+    club_id: 1,
+    club_name: "Club",
+    status: "a",
+    selected_by_percent: 10,
+    transfers_in_event: 10,
+    transfers_out_event: 10,
+    form: 10,
+    defensive_contribution: 70 - index,
+    bps: 60 - index,
+    points_per_game: 7 - index / 10,
+    expected_goal_involvements_per_90: 1.5 - index / 100,
+    latest_finished_gameweek_points: 20 - index,
+  }));
+
+  const stats = rankPlayerStats({ players, currentGameweekId: "gw2" });
+
+  assert.deepEqual(stats.defensiveContribution.MID.slice(0, 2).map((entry) => entry.playerId), [1, 2]);
+  assert.deepEqual(stats.bps.MID.slice(0, 2).map((entry) => entry.playerId), [1, 2]);
+  assert.deepEqual(stats.pointsPerGame.MID.slice(0, 2).map((entry) => entry.playerId), [1, 2]);
+  assert.deepEqual(stats.expectedGoalInvolvementsPer90.MID.slice(0, 2).map((entry) => entry.playerId), [1, 2]);
+  assert.deepEqual(stats.latestGameweekPoints.MID.slice(0, 2).map((entry) => entry.playerId), [1, 2]);
+});

@@ -41,6 +41,7 @@ export function normalizePlayerSnapshot(input: {
   seasonId: string;
   gameweekId: string;
   snapshot: FplBootstrapSnapshot;
+  latestFinishedGameweekPoints?: ReadonlyMap<number, number>;
   syncedAt: string;
 }): FantasyPlayerStatInsert[] {
   return input.snapshot.players.map((player) => ({
@@ -55,8 +56,13 @@ export function normalizePlayerSnapshot(input: {
     status: player.status,
     selected_by_percent: player.selectedByPercent,
     transfers_in_event: player.transfersInEvent,
-      transfers_out_event: player.transfersOutEvent,
+    transfers_out_event: player.transfersOutEvent,
       form: player.form,
+      defensive_contribution: player.defensiveContribution,
+      bps: player.bps,
+      points_per_game: player.pointsPerGame,
+      expected_goal_involvements_per_90: player.expectedGoalInvolvementsPer90,
+      latest_finished_gameweek_points: input.latestFinishedGameweekPoints?.get(player.playerId) ?? null,
       is_global_captain: player.playerId === input.snapshot.mostCaptainedPlayerId,
       is_global_vice_captain: player.playerId === input.snapshot.mostViceCaptainedPlayerId,
       source_synced_at: input.syncedAt,
