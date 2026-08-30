@@ -71,7 +71,7 @@ export function buildDashboardLeaderboardRows(
       const user = usersById.get(id);
       if (!user) return [];
       return [{ id, displayName: user.display_name, avatarUrl: user.avatar_url ?? "", gameweekPoints: userScores.get(id) ?? 0, seasonPoints: seasonTotalsThroughGameweek.get(id) ?? 0 }];
-    }).sort((a, b) => b.seasonPoints - a.seasonPoints || b.gameweekPoints - a.gameweekPoints || a.displayName.localeCompare(b.displayName));
+    }).sort((a, b) => b.gameweekPoints - a.gameweekPoints || b.seasonPoints - a.seasonPoints || a.displayName.localeCompare(b.displayName));
     return [gameweek.number, rows];
   }));
 }
@@ -82,7 +82,7 @@ export function buildLeaderboardByGameweek(
 ): Record<number, LeaderboardEntry[]> {
   return Object.fromEntries(gameweeks.map((gameweek) => {
     const entries = [...(rowsByGameweek[gameweek.number] ?? [])]
-      .sort((a, b) => b.seasonPoints - a.seasonPoints || b.gameweekPoints - a.gameweekPoints || a.displayName.localeCompare(b.displayName));
+      .sort((a, b) => b.gameweekPoints - a.gameweekPoints || b.seasonPoints - a.seasonPoints || a.displayName.localeCompare(b.displayName));
     return [gameweek.number, entries.map((entry, index) => ({
       ...entry,
       shortName: entry.displayName.slice(0, 2),

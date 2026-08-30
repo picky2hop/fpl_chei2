@@ -1,6 +1,38 @@
+import { getFixtureOutcome } from "./domain/fixtures.ts";
+
 export type PredictionChoice = "home" | "draw" | "away";
 
 export type PredictionMap = Record<string, PredictionChoice>;
+
+export type PredictionResultStatus = "pending" | "correct" | "incorrect";
+
+export type PredictionResult = {
+  status: PredictionResultStatus;
+  points: 0 | 3;
+};
+
+type PredictionResultFixture = {
+  status?: string;
+  homeScore?: number | null;
+  awayScore?: number | null;
+};
+
+export function getPredictionResult(fixture: PredictionResultFixture, choice: PredictionChoice | undefined): PredictionResult {
+  if (choice === undefined || fixture.status !== "finished" || typeof fixture.homeScore !== "number" || typeof fixture.awayScore !== "number") {
+    return { status: "pending", points: 0 };
+  }
+
+  return getFixtureOutcome(fixture.homeScore, fixture.awayScore) === choice
+    ? { status: "correct", points: 3 }
+    : { status: "incorrect", points: 0 };
+}
+
+export function getCurrentPredictionPoints(
+  fixtures: Array<{ id: string } & PredictionResultFixture>,
+  predictions: PredictionMap,
+): number {
+  return fixtures.reduce((total, fixture) => total + getPredictionResult(fixture, predictions[fixture.id]).points, 0);
+}
 
 export type PredictionEditableFixture = {
   id: string;

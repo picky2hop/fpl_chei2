@@ -9,6 +9,8 @@ import {
   getFixturePredictors,
   getFixturePredictionDetails,
   getPredictionPercentages,
+  getPredictionResult,
+  getCurrentPredictionPoints,
   getPredictionTeamHighlights,
   getUserPredictionDetails,
   isPredictionComplete,
@@ -171,5 +173,23 @@ describe("prediction helpers", () => {
     assert.deepEqual(getPredictionTeamHighlights("home"), { home: true, away: false });
     assert.deepEqual(getPredictionTeamHighlights("draw"), { home: false, away: false });
     assert.deepEqual(getPredictionTeamHighlights("away"), { home: false, away: true });
+  });
+
+  it("classifies finished prediction results and leaves open fixtures pending", () => {
+    assert.deepEqual(getPredictionResult({ status: "finished", homeScore: 2, awayScore: 0 }, "home"), { status: "correct", points: 3 });
+    assert.deepEqual(getPredictionResult({ status: "finished", homeScore: 2, awayScore: 0 }, "away"), { status: "incorrect", points: 0 });
+    assert.deepEqual(getPredictionResult({ status: "live", homeScore: 2, awayScore: 0 }, "home"), { status: "pending", points: 0 });
+  });
+
+  it("calculates current prediction points from finished fixtures only", () => {
+    assert.equal(getCurrentPredictionPoints([
+      { id: "finished-correct", status: "finished", homeScore: 2, awayScore: 0 },
+      { id: "finished-wrong", status: "finished", homeScore: 0, awayScore: 1 },
+      { id: "scheduled", status: "scheduled", homeScore: null, awayScore: null },
+    ], {
+      "finished-correct": "home",
+      "finished-wrong": "home",
+      scheduled: "away",
+    }), 3);
   });
 });

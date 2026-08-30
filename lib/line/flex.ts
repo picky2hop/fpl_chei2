@@ -1,4 +1,4 @@
-import { normalizePredictionPercentage } from "../predictions.ts";
+import { getPredictionResult, normalizePredictionPercentage } from "../predictions.ts";
 
 export type PredictionChoice = "home" | "draw" | "away";
 
@@ -11,6 +11,7 @@ export type PredictionFlexInput = {
   displayName: string;
   avatarUrl?: string;
   gameweek: number;
+  currentPoints?: number;
   fixtures: Array<{
     homeTeam: FlexTeam;
     awayTeam: FlexTeam;
@@ -155,11 +156,17 @@ function teamLogoOrFallback(url: string | undefined, fallback: string, size = "4
   };
 }
 
-function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, centered = false) {
+function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, centered = false, result?: "correct" | "incorrect") {
   const name = {
     ...text(team.name, "xs", "bold", highlighted ? "#d9ff58" : PRIMARY_TEXT),
     ...(centered ? { align: "center" } : {}),
   };
+  const resultLabel = result
+    ? { ...text(result === "correct" ? "ทายถูก" : "ทายผิด", "xxs", "bold", result === "correct" ? "#D9FF58" : "#FF647C"), align: centered ? "center" : side === "home" ? "end" : "start" }
+    : null;
+  const nameContent = resultLabel
+    ? { type: "box", layout: "vertical", flex: 1, alignItems: centered ? "center" : side === "home" ? "flex-end" : "flex-start", contents: [name, resultLabel] }
+    : name;
   const logo = teamLogoOrFallback(team.logoUrl, team.name, "36px");
   return {
     type: "box",
@@ -171,7 +178,7 @@ function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, ce
     backgroundColor: highlighted ? "#d9ff5815" : centered ? MAIN_BACKGROUND : CARD_BACKGROUND,
     justifyContent: centered ? "center" : side === "home" ? "flex-end" : "flex-start",
     alignItems: "center",
-    contents: side === "home" ? [name, logo] : [logo, name],
+    contents: side === "home" ? [nameContent, logo] : [logo, nameContent],
   };
 }
 
@@ -376,6 +383,7 @@ function predictionPercentageBar(choice: PredictionChoice, percentage: number) {
 
 function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
   const hasScore = typeof fixture.homeScore === "number" && typeof fixture.awayScore === "number";
+  const result = getPredictionResult(fixture, fixture.choice);
   const scoreLabel = hasScore ? `${fixture.homeScore}-${fixture.awayScore}` : "VS";
   const statusLabel = fixture.status === "finished"
     ? "จบแล้ว"
@@ -393,7 +401,7 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
     backgroundColor: MAIN_BACKGROUND,
     alignItems: "center",
     contents: [
-      teamSide(fixture.homeTeam, "home", fixture.choice === "home", true),
+      teamSide(fixture.homeTeam, "home", fixture.choice === "home", true, fixture.choice === "home" && result.status !== "pending" ? result.status : undefined),
       {
         type: "box",
         layout: "vertical",
@@ -404,9 +412,10 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
          contents: [
            { ...text(scoreLabel, "xs", "bold", hasScore ? PRIMARY_TEXT : MUTED_TEXT), align: "center", wrap: false },
            ...(statusLabel ? [{ ...text(statusLabel, "xxs", "regular", statusColor), align: "center" }] : []),
+           ...(fixture.choice === "draw" && result.status !== "pending" ? [{ ...text(result.status === "correct" ? "ทายถูก" : "ทายผิด", "xxs", "bold", result.status === "correct" ? "#D9FF58" : "#FF647C"), align: "center" }] : []),
          ],
       },
-      teamSide(fixture.awayTeam, "away", fixture.choice === "away", true),
+      teamSide(fixture.awayTeam, "away", fixture.choice === "away", true, fixture.choice === "away" && result.status !== "pending" ? result.status : undefined),
       predictionChoicePill(fixture.choice),
     ],
   };
@@ -583,6 +592,7 @@ function predictionDateGroups(fixtures: PredictionFlexInput["fixtures"]) {
 }
 
 export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessage {
+  const currentPoints = input.currentPoints ?? input.fixtures.reduce((total, fixture) => total + getPredictionResult(fixture, fixture.choice).points, 0);
   const profile = {
     type: "box",
     layout: "horizontal",
@@ -598,6 +608,12 @@ export function buildPredictionResultFlex(input: PredictionFlexInput): FlexMessa
         layout: "vertical",
         flex: 1,
         contents: [text(input.displayName, "md", "bold"), text(`คำทายของ GW ${input.gameweek}`, "xs", "regular", MUTED_TEXT)],
+      },
+      {
+        type: "box",
+        layout: "vertical",
+        alignItems: "flex-end",
+        contents: [text("คะแนนปัจจุบัน", "xxs", "regular", MUTED_TEXT), { ...text(`${currentPoints} คะแนน`, "md", "bold", ACCENT), align: "end" }],
       },
     ],
   };

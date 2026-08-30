@@ -427,6 +427,40 @@ test("prediction result Flex labels finished fixtures below the latest score", (
   assert.match(JSON.stringify(message), /"text":"จบแล้ว","size":"xxs","weight":"regular"/);
 });
 
+test("prediction result Flex shows current points and correct or incorrect labels", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    gameweek: 1,
+    currentPoints: 3,
+    fixtures: [
+      {
+        homeTeam: { name: "Arsenal" },
+        awayTeam: { name: "Chelsea" },
+        choice: "home",
+        status: "finished",
+        homeScore: 2,
+        awayScore: 0,
+      },
+      {
+        homeTeam: { name: "Liverpool" },
+        awayTeam: { name: "Spurs" },
+        choice: "home",
+        status: "finished",
+        homeScore: 0,
+        awayScore: 1,
+      },
+    ],
+  });
+
+  const serialized = JSON.stringify(message);
+  assert.match(serialized, /คะแนนปัจจุบัน/);
+  assert.match(serialized, /3 คะแนน/);
+  assert.match(serialized, /ทายถูก/);
+  assert.match(serialized, /ทายผิด/);
+  assert.match(serialized, /#D9FF58/);
+  assert.match(serialized, /#FF647C/);
+});
+
 test("fixture prediction Flex mirrors the app detail and groups predictors", () => {
   const message = buildFixturePredictionFlex({
     gameweek: 1,

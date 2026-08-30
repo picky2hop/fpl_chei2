@@ -43,6 +43,23 @@ test("builds server leaderboard rows from active participants of that gameweek",
   assert.equal(result[2]?.[0]?.seasonPoints, 4);
 });
 
+test("ranks the selected gameweek by gameweek points before season totals", () => {
+  const result = buildLeaderboardByGameweek(
+    [{ id: "gw-1", number: 1 }, { id: "gw-2", number: 2 }],
+    {
+      2: [
+        { ...users[0], gameweekPoints: 9, seasonPoints: 9 },
+        { ...users[1], gameweekPoints: 6, seasonPoints: 12 },
+      ],
+    },
+  );
+
+  assert.deepEqual(result[2]?.map((entry) => [entry.id, entry.gameweekPoints, entry.rank]), [
+    ["user-a", 9, 1],
+    ["user-b", 6, 2],
+  ]);
+});
+
 test("does not show a player with no prediction in the selected gameweek", () => {
   const entries = [
     { ...users[0], rank: 1, gameweekPoints: 10, seasonPoints: 10, trend: "same" as const, form: [] },
