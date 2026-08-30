@@ -197,16 +197,21 @@ test("builds filtered player-stat share with category and position", () => {
   assert.match(serialized, /Bournemouth/);
 });
 
-test("includes the requested player-stat explanation in the Flex share", () => {
+test("omits the player-stat category label while retaining its description", () => {
   const message = buildFantasyPlayerStatsShareFlex({
     gameweek: 2,
-    categoryLabel: "ค่าการป้องกัน(DC)",
+    categoryLabel: "ชื่อหมวดหมู่",
     categoryDescription: "ค่าการป้องกัน(DC) GW ล่าสุด",
     positionLabel: "กองกลาง",
     rows: [{ rank: 1, position: "MID", playerName: "Semenyo", clubName: "Bournemouth", metricValue: 12 }],
   });
 
-  assert.match(JSON.stringify(message), /ค่าการป้องกัน\(DC\) GW ล่าสุด/);
+  const contents = message.contents as Record<string, unknown>;
+  const body = contents.body as Record<string, unknown>;
+  const bodyContents = body.contents as Array<Record<string, unknown>>;
+
+  assert.equal(bodyContents[1].text, "GW 2 · ค่าการป้องกัน(DC) GW ล่าสุด");
+  assert.doesNotMatch(String(bodyContents[1].text), /ชื่อหมวดหมู่/);
 });
 
 test("fantasy player-stat share removes the branding header and uses a full-width bubble", () => {
@@ -256,7 +261,8 @@ test("uses a football fallback when a player photo is unavailable", () => {
 test("shares all player positions as four ordered bubbles", () => {
   const message = buildFantasyPlayerStatsShareFlex({
     gameweek: 3,
-    categoryLabel: "ฟอร์มสูงสุด",
+    categoryLabel: "ชื่อหมวดหมู่",
+    categoryDescription: "คำอธิบายสถิติ GW ล่าสุด",
     positionLabel: "ทั้งหมด",
     rows: [
       { rank: 1, position: "GK", playerName: "Goalkeeper", clubName: "Club", metricValue: 4 },
@@ -278,6 +284,16 @@ test("shares all player positions as four ordered bubbles", () => {
 
   assert.equal(contents.type, "carousel");
   assert.deepEqual(labels, ["ตำแหน่ง: กองหน้า", "ตำแหน่ง: กองกลาง", "ตำแหน่ง: กองหลัง", "ตำแหน่ง: GK"]);
+  const subtitles = bubbles.map((item) => {
+    const body = item.body as Record<string, unknown>;
+    return ((body.contents as Array<Record<string, unknown>>)[1] ?? {}).text;
+  });
+  assert.deepEqual(subtitles, [
+    "GW 3 · คำอธิบายสถิติ GW ล่าสุด",
+    "GW 3 · คำอธิบายสถิติ GW ล่าสุด",
+    "GW 3 · คำอธิบายสถิติ GW ล่าสุด",
+    "GW 3 · คำอธิบายสถิติ GW ล่าสุด",
+  ]);
   assert.equal(JSON.stringify(message).split("แชร์เมื่อ 24/08/2569 21:45 น.").length - 1, 4);
 });
 

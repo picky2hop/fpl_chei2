@@ -232,7 +232,7 @@ const playerStatPositions: Array<{ key: FantasyPlayerStatsShareRow["position"]; 
 function playerStatsBubble(input: { gameweek: number; categoryLabel: string; categoryDescription?: string; positionLabel: string; rows: FantasyPlayerStatsShareRow[]; sharedAt: string }) {
   return bubble([
     text("สถิตินักเตะ Fantasy", "lg", "bold", ACCENT),
-    text(`GW ${input.gameweek} · ${input.categoryLabel}${input.categoryDescription ? ` · ${input.categoryDescription}` : ""}`, "sm", "bold"),
+    text(`GW ${input.gameweek}${input.categoryDescription ? ` · ${input.categoryDescription}` : ""}`, "sm", "bold"),
     text(`ตำแหน่ง: ${input.positionLabel}`, "xs", "regular", MUTED_TEXT),
     {
       type: "box",
