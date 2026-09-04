@@ -583,10 +583,15 @@ function predictionDateGroups(fixtures: PredictionFlexInput["fixtures"]) {
     spacing: "xs",
     contents: [
       text(`${group.label} — ${[...group.times.values()].reduce((count, timeGroup) => count + timeGroup.fixtures.length, 0)} คู่`, "sm", "bold", ACCENT),
-      ...sortGroups([...group.times.values()]).flatMap((timeGroup) => [
-        text(`${timeGroup.label} · ${timeGroup.fixtures.length} คู่`, "xs", "bold", ACCENT),
-        ...timeGroup.fixtures.map(predictionFixture),
-      ]),
+      ...sortGroups([...group.times.values()]).map((timeGroup) => ({
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        contents: [
+          text(`${timeGroup.label} · ${timeGroup.fixtures.length} คู่`, "xs", "bold", ACCENT),
+          ...timeGroup.fixtures.map(predictionFixture),
+        ],
+      })),
     ],
   }));
 }

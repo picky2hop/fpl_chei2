@@ -225,7 +225,8 @@ test("prediction Flex matches the app detail row treatment", () => {
   const body = bubble.body as Record<string, unknown>;
   const bodyContents = body.contents as Array<Record<string, unknown>>;
   const dateGroup = bodyContents[1];
-  const fixtureRow = (dateGroup.contents as Array<Record<string, unknown>>)[2];
+  const timeGroup = (dateGroup.contents as Array<Record<string, unknown>>)[1];
+  const fixtureRow = (timeGroup.contents as Array<Record<string, unknown>>)[1];
   const rowContents = fixtureRow.contents as Array<Record<string, unknown>>;
   const homeSide = rowContents[0];
   const vs = rowContents[1];
@@ -275,8 +276,10 @@ test("prediction Flex groups fixtures under Thai weekday/date headings", () => {
   assert.equal(groups.length, 2);
   assert.match(JSON.stringify(message), /วันเสาร์ที่ 1 สิงหาคม 2569 — 5 คู่/);
   assert.match(JSON.stringify(message), /วันอาทิตย์ที่ 2 สิงหาคม 2569 — 5 คู่/);
-  assert.equal((groups[0]?.contents as Array<Record<string, unknown>>).length, 7);
-  assert.equal((groups[1]?.contents as Array<Record<string, unknown>>).length, 7);
+  assert.equal((groups[0]?.contents as Array<Record<string, unknown>>).length, 2);
+  assert.equal((groups[1]?.contents as Array<Record<string, unknown>>).length, 2);
+  assert.equal(((groups[0]?.contents as Array<Record<string, unknown>>)[1]?.contents as Array<Record<string, unknown>>).length, 6);
+  assert.equal(((groups[1]?.contents as Array<Record<string, unknown>>)[1]?.contents as Array<Record<string, unknown>>).length, 6);
 });
 
 test("prediction Flex groups fixtures by Bangkok date and kickoff time", () => {
@@ -293,10 +296,34 @@ test("prediction Flex groups fixtures by Bangkok date and kickoff time", () => {
   const secondDateContents = dateGroups[1]?.contents as Array<Record<string, unknown>>;
 
   assert.equal(dateGroups.length, 2);
-  assert.equal(firstDateContents[1]?.text, "19:00 · 2 คู่");
-  assert.equal(firstDateContents[4]?.text, "20:30 · 1 คู่");
-  assert.equal(secondDateContents[1]?.text, "19:00 · 1 คู่");
-  assert.equal(firstDateContents.filter((item) => item.type === "text").length, 3);
+  assert.equal((firstDateContents[1]?.contents as Array<Record<string, unknown>>)[0]?.text, "19:00 · 2 คู่");
+  assert.equal((firstDateContents[2]?.contents as Array<Record<string, unknown>>)[0]?.text, "20:30 · 1 คู่");
+  assert.equal((secondDateContents[1]?.contents as Array<Record<string, unknown>>)[0]?.text, "19:00 · 1 คู่");
+  assert.equal(firstDateContents.filter((item) => item.type === "box").length, 2);
+});
+
+test("prediction Flex stays valid when one date has many kickoff-time groups", () => {
+  const kickoffs = [
+    "2026-09-05T02:00:00+07:00",
+    "2026-09-05T18:30:00+07:00",
+    "2026-09-05T21:00:00+07:00",
+    "2026-09-05T21:00:00+07:00",
+    "2026-09-05T21:00:00+07:00",
+    "2026-09-05T21:00:00+07:00",
+    "2026-09-05T21:00:00+07:00",
+    "2026-09-05T23:30:00+07:00",
+    "2026-09-06T20:00:00+07:00",
+    "2026-09-06T22:30:00+07:00",
+  ];
+  const fixtures = kickoffs.map((kickoff, index) => ({
+    homeTeam: { name: `Home ${index + 1}` },
+    awayTeam: { name: `Away ${index + 1}` },
+    kickoffAt: kickoff,
+    choice: "home" as const,
+  }));
+  const message = buildPredictionResultFlex({ displayName: "Picky", gameweek: 3, fixtures });
+
+  assert.doesNotThrow(() => validateFlexMessage(message));
 });
 
 test("prediction Flex keeps width properties on Box components only", () => {
