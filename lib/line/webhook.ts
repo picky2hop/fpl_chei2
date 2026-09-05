@@ -1,6 +1,6 @@
 import { buildLineMenuMessage, parseLineCommand } from "./commands.ts";
 import { buildFantasyAwardsFlex, buildPredictionAwardsFlex, buildPredictionResultFlex, buildStandingsFlex, buildTodayFixturesFlex } from "./flex.ts";
-import { buildFantasyAwardsAnnouncement, buildPredictionAwardsAnnouncement } from "./announcement.ts";
+import { buildFantasyAwardsAnnouncement, buildPredictionAwardsAnnouncements } from "./announcement.ts";
 import { buildFantasyLeaderboardTopBottomShareFlex, buildFantasySquadShareFlex } from "../fantasy/fantasy-share-payload.ts";
 import { selectBottomLeaderboardRows, selectTopLeaderboardRows } from "../fantasy/leaderboard-share-selection.ts";
 import type { LineMessage } from "./messaging.ts";
@@ -98,10 +98,11 @@ export function createLineBotCommandService(data: LineBotDataReader): LineBotCom
         if (!awards) return [{ type: "text", text: "ยังไม่มีผลตัดสินแชมป์บ๊วยของ GW ที่จบแล้วครับ" }];
         return [
           buildPredictionAwardsFlex(awards),
-          buildPredictionAwardsAnnouncement({
+          ...buildPredictionAwardsAnnouncements({
             gameweek: awards.gameweek,
             champions: awards.champions,
             woodenSpoons: awards.woodenSpoons,
+            nonChampions: awards.nonChampions,
             allowMentions: input.chatType === "group" || input.chatType === "room",
           }),
         ];

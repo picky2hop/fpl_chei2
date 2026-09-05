@@ -77,10 +77,18 @@ test("maps tied prediction award recipients with profile and LINE identity", () 
   assert.deepEqual(mapPredictionAwards([
     { gameweekId: "gw-5", gameweek: 5, award: "champion", userId: "u1", lineUserId: "line-1", displayName: "Ar Tao", avatarUrl: "https://example.test/ar.png", points: 18 },
     { gameweekId: "gw-5", gameweek: 5, award: "wooden_spoon", userId: "u2", lineUserId: null, displayName: "สำรอง", avatarUrl: null, points: 3 },
+  ], [
+    { userId: "u1", lineUserId: "line-1", displayName: "Ar Tao", avatarUrl: "https://example.test/ar.png", points: 18 },
+    { userId: "u2", lineUserId: null, displayName: "สำรอง", avatarUrl: "", points: 3 },
+    { userId: "u3", lineUserId: "line-3", displayName: "ผู้เล่นสาม", avatarUrl: "", points: 8 },
   ]), {
     gameweek: 5,
     champions: [{ userId: "u1", lineUserId: "line-1", displayName: "Ar Tao", avatarUrl: "https://example.test/ar.png", points: 18 }],
     woodenSpoons: [{ userId: "u2", lineUserId: null, displayName: "สำรอง", avatarUrl: "", points: 3 }],
+    nonChampions: [
+      { userId: "u2", lineUserId: null, displayName: "สำรอง", avatarUrl: "", points: 3 },
+      { userId: "u3", lineUserId: "line-3", displayName: "ผู้เล่นสาม", avatarUrl: "", points: 8 },
+    ],
   });
 });
 

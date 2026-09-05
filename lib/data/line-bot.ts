@@ -375,13 +375,24 @@ export function createLineBotDataReader(): LineBotDataReader {
       });
       if (selections.length === 0) return null;
 
-      const userIds = [...new Set(selections.map((selection) => selection.userId))];
+      const userIds = [...eligibleUserIds];
       const { data: users, error: userError } = userIds.length
         ? await admin.from("app_users").select("id,line_user_id,display_name,avatar_url").in("id", userIds)
         : { data: [], error: null };
       if (userError) throw new Error("Prediction awards are unavailable");
 
       const usersById = new Map((users ?? []).map((user) => [user.id, user]));
+      const participantRecipients = userIds.flatMap((userId) => {
+        const user = usersById.get(userId);
+        if (!user) return [];
+        return [{
+          userId: user.id,
+          lineUserId: user.line_user_id,
+          displayName: user.display_name,
+          avatarUrl: user.avatar_url ?? "",
+          points: (scores ?? []).find((score) => score.user_id === user.id)?.points ?? 0,
+        }];
+      });
       return mapPredictionAwards(selections.flatMap((selection) => {
         const user = usersById.get(selection.userId);
         if (!user) return [];
@@ -395,7 +406,7 @@ export function createLineBotDataReader(): LineBotDataReader {
           avatarUrl: user.avatar_url,
           points: selection.points,
         }];
-      }));
+      }), participantRecipients);
     },
 
     async getFantasyAwards(leagueFplId) {

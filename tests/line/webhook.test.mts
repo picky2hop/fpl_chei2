@@ -105,6 +105,7 @@ test("returns awards Flex and a decorated group announcement", async () => {
         gameweek: 5,
         champions: [{ userId: "u1", lineUserId: "line-1", displayName: "Ar Tao", avatarUrl: "", points: 18 }],
         woodenSpoons: [{ userId: "u2", lineUserId: "line-2", displayName: "สำรอง", avatarUrl: "", points: 3 }],
+        nonChampions: [{ userId: "u2", lineUserId: "line-2", displayName: "สำรอง", avatarUrl: "", points: 3 }],
       };
     },
     async getFantasyAwards() { throw new Error("must not load fantasy awards"); },
@@ -116,7 +117,8 @@ test("returns awards Flex and a decorated group announcement", async () => {
   assert.equal(messages?.length, 2);
   assert.equal(messages?.[0]?.type, "flex");
   assert.equal(messages?.[1]?.type, "textV2");
-  assert.match(JSON.stringify(messages), /Ar Tao|สำรอง|champion_1|wooden_spoon_1/);
+  assert.match(JSON.stringify(messages), /Ar Tao|สำรอง|champion_1|non_champion_1|โอนเงินให้แชมป์/);
+  assert.doesNotMatch(JSON.stringify(messages), /wooden_spoon/);
 });
 
 test("returns Fantasy Chei Flex and a group announcement with mentions", async () => {

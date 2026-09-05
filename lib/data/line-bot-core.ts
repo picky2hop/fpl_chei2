@@ -79,6 +79,7 @@ export type PredictionAwardsData = {
   gameweek: number;
   champions: PredictionAwardRecipient[];
   woodenSpoons: PredictionAwardRecipient[];
+  nonChampions: PredictionAwardRecipient[];
 };
 
 export type FantasyAwardRow = {
@@ -223,7 +224,10 @@ export function derivePredictionAwardSelections(input: {
   ];
 }
 
-export function mapPredictionAwards(rows: readonly PredictionAwardRow[]): PredictionAwardsData | null {
+export function mapPredictionAwards(
+  rows: readonly PredictionAwardRow[],
+  participants: readonly PredictionAwardRecipient[] = [],
+): PredictionAwardsData | null {
   const first = rows[0];
   if (!first) return null;
   const mapRecipient = (row: PredictionAwardRow) => ({
@@ -237,6 +241,7 @@ export function mapPredictionAwards(rows: readonly PredictionAwardRow[]): Predic
     gameweek: first.gameweek,
     champions: rows.filter((row) => row.award === "champion").map(mapRecipient),
     woodenSpoons: rows.filter((row) => row.award === "wooden_spoon").map(mapRecipient),
+    nonChampions: participants.filter((participant) => !rows.some((row) => row.award === "champion" && row.userId === participant.userId)),
   };
 }
 
