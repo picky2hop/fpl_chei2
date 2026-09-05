@@ -67,7 +67,7 @@ function dependencies() {
   };
 }
 
-test("recalculates legacy and missing scores, skips formula rows, and keeps failed old rows untouched", async () => {
+test("recalculates legacy and previous formula rows, and keeps failed old rows untouched", async () => {
   const base = dependencies();
 
   const result = await runFantasyScoreRecalculation(base.dependencies);
@@ -75,6 +75,7 @@ test("recalculates legacy and missing scores, skips formula rows, and keeps fail
   assert.equal(result.stale, false);
   assert.deepEqual(base.saved, [
     { entryId: 10, gameweekId: "gw-1", points: 120 },
+    { entryId: 10, gameweekId: "gw-2", points: 120 },
     { entryId: 20, gameweekId: "gw-2", points: 240 },
   ]);
   assert.deepEqual(result.failedScoreTargets, [{ entryId: 20, gameweek: 1, reason: "ไม่สามารถอ่าน Picks ของ Entry/GW นี้ได้" }]);

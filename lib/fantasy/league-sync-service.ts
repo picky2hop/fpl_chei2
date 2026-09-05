@@ -130,7 +130,7 @@ function buildScoreRow(input: {
 function buildScoreTargets(input: {
   members: ReturnType<typeof deduplicateLeagueMembers>;
   histories: Map<number, FplEntryHistoryEvent[]>;
-  existing: Array<{ fpl_entry_id: number; gameweek_id: string; calculation_method: "legacy_fpl_history" | "starting_xi_captain_v1" }>;
+  existing: Array<{ fpl_entry_id: number; gameweek_id: string; calculation_method: "legacy_fpl_history" | "starting_xi_captain_v1" | "starting_xi_captain_v2" }>;
   gameweekIds: Map<number, string>;
   currentGameweekNumber: number;
 }): ScoreTarget[] {
@@ -140,7 +140,7 @@ function buildScoreTargets(input: {
     const gameweekId = input.gameweekIds.get(gameweekNumber);
     if (!gameweekId) return;
     const method = existingByKey.get(`${entryId}:${gameweekId}`);
-    if (gameweekNumber !== input.currentGameweekNumber && method === "starting_xi_captain_v1") return;
+    if (gameweekNumber !== input.currentGameweekNumber && method === "starting_xi_captain_v2") return;
     targets.set(`${entryId}:${gameweekId}`, { entryId, gameweekNumber, gameweekId });
   };
 

@@ -70,7 +70,7 @@ function dependencies(overrides: Partial<FantasyLeagueSyncDependencies> = {}) {
       assert.deepEqual(input.leagues.map((league) => league.official_name), ["Official Cup", "Official Love"]);
       assert.equal(input.memberships.length, 4);
       assert.deepEqual([...new Set(input.scores.map((score) => score.fpl_entry_id))], [10, 20, 30]);
-      assert.equal(input.scores.every((score) => score.calculation_method === "starting_xi_captain_v1"), true);
+      assert.equal(input.scores.every((score) => score.calculation_method === "starting_xi_captain_v2"), true);
       assert.equal(input.players.length, 0);
       return { jobRunId: input.jobRunId, leaguesUpserted: 2, membershipsUpserted: 4, scoresUpserted: input.scores.length, playersUpserted: input.players.length };
     },

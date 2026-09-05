@@ -91,7 +91,7 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item
 function buildTargets(input: {
   entryIds: number[];
   histories: Map<number, FplEntryHistoryEvent[]>;
-  existing: Array<{ fpl_entry_id: number; gameweek_id: string; calculation_method: "legacy_fpl_history" | "starting_xi_captain_v1" }>;
+  existing: Array<{ fpl_entry_id: number; gameweek_id: string; calculation_method: "legacy_fpl_history" | "starting_xi_captain_v1" | "starting_xi_captain_v2" }>;
   gameweekIds: Map<number, string>;
 }): Target[] {
   const existingByKey = new Map(input.existing.map((row) => [`${row.fpl_entry_id}:${row.gameweek_id}`, row.calculation_method]));
@@ -99,7 +99,7 @@ function buildTargets(input: {
   for (const entryId of input.entryIds) {
     for (const event of input.histories.get(entryId) ?? []) {
       const gameweekId = input.gameweekIds.get(event.event);
-      if (!gameweekId || existingByKey.get(`${entryId}:${gameweekId}`) === "starting_xi_captain_v1") continue;
+      if (!gameweekId || existingByKey.get(`${entryId}:${gameweekId}`) === "starting_xi_captain_v2") continue;
       targets.set(`${entryId}:${gameweekId}`, { entryId, gameweek: event.event, gameweekId });
     }
   }

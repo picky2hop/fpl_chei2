@@ -3,7 +3,7 @@ import type { FantasySquadPlayer } from "./types.ts";
 export type FantasyCalculatedScore = {
   points: number;
   captainPlayerId: number;
-  calculationMethod: "starting_xi_captain_v1";
+  calculationMethod: "starting_xi_captain_v2";
 };
 
 export function calculateStartingXiCaptainScore(picks: FantasySquadPlayer[]): FantasyCalculatedScore {
@@ -21,10 +21,14 @@ export function calculateStartingXiCaptainScore(picks: FantasySquadPlayer[]): Fa
     throw new Error("Fantasy starter points are invalid");
   }
 
-  const starterPoints = starters.reduce((total, player) => total + player.points! * player.multiplier, 0);
+  const starterPoints = starters.reduce((total, player) => {
+    // The app's Fantasy table always applies captain x2, even when FPL reports Triple Captain.
+    const multiplier = player.multiplier > 1 ? 2 : player.multiplier;
+    return total + player.points! * multiplier;
+  }, 0);
   return {
     points: starterPoints,
     captainPlayerId: captains[0].playerId,
-    calculationMethod: "starting_xi_captain_v1",
+    calculationMethod: "starting_xi_captain_v2",
   };
 }

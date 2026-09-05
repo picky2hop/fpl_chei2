@@ -3,7 +3,7 @@ import test from "node:test";
 import { calculateStartingXiCaptainScore } from "../../lib/fantasy/fantasy-score-calculator.ts";
 import type { FantasySquadPlayer } from "../../lib/fantasy/types.ts";
 
-function picks(input: { captainPoints?: number; starterPoints?: number; benchPoints?: number; captainPosition?: number; nullStarterPosition?: number; duplicatePosition?: boolean } = {}): FantasySquadPlayer[] {
+function picks(input: { captainPoints?: number; starterPoints?: number; benchPoints?: number; captainPosition?: number; captainMultiplier?: number; nullStarterPosition?: number; duplicatePosition?: boolean } = {}): FantasySquadPlayer[] {
   const captainPosition = input.captainPosition ?? 5;
   const starterPoints = input.starterPoints ?? 52;
   const benchPoints = input.benchPoints ?? 100;
@@ -14,7 +14,7 @@ function picks(input: { captainPoints?: number; starterPoints?: number; benchPoi
     playerName: `Starter ${index + 1}`,
     position: index === 0 ? "GK" as const : index < 5 ? "DEF" as const : index < 9 ? "MID" as const : "FWD" as const,
     clubName: "Club",
-    multiplier: index + 1 === captainPosition ? 2 : 1,
+    multiplier: index + 1 === captainPosition ? input.captainMultiplier ?? 2 : 1,
     isCaptain: index + 1 === captainPosition,
     isViceCaptain: false,
     points: index + 1 === captainPosition ? input.captainPoints ?? 8 : index === 0 ? baseStarterPoints : 0,
@@ -40,8 +40,12 @@ test("sums positions 1 through 11 and adds the captain raw points once", () => {
   assert.deepEqual(calculateStartingXiCaptainScore(picks()), {
     points: 60,
     captainPlayerId: 5,
-    calculationMethod: "starting_xi_captain_v1",
+    calculationMethod: "starting_xi_captain_v2",
   });
+});
+
+test("ignores the FPL Triple Captain multiplier and still adds the captain raw points once", () => {
+  assert.equal(calculateStartingXiCaptainScore(picks({ starterPoints: 16, captainPoints: 8, captainMultiplier: 3 })).points, 24);
 });
 
 test("excludes non-zero bench points", () => {
@@ -73,6 +77,6 @@ test("uses the vice-captain multiplier when FPL moves the original captain to th
   assert.deepEqual(calculateStartingXiCaptainScore(autoSubstituted), {
     points: 60,
     captainPlayerId: 5,
-    calculationMethod: "starting_xi_captain_v1",
+    calculationMethod: "starting_xi_captain_v2",
   });
 });
