@@ -24,6 +24,7 @@ import type {
   FantasyLeagueSyncWriteResult,
 } from "./league-types.ts";
 import type { FantasyLeagueDashboardInput } from "./league-dashboard.ts";
+import { readAllRows } from "./browse.ts";
 
 export type FantasyMappingIdentity = Pick<
   FantasyEntryMapping,
@@ -63,7 +64,7 @@ export type FantasyLeagueRepository = {
   listEntryGameweekScores(seasonId: string): Promise<FantasyEntryGameweekScoreMethodRow[]>;
   getCurrentLeagueEntry?(input: { seasonId: string; leagueId: string; entryId: number }): Promise<{ gameweekId: string; gameweekNumber: number }>;
   replaceLeagueAwards(input: { seasonId: string; leagueId: string; gameweekId: string; selectedBy: string; awards: Array<{ fplEntryId: number; award: "champion" | "wooden_spoon" }> }): Promise<void>;
-  getLeagueDashboard(input: { seasonId: string; leagueId: string; selectedGameweekNumber?: number }): Promise<FantasyLeagueDashboardInput>;
+  getLeagueDashboard(input: { seasonId: string; leagueId: string; selectedGameweekNumber?: number; browse?: boolean; includePlayers?: boolean }): Promise<FantasyLeagueDashboardInput>;
   applyLeagueSync(input: {
     jobRunId: string;
     syncedAt: string;
@@ -319,12 +320,12 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
       const selectedGameweekId = gameweeks.find((gameweek) => gameweek.number === selectedGameweekNumber)?.id;
       if (!currentGameweekId || !selectedGameweekId) throw new Error("Fantasy gameweek is unavailable");
       const [membershipResult, scoreResult, playerResult, mappingResult, usersResult, awardResult, jobResult] = await Promise.all([
-        client.from("fantasy_league_membership_snapshots").select("league_id,gameweek_id,fpl_entry_id,fpl_team_name,fpl_manager_name").eq("season_id", input.seasonId).eq("league_id", input.leagueId),
-        client.from("fantasy_entry_gameweek_scores").select("fpl_entry_id,gameweek_id,points").eq("season_id", input.seasonId),
-        client.from("fantasy_player_gameweek_stats").select("*").eq("season_id", input.seasonId).eq("gameweek_id", currentGameweekId),
+        input.browse ? readAllRows((from, to) => client.from("fantasy_league_membership_snapshots").select("league_id,gameweek_id,fpl_entry_id,fpl_team_name,fpl_manager_name").eq("season_id", input.seasonId).eq("league_id", input.leagueId).order("gameweek_id").order("fpl_entry_id").range(from, to)).then((data) => ({ data, error: null })) : client.from("fantasy_league_membership_snapshots").select("league_id,gameweek_id,fpl_entry_id,fpl_team_name,fpl_manager_name").eq("season_id", input.seasonId).eq("league_id", input.leagueId),
+        input.browse ? readAllRows((from, to) => client.from("fantasy_entry_gameweek_scores").select("fpl_entry_id,gameweek_id,points").eq("season_id", input.seasonId).order("gameweek_id").order("fpl_entry_id").range(from, to)).then((data) => ({ data, error: null })) : client.from("fantasy_entry_gameweek_scores").select("fpl_entry_id,gameweek_id,points").eq("season_id", input.seasonId),
+        input.includePlayers === false ? Promise.resolve({ data: [], error: null }) : client.from("fantasy_player_gameweek_stats").select("*").eq("season_id", input.seasonId).eq("gameweek_id", currentGameweekId),
         client.from("fantasy_entry_mappings").select("fpl_entry_id,app_user_id").eq("season_id", input.seasonId).eq("mapping_status", "active"),
         client.from("app_users").select("id,display_name,avatar_url"),
-        client.from("fantasy_league_awards").select("fpl_entry_id,award").eq("season_id", input.seasonId).eq("league_id", input.leagueId).eq("gameweek_id", selectedGameweekId),
+        input.browse ? readAllRows((from, to) => client.from("fantasy_league_awards").select("gameweek_id,fpl_entry_id,award").eq("season_id", input.seasonId).eq("league_id", input.leagueId).order("gameweek_id").order("fpl_entry_id").order("award").range(from, to)).then((data) => ({ data, error: null })) : client.from("fantasy_league_awards").select("gameweek_id,fpl_entry_id,award").eq("season_id", input.seasonId).eq("league_id", input.leagueId).eq("gameweek_id", selectedGameweekId),
         client.from("job_runs").select("status,finished_at,started_at,error_message").eq("job_type", "fantasy_sync").order("started_at", { ascending: false }).limit(20),
       ]);
       if (membershipResult.error || scoreResult.error || playerResult.error || mappingResult.error || usersResult.error || awardResult.error || jobResult.error
@@ -352,7 +353,7 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         players: playerResult.data as unknown as FantasyLeagueDashboardInput["players"],
         globalCaptainPlayerId: playerResult.data.find((player) => player.is_global_captain)?.fpl_player_id ?? null,
         globalViceCaptainPlayerId: playerResult.data.find((player) => player.is_global_vice_captain)?.fpl_player_id ?? null,
-        awards: awardResult.data.map((award) => ({ fpl_entry_id: award.fpl_entry_id, award: award.award as "champion" | "wooden_spoon" })),
+        awards: awardResult.data.map((award) => ({ gameweek_id: award.gameweek_id, fpl_entry_id: award.fpl_entry_id, award: award.award as "champion" | "wooden_spoon" })),
         sync: {
           lastSyncedAt: latestSuccess?.finished_at ?? null,
           stale: !latestSuccess || latestJob?.status !== "succeeded",

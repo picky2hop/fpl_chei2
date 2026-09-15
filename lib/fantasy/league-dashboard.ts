@@ -15,7 +15,7 @@ export type FantasyLeagueDashboardInput = {
   players: FantasyPlayerStatRow[];
   globalCaptainPlayerId: number | null;
   globalViceCaptainPlayerId: number | null;
-  awards: Array<{ fpl_entry_id: number; award: "champion" | "wooden_spoon" }>;
+  awards: Array<{ gameweek_id?: string; fpl_entry_id: number; award: "champion" | "wooden_spoon" }>;
   sync: { lastSyncedAt: string | null; stale: boolean; message: string | null };
   playerOfWeek?: FantasyWeeklyFeatureState<FantasyPlayerOfWeek>;
 };
