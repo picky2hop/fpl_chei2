@@ -482,10 +482,87 @@ test("prediction result Flex shows current points and correct or incorrect label
   const serialized = JSON.stringify(message);
   assert.match(serialized, /คะแนนปัจจุบัน/);
   assert.match(serialized, /3 คะแนน/);
-  assert.match(serialized, /ทายถูก/);
-  assert.match(serialized, /ทายผิด/);
-  assert.match(serialized, /#D9FF58/);
+  assert.match(serialized, /"text":"✓"/);
+  assert.match(serialized, /"text":"✕"/);
+  assert.doesNotMatch(serialized, /"text":"ทายถูก"/);
+  assert.doesNotMatch(serialized, /"text":"ทายผิด"/);
+  assert.match(serialized, /#47D7A0/);
   assert.match(serialized, /#FF647C/);
+});
+
+test("prediction Flex colors a correct selected home pick and puts the icon before the home name", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    gameweek: 1,
+    fixtures: [{
+      homeTeam: { name: "Arsenal" },
+      awayTeam: { name: "Chelsea" },
+      choice: "home",
+      status: "finished",
+      homeScore: 2,
+      awayScore: 0,
+    }],
+  });
+  const body = (message.contents as Record<string, unknown>).body as Record<string, unknown>;
+  const dateGroup = (body.contents as Array<Record<string, unknown>>)[1];
+  const timeGroup = (dateGroup.contents as Array<Record<string, unknown>>)[1];
+  const row = ((timeGroup.contents as Array<Record<string, unknown>>)[1]);
+  const rowContents = row.contents as Array<Record<string, unknown>>;
+
+  assert.equal(rowContents[0]?.backgroundColor, "#47D7A01A");
+  assert.match(JSON.stringify(rowContents[0]), /"text":"✓"/);
+  assert.match(JSON.stringify(rowContents[0]), /"text":"Arsenal"/);
+  assert.equal(rowContents[2]?.backgroundColor, "#071525");
+});
+
+test("prediction Flex colors an incorrect selected away pick and puts the icon after the away name", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    gameweek: 1,
+    fixtures: [{
+      homeTeam: { name: "Arsenal" },
+      awayTeam: { name: "Chelsea" },
+      choice: "away",
+      status: "finished",
+      homeScore: 2,
+      awayScore: 0,
+    }],
+  });
+  const body = (message.contents as Record<string, unknown>).body as Record<string, unknown>;
+  const dateGroup = (body.contents as Array<Record<string, unknown>>)[1];
+  const timeGroup = (dateGroup.contents as Array<Record<string, unknown>>)[1];
+  const row = ((timeGroup.contents as Array<Record<string, unknown>>)[1]);
+  const rowContents = row.contents as Array<Record<string, unknown>>;
+
+  assert.equal(rowContents[0]?.backgroundColor, "#071525");
+  assert.equal(rowContents[2]?.backgroundColor, "#FF647C1A");
+  assert.match(JSON.stringify(rowContents[2]), /"text":"✕"/);
+  assert.match(JSON.stringify(rowContents[2]), /"text":"Chelsea"/);
+});
+
+test("prediction Flex colors both teams for a finished draw pick", () => {
+  const message = buildPredictionResultFlex({
+    displayName: "Picky",
+    gameweek: 1,
+    fixtures: [{
+      homeTeam: { name: "Arsenal" },
+      awayTeam: { name: "Chelsea" },
+      choice: "draw",
+      status: "finished",
+      homeScore: 1,
+      awayScore: 1,
+    }],
+  });
+  const body = (message.contents as Record<string, unknown>).body as Record<string, unknown>;
+  const dateGroup = (body.contents as Array<Record<string, unknown>>)[1];
+  const timeGroup = (dateGroup.contents as Array<Record<string, unknown>>)[1];
+  const row = ((timeGroup.contents as Array<Record<string, unknown>>)[1]);
+  const rowContents = row.contents as Array<Record<string, unknown>>;
+
+  assert.equal(rowContents[0]?.backgroundColor, "#47D7A01A");
+  assert.equal(rowContents[2]?.backgroundColor, "#47D7A01A");
+  assert.match(JSON.stringify(rowContents[0]), /"text":"✓"/);
+  assert.match(JSON.stringify(rowContents[2]), /"text":"✓"/);
 });
 
 test("fixture prediction Flex mirrors the app detail and groups predictors", () => {

@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Share2,
   Sparkles,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import DetailModal from "./detail-modal";
@@ -95,6 +96,19 @@ function PredictionResultLabel({ result }: { result: ReturnType<typeof getPredic
   return <span className={`mt-0.5 block text-[10px] font-black ${result.status === "correct" ? "text-[#d9ff58]" : "text-[#ff647c]"}`}>{result.status === "correct" ? "ทายถูก" : "ทายผิด"}</span>;
 }
 
+function PredictionResultIcon({ result }: { result: ReturnType<typeof getPredictionResult> }) {
+  if (result.status === "pending") return null;
+  const isCorrect = result.status === "correct";
+  return <span role="img" aria-label={isCorrect ? "ทายถูก" : "ทายผิด"} className={isCorrect ? "inline-flex shrink-0 items-center justify-center text-[#47d7a0]" : "inline-flex shrink-0 items-center justify-center text-[#ff647c]"}>{isCorrect ? <Check aria-hidden="true" size={15} strokeWidth={3.2} /> : <X aria-hidden="true" size={15} strokeWidth={3.2} />}</span>;
+}
+
+function predictionTeamHighlight(selected: boolean, result: ReturnType<typeof getPredictionResult>["status"]) {
+  if (!selected) return "text-white/75";
+  if (result === "correct") return "rounded-xl bg-[#47d7a0]/20 px-2 py-1 text-[#b7f5de]";
+  if (result === "incorrect") return "rounded-xl bg-[#ff647c]/20 px-2 py-1 text-[#ffb0bc]";
+  return "rounded-xl bg-[#d9ff58]/15 px-2 py-1 text-[#d9ff58]";
+}
+
 function GameweekPicker({ gameweeks, value, currentGameweekId, onChange, onJumpToCurrent }: { gameweeks: Gameweek[]; value: number; currentGameweekId: number | null; onChange: (value: number) => void; onJumpToCurrent: () => void }) {
   const isCurrent = currentGameweekId !== null && value === currentGameweekId;
   return <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={onJumpToCurrent} disabled={currentGameweekId === null || isCurrent} aria-label="กลับไปดู GW ปัจจุบัน" aria-pressed={isCurrent} className="rounded-full border border-[#d9ff58]/30 bg-[#d9ff58]/10 px-2.5 py-2 text-[10px] font-black text-[#d9ff58] outline-none transition hover:bg-[#d9ff58]/20 focus-visible:ring-2 focus-visible:ring-[#d9ff58] disabled:cursor-default disabled:opacity-45">GW ปัจจุบัน: GW {currentGameweekId ?? "—"}</button><label className="relative block"><span className="sr-only">เลือกเกมวีค</span><select value={value} onChange={(event) => onChange(Number(event.target.value))} className="appearance-none rounded-full border border-white/15 bg-[#10253a] py-2 pl-3 pr-8 text-xs font-black text-white outline-none transition focus:border-[#d9ff58] focus-visible:ring-2 focus-visible:ring-[#d9ff58]"><option value="">เลือก GW</option>{gameweeks.map((gameweek) => <option key={gameweek.id} value={gameweek.id}>{gameweek.label} · {gameweek.fixtureCount} คู่</option>)}</select><ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/55" size={14} /></label></div>;
@@ -110,6 +124,7 @@ void LegacyFixturePredictionCard;
 void LegacyResults;
 void LegacyPlayerDetail;
 void LegacyFixtureDetail;
+void PlayerDetailLegacy;
 
 function Leaderboard({ entries, gameweek, fixtureIds, predictionBook, onSelect }: { entries: LeaderboardEntry[]; gameweek: number; fixtureIds: string[]; predictionBook: Record<number, Record<string, PredictionMap>>; onSelect: (entry: LeaderboardEntry) => void }) {
   const [mode, setMode] = useState<"gameweek" | "season">("gameweek");
@@ -173,9 +188,34 @@ function LegacyPlayerDetail({ player, fixtures, gameweek, predictionMap }: { pla
   return <div className="space-y-3"><div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3"><Avatar user={player} size={48} /><div><p className="font-black">{player.displayName}</p><p className="text-xs text-white/50">คำทายของ GW {gameweek}</p></div><span className="ml-auto text-xl font-black text-[#d9ff58]">{player.gameweekPoints} <span className="text-[10px] text-white/45">แต้ม</span></span></div>{details.length ? details.map((detail) => { const highlights = getPredictionTeamHighlights(detail.choice); return <div key={detail.fixtureId} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3"><div className="min-w-0 flex-1"><p className="flex flex-wrap items-center gap-1.5 text-sm font-extrabold"><span className={highlights.home ? "rounded-lg bg-[#d9ff58]/15 px-1.5 py-1 text-[#d9ff58]" : "text-white/75"}>{detail.homeTeam}</span><span className="text-white/35">vs</span><span className={highlights.away ? "rounded-lg bg-[#d9ff58]/15 px-1.5 py-1 text-[#d9ff58]" : "text-white/75"}>{detail.awayTeam}</span></p></div><span className={`shrink-0 rounded-full px-2.5 py-1.5 text-[10px] font-black ${choiceColors[detail.choice]}`}>{choiceLabels[detail.choice]}</span></div>; }) : <p className="rounded-2xl bg-white/5 p-4 text-sm text-white/55">ยังไม่มีคำทายในเกมวีคนี้</p>}</div>;
 }
 
-function PlayerDetail({ player, fixtures, gameweek, predictionMap }: { player: LeaderboardEntry; fixtures: Fixture[]; gameweek: number; predictionMap: PredictionMap }) {
+function PlayerDetailLegacy({ player, fixtures, gameweek, predictionMap }: { player: LeaderboardEntry; fixtures: Fixture[]; gameweek: number; predictionMap: PredictionMap }) {
   const details = getUserPredictionDetails(fixtures.map((fixture) => ({ id: fixture.id, homeTeam: fixture.homeTeam.name, awayTeam: fixture.awayTeam.name })), predictionMap);
   return <div className="space-y-3"><div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3"><Avatar user={player} size={48} /><div><p className="font-black">{player.displayName}</p><p className="text-xs text-white/50">คำทายของ GW {gameweek}</p></div><span className="ml-auto text-xl font-black text-[#d9ff58]">{player.gameweekPoints} <span className="text-[10px] text-white/45">แต้ม</span></span></div>{details.length ? details.map((detail) => { const highlights = getPredictionTeamHighlights(detail.choice); const fixture = fixtures.find((item) => item.id === detail.fixtureId); const score = fixture && getFixtureScoreText(fixture); const result = getPredictionResult(fixture ?? { status: "scheduled" }, detail.choice); return <div key={detail.fixtureId} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-3"><div className={`flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right ${highlights.home ? "rounded-xl bg-[#d9ff58]/15 px-2 py-1 text-[#d9ff58]" : "text-white/75"}`}><div className="min-w-0"><p className="truncate text-xs font-extrabold">{fixture?.homeTeam.name ?? detail.homeTeam}</p>{detail.choice === "home" && <PredictionResultLabel result={result} />}</div>{fixture && <TeamLogo team={fixture.homeTeam} />}</div><div className="shrink-0 text-center"><span className="text-[10px] font-black text-white/65">{score ?? "VS"}</span>{fixture?.status === "live" && score && <span className="block text-[9px] font-bold text-[#ff8698]">LIVE</span>}{detail.choice === "draw" && <PredictionResultLabel result={result} />}</div><div className={`flex min-w-0 flex-1 items-center gap-1.5 ${highlights.away ? "rounded-xl bg-[#d9ff58]/15 px-2 py-1 text-[#d9ff58]" : "text-white/75"}`}>{fixture && <TeamLogo team={fixture.awayTeam} />}<div className="min-w-0"><p className="truncate text-xs font-extrabold">{fixture?.awayTeam.name ?? detail.awayTeam}</p>{detail.choice === "away" && <PredictionResultLabel result={result} />}</div></div><span className={`shrink-0 rounded-full px-2.5 py-1.5 text-[10px] font-black ${choiceColors[detail.choice]}`}>{choiceLabels[detail.choice]}</span></div>; }) : <p className="rounded-2xl bg-white/5 p-4 text-sm text-white/55">ยังไม่มีคำทายในเกมวีคนี้</p>}</div>;
+}
+
+function PlayerDetail({ player, fixtures, gameweek, predictionMap }: { player: LeaderboardEntry; fixtures: Fixture[]; gameweek: number; predictionMap: PredictionMap }) {
+  const details = getUserPredictionDetails(fixtures.map((fixture) => ({ id: fixture.id, homeTeam: fixture.homeTeam.name, awayTeam: fixture.awayTeam.name })), predictionMap);
+  return <div className="space-y-3"><div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3"><Avatar user={player} size={48} /><div><p className="font-black">{player.displayName}</p><p className="text-xs text-white/50">คำทายของ GW {gameweek}</p></div><span className="ml-auto text-xl font-black text-[#d9ff58]">{player.gameweekPoints} <span className="text-[10px] text-white/45">แต้ม</span></span></div>{details.length ? details.map((detail) => {
+    const fixture = fixtures.find((item) => item.id === detail.fixtureId);
+    const result = getPredictionResult(fixture ?? { status: "scheduled" }, detail.choice);
+    const isDraw = detail.choice === "draw";
+    const selectedHome = detail.choice === "home" || isDraw;
+    const selectedAway = detail.choice === "away" || isDraw;
+    return <div key={detail.fixtureId} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+      <div className={["flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right", predictionTeamHighlight(selectedHome, result.status)].join(" ")}>
+        {(detail.choice === "home" || isDraw) && <PredictionResultIcon result={result} />}
+        <div className="min-w-0"><p className="truncate text-xs font-extrabold">{fixture?.homeTeam.name ?? detail.homeTeam}</p></div>
+        {fixture && <TeamLogo team={fixture.homeTeam} />}
+      </div>
+      <div className="shrink-0 text-center"><span className="text-[10px] font-black text-white/65">{fixture ? getFixtureScoreText(fixture) ?? "VS" : "VS"}</span>{fixture?.status === "live" && getFixtureScoreText(fixture) && <span className="block text-[9px] font-bold text-[#ff8698]">LIVE</span>}</div>
+      <div className={["flex min-w-0 flex-1 items-center gap-1.5", predictionTeamHighlight(selectedAway, result.status)].join(" ")}>
+        {fixture && <TeamLogo team={fixture.awayTeam} />}
+        <div className="min-w-0"><p className="truncate text-xs font-extrabold">{fixture?.awayTeam.name ?? detail.awayTeam}</p></div>
+        {(detail.choice === "away" || isDraw) && <PredictionResultIcon result={result} />}
+      </div>
+      <span className={["shrink-0 rounded-full px-2.5 py-1.5 text-[10px] font-black", choiceColors[detail.choice]].join(" ")}>{choiceLabels[detail.choice]}</span>
+    </div>;
+  }) : <p className="rounded-2xl bg-white/5 p-4 text-sm text-white/55">ยังไม่มีคำทายในเกมวีคนี้</p>}</div>;
 }
 
 function LegacyFixtureDetail({ fixture, entries, gameweek }: { fixture: Fixture; entries: LeaderboardEntry[]; gameweek: number }) {

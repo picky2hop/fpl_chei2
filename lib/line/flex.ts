@@ -158,16 +158,33 @@ function teamLogoOrFallback(url: string | undefined, fallback: string, size = "4
 
 function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, centered = false, result?: "correct" | "incorrect") {
   const name = {
-    ...text(team.name, "xs", "bold", highlighted ? "#d9ff58" : PRIMARY_TEXT),
+    ...text(team.name, "xs", "bold", result ? PRIMARY_TEXT : highlighted ? "#d9ff58" : PRIMARY_TEXT),
     ...(centered ? { align: "center" } : {}),
   };
-  const resultLabel = result
-    ? { ...text(result === "correct" ? "ทายถูก" : "ทายผิด", "xxs", "bold", result === "correct" ? "#D9FF58" : "#FF647C"), align: centered ? "center" : side === "home" ? "end" : "start" }
+  const resultIcon = result
+    ? { ...text(result === "correct" ? "✓" : "✕", "sm", "bold", result === "correct" ? "#47D7A0" : "#FF647C"), flex: 0, wrap: false }
     : null;
-  const nameContent = resultLabel
-    ? { type: "box", layout: "vertical", flex: 1, alignItems: centered ? "center" : side === "home" ? "flex-end" : "flex-start", contents: [name, resultLabel] }
-    : name;
+  const nameContent = {
+    type: "box",
+    layout: "horizontal",
+    flex: 1,
+    spacing: "xs",
+    alignItems: "center",
+    justifyContent: centered ? "center" : side === "home" ? "flex-end" : "flex-start",
+    contents: side === "home"
+      ? [...(resultIcon ? [resultIcon] : []), name]
+      : [name, ...(resultIcon ? [resultIcon] : [])],
+  };
   const logo = teamLogoOrFallback(team.logoUrl, team.name, "36px");
+  const backgroundColor = result === "correct"
+    ? CORRECT_PREDICTION_HIGHLIGHT
+    : result === "incorrect"
+      ? INCORRECT_PREDICTION_HIGHLIGHT
+      : highlighted
+        ? SELECTED_PREDICTION_HIGHLIGHT
+        : centered
+          ? MAIN_BACKGROUND
+          : CARD_BACKGROUND;
   return {
     type: "box",
     layout: "horizontal",
@@ -175,7 +192,7 @@ function teamSide(team: FlexTeam, side: "home" | "away", highlighted = false, ce
     spacing: "sm",
     paddingAll: centered ? "8px" : highlighted ? "8px" : "none",
     cornerRadius: "md",
-    backgroundColor: highlighted ? "#d9ff5815" : centered ? MAIN_BACKGROUND : CARD_BACKGROUND,
+    backgroundColor,
     justifyContent: centered ? "center" : side === "home" ? "flex-end" : "flex-start",
     alignItems: "center",
     contents: side === "home" ? [nameContent, logo] : [logo, nameContent],
@@ -318,6 +335,10 @@ const choiceColors: Record<PredictionChoice, { background: string; text: string 
   away: { background: "#6da9ff", text: "#071525" },
 };
 
+const SELECTED_PREDICTION_HIGHLIGHT = "#d9ff5815";
+const CORRECT_PREDICTION_HIGHLIGHT = "#47D7A01A";
+const INCORRECT_PREDICTION_HIGHLIGHT = "#FF647C1A";
+
 export function formatPredictionDateLabel(kickoffAt?: string, fallback = "วันที่แข่งขัน"): string {
   if (!kickoffAt) return fallback;
   const date = new Date(kickoffAt);
@@ -401,7 +422,7 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
     backgroundColor: MAIN_BACKGROUND,
     alignItems: "center",
     contents: [
-      teamSide(fixture.homeTeam, "home", fixture.choice === "home", true, fixture.choice === "home" && result.status !== "pending" ? result.status : undefined),
+      teamSide(fixture.homeTeam, "home", fixture.choice === "home" || fixture.choice === "draw", true, (fixture.choice === "home" || fixture.choice === "draw") && result.status !== "pending" ? result.status : undefined),
       {
         type: "box",
         layout: "vertical",
@@ -412,10 +433,9 @@ function predictionFixture(fixture: PredictionFlexInput["fixtures"][number]) {
          contents: [
            { ...text(scoreLabel, "xs", "bold", hasScore ? PRIMARY_TEXT : MUTED_TEXT), align: "center", wrap: false },
            ...(statusLabel ? [{ ...text(statusLabel, "xxs", "regular", statusColor), align: "center" }] : []),
-           ...(fixture.choice === "draw" && result.status !== "pending" ? [{ ...text(result.status === "correct" ? "ทายถูก" : "ทายผิด", "xxs", "bold", result.status === "correct" ? "#D9FF58" : "#FF647C"), align: "center" }] : []),
          ],
       },
-      teamSide(fixture.awayTeam, "away", fixture.choice === "away", true, fixture.choice === "away" && result.status !== "pending" ? result.status : undefined),
+      teamSide(fixture.awayTeam, "away", fixture.choice === "away" || fixture.choice === "draw", true, (fixture.choice === "away" || fixture.choice === "draw") && result.status !== "pending" ? result.status : undefined),
       predictionChoicePill(fixture.choice),
     ],
   };
