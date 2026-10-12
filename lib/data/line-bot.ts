@@ -2,7 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
-import { buildLeagueLeaderboard } from "@/lib/fantasy/league-scoring";
+import { buildLeagueLeaderboard, getLeaderboardManagerName } from "@/lib/fantasy/league-scoring";
 import { getFantasyMyTeamData } from "./fantasy.ts";
 import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, selectUserPredictionGameweek, type FantasyAwardsData, type FantasyMyTeamData, type FantasyTopBottomData, type PredictionAwardsData } from "./line-bot-core";
 
@@ -542,7 +542,7 @@ export function createLineBotDataReader(): LineBotDataReader {
         gameweek: currentGameweek.number,
         rows: leaderboard.map((row) => ({
           rank: row.rank,
-          managerName: row.managerName,
+          managerName: getLeaderboardManagerName(row),
           teamName: row.teamName,
           points: row.points,
           avatarUrl: row.avatarUrl,

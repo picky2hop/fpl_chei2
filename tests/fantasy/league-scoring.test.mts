@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildLeagueLeaderboard } from "../../lib/fantasy/league-scoring.ts";
+import { buildLeagueLeaderboard, getLeaderboardManagerName } from "../../lib/fantasy/league-scoring.ts";
 
 const members = [
   { league_id: "league-1", gameweek_id: "gw-2", fpl_entry_id: 101, fpl_team_name: "Team One", fpl_manager_name: "Manager One" },
@@ -38,6 +38,20 @@ test("includes mapped and unmapped members and assigns competition ranks", () =>
     { entry: 103, points: 0, rank: 3, display: "Team Three" },
   ]);
   assert.equal(rows[1].mapped, false);
+});
+
+test("uses the LINE display name for mapped entries and the FPL manager name otherwise", () => {
+  const rows = buildLeagueLeaderboard({
+    members,
+    scores,
+    mappings,
+    selectedGameweekId: "gw-2",
+    selectedGameweekNumber: 2,
+    mode: "gameweek",
+  });
+
+  assert.equal(getLeaderboardManagerName(rows[0]), "LINE One");
+  assert.equal(getLeaderboardManagerName(rows[1]), "Manager Two");
 });
 
 test("keeps two mapped Entries as separate rows when they share one LINE identity", () => {

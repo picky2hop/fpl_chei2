@@ -32,6 +32,10 @@ export type LeagueLeaderboardRow = {
   avatarUrl: string | null;
 };
 
+export function getLeaderboardManagerName(row: Pick<LeagueLeaderboardRow, "mapped" | "displayName" | "managerName">): string {
+  return row.mapped ? row.displayName : row.managerName;
+}
+
 function scoreForEntry(input: {
   scores: EntryScoreRow[];
   entryId: number;
