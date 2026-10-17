@@ -43,6 +43,30 @@ test("builds server leaderboard rows from active participants of that gameweek",
   assert.equal(result[2]?.[0]?.seasonPoints, 4);
 });
 
+test("attaches full-season award counts to every prediction leaderboard view", () => {
+  const result = buildDashboardLeaderboardRows(
+    [{ id: "gw-1", number: 1 }, { id: "gw-2", number: 2 }],
+    [{ gameweek_id: "gw-2", user_id: "user-b", status: "active" }],
+    [{ gameweek_id: "gw-2", user_id: "user-b", points: 4 }],
+    [{ id: "user-b", display_name: "ผู้เล่น B", avatar_url: null }],
+    [
+      { user_id: "user-b", award: "champion" as const },
+      { user_id: "user-b", award: "wooden_spoon" as const },
+      { user_id: "user-b", award: "champion" as const },
+    ],
+  );
+
+  assert.deepEqual(result[2]?.[0], {
+    id: "user-b",
+    displayName: "ผู้เล่น B",
+    avatarUrl: "",
+    gameweekPoints: 4,
+    seasonPoints: 4,
+    championCount: 2,
+    woodenSpoonCount: 1,
+  });
+});
+
 test("ranks the selected gameweek by gameweek points before season totals", () => {
   const result = buildLeaderboardByGameweek(
     [{ id: "gw-1", number: 1 }, { id: "gw-2", number: 2 }],

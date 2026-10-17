@@ -1,3 +1,5 @@
+import { countLeaderboardAwards, type LeaderboardAward } from "../leaderboard-awards.ts";
+
 export type LeagueMembershipRow = {
   league_id: string;
   gameweek_id: string;
@@ -30,6 +32,8 @@ export type LeagueLeaderboardRow = {
   appUserId: string | null;
   displayName: string;
   avatarUrl: string | null;
+  championCount: number;
+  woodenSpoonCount: number;
 };
 
 export function getLeaderboardManagerName(row: Pick<LeagueLeaderboardRow, "mapped" | "displayName" | "managerName">): string {
@@ -69,11 +73,14 @@ export function buildLeagueLeaderboard(input: {
   selectedGameweekId: string;
   selectedGameweekNumber: number;
   mode: "gameweek" | "season";
+  awards?: Array<{ fpl_entry_id: number; award: LeaderboardAward }>;
 }): LeagueLeaderboardRow[] {
   const mappingByEntry = new Map(input.mappings.map((mapping) => [mapping.fpl_entry_id, mapping]));
+  const awardCounts = countLeaderboardAwards(input.awards ?? [], (award) => String(award.fpl_entry_id));
   const uniqueMembers = [...new Map(input.members.map((member) => [member.fpl_entry_id, member])).values()];
   const rows = uniqueMembers.map((member) => {
     const mapping = mappingByEntry.get(member.fpl_entry_id);
+    const counts = awardCounts.get(String(member.fpl_entry_id)) ?? { championCount: 0, woodenSpoonCount: 0 };
     return {
       rank: 0,
       fplEntryId: member.fpl_entry_id,
@@ -84,6 +91,7 @@ export function buildLeagueLeaderboard(input: {
       appUserId: mapping?.app_user_id ?? null,
       displayName: mapping?.display_name ?? member.fpl_team_name,
       avatarUrl: mapping?.avatar_url ?? null,
+      ...counts,
     } satisfies LeagueLeaderboardRow;
   }).sort((left, right) => right.points - left.points || left.fplEntryId - right.fplEntryId);
 

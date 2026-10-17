@@ -75,3 +75,39 @@ test("dashboard can select historical leaderboard GW without changing current pl
   assert.equal(result.awards.champions[0].mappingId, "m1");
   assert.equal(result.sync.stale, true);
 });
+
+test("legacy dashboard keeps award badges scoped to the selected GW while counts span the season", () => {
+  const result = buildFantasyDashboard({
+    season: { id: "s1", name: "2026/27" },
+    gameweeks: [
+      { id: "gw1", number: 1, name: "GW 1", is_current: false, status: "closed" },
+      { id: "gw2", number: 2, name: "GW 2", is_current: true, status: "open" },
+    ],
+    selectedGameweekNumber: 1,
+    mappings: [{ id: "m1", season_id: "s1", app_user_id: "u1", fpl_entry_id: 100, fpl_team_name: "FC", fpl_manager_name: "Manager", mapping_status: "active", display_name: "User", avatar_url: null }],
+    scores: [{ mapping_id: "m1", gameweek_id: "gw1", points: 72 }, { mapping_id: "m1", gameweek_id: "gw2", points: 45 }],
+    players: [],
+    globalCaptainPlayerId: null,
+    globalViceCaptainPlayerId: null,
+    awards: [
+      { gameweek_id: "gw1", mapping_id: "m1", award: "champion" },
+      { gameweek_id: "gw2", mapping_id: "m1", award: "champion" },
+    ],
+    sync: { lastSyncedAt: null, stale: false, message: null },
+  });
+
+  assert.deepEqual(result.awards.champions, [{ mappingId: "m1", award: "champion" }]);
+  assert.deepEqual(result.leaderboard.gameweek[0], {
+    mappingId: "m1",
+    fplEntryId: 100,
+    teamName: "FC",
+    managerName: "Manager",
+    mappingStatus: "active",
+    appUserId: "u1",
+    displayName: "User",
+    avatarUrl: null,
+    points: 72,
+    championCount: 2,
+    woodenSpoonCount: 0,
+  });
+});

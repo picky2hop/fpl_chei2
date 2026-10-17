@@ -20,7 +20,7 @@ export type FantasyDashboardInput = {
   players: FantasyPlayerStatRow[];
   globalCaptainPlayerId: number | null;
   globalViceCaptainPlayerId: number | null;
-  awards: Array<{ mapping_id: string; award: FantasyAward }>;
+  awards: Array<{ gameweek_id?: string; mapping_id: string; award: FantasyAward }>;
   sync: { lastSyncedAt: string | null; stale: boolean; message: string | null };
 };
 
@@ -60,6 +60,7 @@ export function buildFantasyDashboard(input: FantasyDashboardInput): FantasyDash
     : current;
   const selectedGameweekId = input.gameweeks.find((gameweek) => gameweek.number === selected)?.id ?? "";
   const currentGameweekId = input.gameweeks.find((gameweek) => gameweek.number === current)?.id ?? "";
+  const selectedAwards = input.awards.filter((award) => award.gameweek_id === undefined || award.gameweek_id === selectedGameweekId);
   const leaderboardMappings = input.mappings.filter((mapping) => mapping.mapping_status === "active"
     || input.scores.some((score) => score.mapping_id === mapping.id));
   const playerStats = rankPlayerStats({
@@ -75,12 +76,12 @@ export function buildFantasyDashboard(input: FantasyDashboardInput): FantasyDash
     selectedLeaderboardGameweek: selected,
     sync: input.sync,
     leaderboard: {
-      gameweek: buildFantasyLeaderboard({ rows: input.scores, mappings: leaderboardMappings, selectedGameweekId, mode: "gameweek" }),
-      season: buildFantasyLeaderboard({ rows: input.scores, mappings: leaderboardMappings, selectedGameweekId, mode: "season" }),
+      gameweek: buildFantasyLeaderboard({ rows: input.scores, mappings: leaderboardMappings, selectedGameweekId, mode: "gameweek", awards: input.awards }),
+      season: buildFantasyLeaderboard({ rows: input.scores, mappings: leaderboardMappings, selectedGameweekId, mode: "season", awards: input.awards }),
     },
     awards: {
-      champions: input.awards.filter((award) => award.award === "champion").map((award) => ({ mappingId: award.mapping_id, award: "champion" as const })),
-      woodenSpoons: input.awards.filter((award) => award.award === "wooden_spoon").map((award) => ({ mappingId: award.mapping_id, award: "wooden_spoon" as const })),
+      champions: selectedAwards.filter((award) => award.award === "champion").map((award) => ({ mappingId: award.mapping_id, award: "champion" as const })),
+      woodenSpoons: selectedAwards.filter((award) => award.award === "wooden_spoon").map((award) => ({ mappingId: award.mapping_id, award: "wooden_spoon" as const })),
     },
     playerStats,
   };

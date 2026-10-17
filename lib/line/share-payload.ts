@@ -20,6 +20,8 @@ export function buildStandingsShareFlex(input: {
       displayName: entry.displayName,
       avatarUrl: entry.avatarUrl,
       points: input.period === "season" ? entry.seasonPoints : entry.gameweekPoints,
+      championCount: entry.championCount,
+      woodenSpoonCount: entry.woodenSpoonCount,
     })),
   });
 }

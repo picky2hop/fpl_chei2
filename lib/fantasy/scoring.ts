@@ -1,5 +1,6 @@
 import type { FantasyAward, FantasyEntryMapping } from "./types.ts";
 import { buildFplPlayerPhotoUrl } from "./player-image.ts";
+import { countLeaderboardAwards, type LeaderboardAward } from "../leaderboard-awards.ts";
 
 export type FantasyScoreRow = {
   mapping_id: string;
@@ -25,6 +26,8 @@ export type FantasyLeaderboardEntry = {
   displayName: string;
   avatarUrl: string | null;
   points: number;
+  championCount: number;
+  woodenSpoonCount: number;
 };
 
 export type FantasyPlayerPosition = "GK" | "DEF" | "MID" | "FWD";
@@ -93,19 +96,25 @@ export function buildFantasyLeaderboard(input: {
   mappings: FantasyMappingLeaderboardRow[];
   selectedGameweekId: string;
   mode: "gameweek" | "season";
+  awards?: Array<{ mapping_id: string; award: LeaderboardAward }>;
 }): FantasyLeaderboardEntry[] {
+  const awardCounts = countLeaderboardAwards(input.awards ?? [], (award) => award.mapping_id);
   return input.mappings
-    .map((mapping) => ({
-      mappingId: mapping.id,
-      fplEntryId: mapping.fpl_entry_id,
-      teamName: mapping.fpl_team_name,
-      managerName: mapping.fpl_manager_name,
-      mappingStatus: mapping.mapping_status,
-      appUserId: mapping.app_user_id,
-      displayName: mapping.display_name,
-      avatarUrl: mapping.avatar_url,
-      points: pointsForMapping(input.rows, mapping.id, input.selectedGameweekId, input.mode),
-    }))
+    .map((mapping) => {
+      const counts = awardCounts.get(mapping.id) ?? { championCount: 0, woodenSpoonCount: 0 };
+      return {
+        mappingId: mapping.id,
+        fplEntryId: mapping.fpl_entry_id,
+        teamName: mapping.fpl_team_name,
+        managerName: mapping.fpl_manager_name,
+        mappingStatus: mapping.mapping_status,
+        appUserId: mapping.app_user_id,
+        displayName: mapping.display_name,
+        avatarUrl: mapping.avatar_url,
+        points: pointsForMapping(input.rows, mapping.id, input.selectedGameweekId, input.mode),
+        ...counts,
+      };
+    })
     .sort((left, right) => right.points - left.points || left.mappingId.localeCompare(right.mappingId));
 }
 

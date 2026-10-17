@@ -72,8 +72,10 @@ export function buildFantasyLeagueDashboard(input: FantasyLeagueDashboardInput):
     mappings: input.mappings,
     selectedGameweekId: selectedGameweek.id,
     selectedGameweekNumber: selected,
+    awards: input.awards,
   } as const;
   const currentGameweekId = input.gameweeks.find((gameweek) => gameweek.number === current)?.id ?? "";
+  const selectedAwards = input.awards.filter((award) => award.gameweek_id === undefined || award.gameweek_id === selectedGameweek.id);
   return {
     season: input.season,
     leagues: input.leagues,
@@ -87,8 +89,8 @@ export function buildFantasyLeagueDashboard(input: FantasyLeagueDashboardInput):
       season: buildLeagueLeaderboard({ ...leaderboardInput, mode: "season" }),
     },
     awards: {
-      champions: input.awards.filter((award) => award.award === "champion").map((award) => ({ entryId: award.fpl_entry_id, award: "champion" as const })),
-      woodenSpoons: input.awards.filter((award) => award.award === "wooden_spoon").map((award) => ({ entryId: award.fpl_entry_id, award: "wooden_spoon" as const })),
+      champions: selectedAwards.filter((award) => award.award === "champion").map((award) => ({ entryId: award.fpl_entry_id, award: "champion" as const })),
+      woodenSpoons: selectedAwards.filter((award) => award.award === "wooden_spoon").map((award) => ({ entryId: award.fpl_entry_id, award: "wooden_spoon" as const })),
     },
     playerStats: rankPlayerStats({
       players: input.players,

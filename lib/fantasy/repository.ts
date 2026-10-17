@@ -325,7 +325,7 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         input.includePlayers === false ? Promise.resolve({ data: [], error: null }) : client.from("fantasy_player_gameweek_stats").select("*").eq("season_id", input.seasonId).eq("gameweek_id", currentGameweekId),
         client.from("fantasy_entry_mappings").select("fpl_entry_id,app_user_id").eq("season_id", input.seasonId).eq("mapping_status", "active"),
         client.from("app_users").select("id,display_name,avatar_url"),
-        input.browse ? readAllRows((from, to) => client.from("fantasy_league_awards").select("gameweek_id,fpl_entry_id,award").eq("season_id", input.seasonId).eq("league_id", input.leagueId).order("gameweek_id").order("fpl_entry_id").order("award").range(from, to)).then((data) => ({ data, error: null })) : client.from("fantasy_league_awards").select("gameweek_id,fpl_entry_id,award").eq("season_id", input.seasonId).eq("league_id", input.leagueId).eq("gameweek_id", selectedGameweekId),
+        input.browse ? readAllRows((from, to) => client.from("fantasy_league_awards").select("gameweek_id,fpl_entry_id,award").eq("season_id", input.seasonId).eq("league_id", input.leagueId).order("gameweek_id").order("fpl_entry_id").order("award").range(from, to)).then((data) => ({ data, error: null })) : client.from("fantasy_league_awards").select("gameweek_id,fpl_entry_id,award").eq("season_id", input.seasonId).eq("league_id", input.leagueId),
         client.from("job_runs").select("status,finished_at,started_at,error_message").eq("job_type", "fantasy_sync").order("started_at", { ascending: false }).limit(20),
       ]);
       if (membershipResult.error || scoreResult.error || playerResult.error || mappingResult.error || usersResult.error || awardResult.error || jobResult.error
@@ -377,13 +377,11 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         ?? 0;
       const currentGameweekId = gameweeks.find((gameweek) => gameweek.number === currentGameweek)?.id;
       if (!currentGameweekId) throw new Error("Fantasy database operation failed");
-      const selectedGameweek = gameweeks.find((gameweek) => gameweek.number === input.selectedGameweekNumber)?.number ?? currentGameweek;
-      const selectedGameweekId = gameweeks.find((gameweek) => gameweek.number === selectedGameweek)?.id ?? currentGameweekId;
       const [mappingResult, scoreResult, playerResult, awardResult, usersResult, jobResult] = await Promise.all([
         client.from("fantasy_entry_mappings").select("*").eq("season_id", input.seasonId),
         client.from("fantasy_gameweek_scores").select("mapping_id,gameweek_id,points").eq("season_id", input.seasonId),
         client.from("fantasy_player_gameweek_stats").select("*").eq("season_id", input.seasonId).eq("gameweek_id", currentGameweekId),
-        client.from("fantasy_awards").select("mapping_id,award").eq("season_id", input.seasonId).eq("gameweek_id", selectedGameweekId),
+        client.from("fantasy_awards").select("gameweek_id,mapping_id,award").eq("season_id", input.seasonId),
         client.from("app_users").select("id,display_name,avatar_url"),
         client.from("job_runs").select("status,finished_at,started_at,error_message").eq("job_type", "fantasy_sync").order("started_at", { ascending: false }).limit(20),
       ]);
@@ -417,7 +415,7 @@ export function createFantasyRepository(client: FantasyDatabaseClient): FantasyR
         players: playerResult.data as unknown as FantasyDashboardInput["players"],
         globalCaptainPlayerId: playerResult.data.find((player) => player.is_global_captain)?.fpl_player_id ?? null,
         globalViceCaptainPlayerId: playerResult.data.find((player) => player.is_global_vice_captain)?.fpl_player_id ?? null,
-        awards: awardResult.data.map((award) => ({ mapping_id: award.mapping_id, award: award.award as "champion" | "wooden_spoon" })),
+        awards: awardResult.data.map((award) => ({ gameweek_id: award.gameweek_id, mapping_id: award.mapping_id, award: award.award as "champion" | "wooden_spoon" })),
         sync: {
           lastSyncedAt: latestSuccess?.finished_at ?? null,
           stale,

@@ -140,9 +140,9 @@ test("maps standings rows with rank, avatar, and deterministic points order", ()
   assert.deepEqual(result, {
     gameweek: 28,
     rows: [
-      { rank: 1, userId: "u1", displayName: "Aom", avatarUrl: "https://example.test/aom.png", points: 6 },
-      { rank: 2, userId: "u3", displayName: "Chei", avatarUrl: "", points: 6 },
-      { rank: 3, userId: "u2", displayName: "Bee", avatarUrl: "", points: 3 },
+      { rank: 1, userId: "u1", displayName: "Aom", avatarUrl: "https://example.test/aom.png", points: 6, championCount: 0, woodenSpoonCount: 0 },
+      { rank: 2, userId: "u3", displayName: "Chei", avatarUrl: "", points: 6, championCount: 0, woodenSpoonCount: 0 },
+      { rank: 3, userId: "u2", displayName: "Bee", avatarUrl: "", points: 3, championCount: 0, woodenSpoonCount: 0 },
     ],
   });
 });

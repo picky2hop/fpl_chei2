@@ -3,6 +3,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PredictionChoice, FlexTeam } from "@/lib/line/flex";
 import { buildLeagueLeaderboard, getLeaderboardManagerName } from "@/lib/fantasy/league-scoring";
+import { countLeaderboardAwards, type LeaderboardAward } from "@/lib/leaderboard-awards";
 import { getFantasyMyTeamData } from "./fantasy.ts";
 import { derivePredictionAwardSelections, formatBangkokDateRangeLabel, formatBangkokFullDate, getBangkokTwoDayRange, mapFantasyAwards, mapPredictionAwards, selectActiveGameweek, selectCompleteParticipantIds, selectLatestAwardedGameweek, selectUserPredictionGameweek, type FantasyAwardsData, type FantasyMyTeamData, type FantasyTopBottomData, type PredictionAwardsData } from "./line-bot-core";
 
@@ -17,6 +18,8 @@ export type StandingsData = {
     displayName: string;
     avatarUrl: string;
     points: number;
+    championCount: number;
+    woodenSpoonCount: number;
   }>;
 };
 
@@ -52,6 +55,8 @@ type StandingsRowInput = {
   displayName: string;
   avatarUrl: string | null;
   points: number | null;
+  championCount?: number;
+  woodenSpoonCount?: number;
 };
 
 type TodayFixtureRowInput = {
@@ -136,6 +141,8 @@ export function mapStandingsRows(gameweek: number, rows: StandingsRowInput[]): S
       displayName: row.displayName,
       avatarUrl: row.avatarUrl ?? "",
       points: row.points ?? 0,
+      championCount: row.championCount ?? 0,
+      woodenSpoonCount: row.woodenSpoonCount ?? 0,
     })),
   };
 }
@@ -199,7 +206,7 @@ async function activeContext() {
   if (gameweekError) throw new Error("Gameweeks are unavailable");
   const gameweek = selectActiveGameweek((gameweeks ?? []).map((row) => ({ id: row.id, number: row.number, isCurrent: row.is_current })));
   if (!gameweek) throw new Error("Current gameweek is unavailable");
-  return { admin, season, gameweek };
+  return { admin, season, gameweek, gameweeks: gameweeks ?? [] };
 }
 
 function teamById(teams: Array<{ id: string; name: string; logo_url: string | null }>) {
@@ -219,14 +226,15 @@ export type LineBotDataReader = {
 export function createLineBotDataReader(): LineBotDataReader {
   return {
     async getCurrentStandings() {
-      const { admin, gameweek } = await activeContext();
-      const [{ data: participants, error: participantError }, { data: scores, error: scoreError }, { data: users, error: userError }, { data: fixtures, error: fixtureError }] = await Promise.all([
+      const { admin, gameweek, gameweeks } = await activeContext();
+      const [{ data: participants, error: participantError }, { data: scores, error: scoreError }, { data: users, error: userError }, { data: fixtures, error: fixtureError }, { data: awards, error: awardError }] = await Promise.all([
         admin.from("gameweek_participants").select("user_id").eq("gameweek_id", gameweek.id).eq("status", "active"),
         admin.from("gameweek_scores").select("user_id,points").eq("gameweek_id", gameweek.id),
         admin.from("app_users").select("id,display_name,avatar_url,status").eq("status", "active"),
         admin.from("fixtures").select("id").eq("gameweek_id", gameweek.id),
+        admin.from("gameweek_awards").select("user_id,award").in("gameweek_id", gameweeks.map((item) => item.id)),
       ]);
-      if (participantError || scoreError || userError || fixtureError) throw new Error("Standings are unavailable");
+      if (participantError || scoreError || userError || fixtureError || awardError) throw new Error("Standings are unavailable");
 
       const fixtureIds = (fixtures ?? []).map((fixture) => fixture.id);
       const { data: predictions, error: predictionError } = fixtureIds.length
@@ -241,9 +249,11 @@ export function createLineBotDataReader(): LineBotDataReader {
       );
       const participantIdSet = new Set(participantIds);
       const points = new Map((scores ?? []).map((row) => [row.user_id, row.points]));
+      const validAwards = (awards ?? []).flatMap((award): Array<{ user_id: string; award: LeaderboardAward }> => award.award === "champion" || award.award === "wooden_spoon" ? [{ user_id: award.user_id, award: award.award as LeaderboardAward }] : []);
+      const awardCounts = countLeaderboardAwards(validAwards, (award) => award.user_id);
       const rows = (users ?? [])
         .filter((user) => participantIdSet.has(user.id))
-        .map((user) => ({ userId: user.id, displayName: user.display_name, avatarUrl: user.avatar_url, points: points.get(user.id) ?? 0 }));
+        .map((user) => ({ userId: user.id, displayName: user.display_name, avatarUrl: user.avatar_url, points: points.get(user.id) ?? 0, ...awardCounts.get(user.id) }));
       return mapStandingsRows(gameweek.number, rows);
     },
 
@@ -498,12 +508,13 @@ export function createLineBotDataReader(): LineBotDataReader {
         ?? (gameweeks ?? [])[0];
       if (!currentGameweek) return null;
 
-      const [{ data: memberships, error: membershipError }, { data: scores, error: scoreError }, { data: mappings, error: mappingError }] = await Promise.all([
+      const [{ data: memberships, error: membershipError }, { data: scores, error: scoreError }, { data: mappings, error: mappingError }, { data: awards, error: awardError }] = await Promise.all([
         admin.from("fantasy_league_membership_snapshots").select("league_id,gameweek_id,fpl_entry_id,fpl_team_name,fpl_manager_name").eq("season_id", season.id).eq("league_id", league.id).eq("gameweek_id", currentGameweek.id),
         admin.from("fantasy_entry_gameweek_scores").select("fpl_entry_id,gameweek_id,points").eq("season_id", season.id).eq("gameweek_id", currentGameweek.id),
         admin.from("fantasy_entry_mappings").select("fpl_entry_id,app_user_id").eq("season_id", season.id).eq("mapping_status", "active"),
+        admin.from("fantasy_league_awards").select("fpl_entry_id,award").eq("season_id", season.id).eq("league_id", league.id),
       ]);
-      if (membershipError || scoreError || mappingError) throw new Error("Fantasy leaderboard is unavailable");
+      if (membershipError || scoreError || mappingError || awardError) throw new Error("Fantasy leaderboard is unavailable");
 
       const userIds = [...new Set((mappings ?? []).map((mapping) => mapping.app_user_id))];
       const { data: users, error: userError } = userIds.length
@@ -535,6 +546,7 @@ export function createLineBotDataReader(): LineBotDataReader {
         selectedGameweekId: currentGameweek.id,
         selectedGameweekNumber: currentGameweek.number,
         mode: "gameweek",
+        awards: (awards ?? []).flatMap((award) => award.award === "champion" || award.award === "wooden_spoon" ? [{ fpl_entry_id: award.fpl_entry_id, award: award.award as LeaderboardAward }] : []),
       });
       return {
         leagueFplId: league.fpl_league_id,
@@ -546,6 +558,8 @@ export function createLineBotDataReader(): LineBotDataReader {
           teamName: row.teamName,
           points: row.points,
           avatarUrl: row.avatarUrl,
+          championCount: row.championCount,
+          woodenSpoonCount: row.woodenSpoonCount,
         })),
       };
     },

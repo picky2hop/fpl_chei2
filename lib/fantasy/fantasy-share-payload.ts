@@ -1,4 +1,5 @@
 import { validateFlexMessage, type FlexMessage } from "../line/flex.ts";
+import { formatLeaderboardName } from "../leaderboard-awards.ts";
 import { fantasyPlayersTotalPoints, fantasySquadTotalPoints, formatFantasyShareTimestamp, playerDisplayPoints } from "./player-presentation.ts";
 import { squadRows } from "./squad-layout.ts";
 import type { FantasyEntryCurrentSquad, FantasySquadPlayer } from "./types.ts";
@@ -15,6 +16,8 @@ type FantasyLeaderboardShareRow = {
   teamName: string;
   points: number;
   avatarUrl: string | null;
+  championCount?: number;
+  woodenSpoonCount?: number;
 };
 
 type FantasyPlayerStatsShareRow = {
@@ -120,6 +123,7 @@ function fixedSpacer() {
 }
 
 function leaderboardRow(row: FantasyLeaderboardShareRow) {
+  const displayName = formatLeaderboardName(row.managerName, row);
   return {
     type: "box",
     layout: "horizontal",
@@ -131,14 +135,14 @@ function leaderboardRow(row: FantasyLeaderboardShareRow) {
     contents: [
       { ...text(String(row.rank), "sm", "bold", row.rank === 1 ? ACCENT : MUTED_TEXT), flex: 0 },
       fixedSpacer(),
-      profileImageOrFallback(row.avatarUrl, row.managerName, "34px"),
+      profileImageOrFallback(row.avatarUrl, displayName, "34px"),
       fixedSpacer(),
       {
         type: "box",
         layout: "vertical",
         flex: 1,
         contents: [
-          text(row.managerName, "sm", "bold"),
+          text(displayName, "sm", "bold"),
           text(`ทีม : ${row.teamName}`, "xs", "bold", ACCENT),
         ],
       },

@@ -48,6 +48,8 @@ export type LeaderboardEntry = UserProfile & {
   rank: number;
   gameweekPoints: number;
   seasonPoints: number;
+  championCount?: number;
+  woodenSpoonCount?: number;
   trend: "up" | "down" | "same";
   form: number[];
 };

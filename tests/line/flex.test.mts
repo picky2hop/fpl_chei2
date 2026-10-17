@@ -79,7 +79,7 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
     gameweek: 1,
     updatedAtLabel: "1 Aug 2026 18:46",
     rows: [
-      { rank: 1, displayName: "Picky", avatarUrl: "https://example.test/picky.png", points: 6 },
+      { rank: 1, displayName: "Picky", avatarUrl: "https://example.test/picky.png", points: 6, championCount: 2, woodenSpoonCount: 1 },
       { rank: 2, displayName: "Chei", avatarUrl: "", points: 3 },
     ],
   });
@@ -87,6 +87,7 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   assert.equal(message.type, "flex");
   const serialized = JSON.stringify(message);
   assert.match(serialized, /Picky/);
+  assert.match(serialized, /Picky \(🥇2 💩1\)/);
   assert.match(serialized, /6/);
   assert.match(serialized, /Chei/);
   assert.match(serialized, /https:\/\/example\.test\/picky\.png/);
@@ -114,7 +115,7 @@ test("standings Flex payload contains rank, player, points, avatar, and app acti
   assert.equal(rowContents[2]?.flex, 0);
   assert.equal(rowContents[3]?.width, "12px");
   assert.equal(rowContents[3]?.flex, 0);
-  assert.equal(rowContents[4]?.text, "Picky");
+  assert.equal(rowContents[4]?.text, "Picky (🥇2 💩1)");
   assert.equal(rowContents[4]?.flex, 1);
   assert.equal(rowContents[5]?.text, "6 คะแนน");
   assert.equal(rowContents[5]?.flex, 0);

@@ -64,13 +64,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const fixtures = sortFixturesForFplOrder(fixtureRows, (fixture) => fixture.kickoff_at, (fixture) => fixture.external_fixture_id);
 
   const fixtureIds = fixtures.map((fixture) => fixture.id);
-  const [{ data: participants, error: participantError }, { data: predictions, error: predictionError }, { data: users, error: userError }, { data: scores, error: scoreError }] = await Promise.all([
+  const [{ data: participants, error: participantError }, { data: predictions, error: predictionError }, { data: users, error: userError }, { data: scores, error: scoreError }, { data: awards, error: awardError }] = await Promise.all([
     admin.from("gameweek_participants").select("gameweek_id,user_id,status").in("gameweek_id", gameweekIds).eq("status", "active"),
     fixtureIds.length ? admin.from("predictions").select("fixture_id,user_id,outcome,status").in("fixture_id", fixtureIds).eq("status", "active") : Promise.resolve({ data: [], error: null }),
     admin.from("app_users").select("id,display_name,avatar_url,status").eq("status", "active"),
     gameweekIds.length ? admin.from("gameweek_scores").select("gameweek_id,user_id,points").in("gameweek_id", gameweekIds) : Promise.resolve({ data: [], error: null }),
+    gameweekIds.length ? admin.from("gameweek_awards").select("user_id,award").in("gameweek_id", gameweekIds) : Promise.resolve({ data: [], error: null }),
   ]);
-  if (participantError || predictionError || userError || scoreError) throw new Error("Dashboard data is unavailable");
+  if (participantError || predictionError || userError || scoreError || awardError) throw new Error("Dashboard data is unavailable");
 
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const gameweekById = new Map(gameweeks.map((gameweek) => [gameweek.id, gameweek]));
@@ -83,7 +84,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       status: fixture.status,
     })),
   );
-  const leaderboardByGameweek = buildDashboardLeaderboardRows(gameweeks, participants, scores, users);
+  const leaderboardByGameweek = buildDashboardLeaderboardRows(gameweeks, participants, scores, users, (awards ?? []).flatMap((award) => award.award === "champion" || award.award === "wooden_spoon" ? [{ user_id: award.user_id, award: award.award }] : []));
 
   return {
     season,

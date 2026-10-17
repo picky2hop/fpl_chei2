@@ -68,13 +68,14 @@ test("builds a fantasy GW leaderboard without exposing entry ids", () => {
     leagueName: "เชยเชย Cup",
     gameweek: 3,
     period: "gameweek",
-    rows: [{ rank: 1, managerName: "Picky", teamName: "Chei FC", points: 26, avatarUrl: null }],
+    rows: [{ rank: 1, managerName: "Picky", teamName: "Chei FC", points: 26, avatarUrl: null, championCount: 2, woodenSpoonCount: 1 }],
   });
   const serialized = JSON.stringify(message);
 
   assert.match(serialized, /เชยเชย Cup/);
   assert.match(serialized, /GW 3/);
   assert.match(serialized, /Chei FC/);
+  assert.match(serialized, /Picky \(🥇2 💩1\)/);
   assert.doesNotMatch(serialized, /entryId|FPL\s+\d/i);
 });
 

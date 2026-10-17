@@ -24,7 +24,7 @@ export function buildBrowseBatch(input: FantasyLeagueDashboardInput, gameweeks: 
   for (const number of requested) {
     const gw = input.gameweeks.find((item) => item.number === number && item.number <= base.currentGameweek);
     if (!gw) continue;
-    const dashboard = buildFantasyLeagueDashboard({ ...input, players: [], selectedGameweekNumber: number, awards: input.awards.filter((award) => award.gameweek_id === gw.id) });
+    const dashboard = buildFantasyLeagueDashboard({ ...input, players: [], selectedGameweekNumber: number });
     views[number] = { selectedLeaderboardGameweek: number, leaderboard: dashboard.leaderboard, awards: dashboard.awards };
   }
   return { season: base.season, leagues: base.leagues, currentGameweek: base.currentGameweek, latestFinishedGameweek: base.latestFinishedGameweek, selectedLeagueId: base.selectedLeagueId, sync: base.sync, views, ...(includePlayers ? { playerStats: base.playerStats } : {}) };

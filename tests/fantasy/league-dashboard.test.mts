@@ -42,6 +42,27 @@ test("league dashboard includes unmapped members and keeps player stats global",
   assert.deepEqual(result.playerOfWeek, { state: "unavailable", message: "ยังไม่มีข้อมูล Player of the Week" });
 });
 
+test("attaches full-season award counts to Fantasy rows in the selected league", () => {
+  const result = buildFantasyLeagueDashboard({
+    ...baseInput,
+    awards: [
+      { gameweek_id: "gw1", fpl_entry_id: 10, award: "champion" },
+      { gameweek_id: "gw2", fpl_entry_id: 10, award: "champion" },
+      { gameweek_id: "gw2", fpl_entry_id: 10, award: "wooden_spoon" },
+      { gameweek_id: "gw2", fpl_entry_id: 20, award: "wooden_spoon" },
+    ],
+  });
+
+  assert.deepEqual(result.leaderboard.gameweek.map((row) => [row.fplEntryId, row.championCount, row.woodenSpoonCount]), [
+    [10, 2, 1],
+    [20, 0, 1],
+  ]);
+  assert.deepEqual(result.leaderboard.season.map((row) => [row.fplEntryId, row.championCount, row.woodenSpoonCount]), [
+    [10, 2, 1],
+    [20, 0, 1],
+  ]);
+});
+
 test("season ranking sums scores through selected GW and archived leagues remain selectable", () => {
   const result = buildFantasyLeagueDashboard({ ...baseInput, selectedLeagueId: "l2", selectedGameweekNumber: 1, memberships: [{ ...baseInput.memberships[0], league_id: "l2" }] });
   assert.equal(result.selectedLeagueId, "l2");

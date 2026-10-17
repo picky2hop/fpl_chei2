@@ -1,4 +1,5 @@
 import { getPredictionResult, normalizePredictionPercentage } from "../predictions.ts";
+import { formatLeaderboardName } from "../leaderboard-awards.ts";
 
 export type PredictionChoice = "home" | "draw" | "away";
 
@@ -50,6 +51,8 @@ export type StandingsFlexInput = {
     displayName: string;
     avatarUrl?: string;
     points: number;
+    championCount?: number;
+    woodenSpoonCount?: number;
   }>;
 };
 
@@ -710,6 +713,7 @@ export function validateFlexMessage(message: FlexMessage): void {
 }
 
 function standingsRow(row: StandingsFlexInput["rows"][number]) {
+  const displayName = formatLeaderboardName(row.displayName, row);
   return {
     type: "box",
     layout: "horizontal",
@@ -721,9 +725,9 @@ function standingsRow(row: StandingsFlexInput["rows"][number]) {
     contents: [
       { ...text(String(row.rank), "sm", "bold", row.rank === 1 ? ACCENT : MUTED_TEXT), flex: 0 },
       { type: "box", layout: "vertical", width: "12px", height: "1px", flex: 0, contents: [{ type: "filler" }] },
-      { ...imageOrFallback(row.avatarUrl, row.displayName, "34px"), flex: 0 },
+      { ...imageOrFallback(row.avatarUrl, displayName, "34px"), flex: 0 },
       { type: "box", layout: "vertical", width: "12px", height: "1px", flex: 0, contents: [{ type: "filler" }] },
-      { ...text(row.displayName, "sm", "bold"), flex: 1 },
+      { ...text(displayName, "sm", "bold"), flex: 1 },
       { ...text(`${row.points} คะแนน`, "sm", "bold", row.rank === 1 ? ACCENT : PRIMARY_TEXT), flex: 0 },
     ],
   };

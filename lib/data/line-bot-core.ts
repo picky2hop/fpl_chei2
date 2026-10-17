@@ -14,6 +14,8 @@ export type StandingsData = {
     displayName: string;
     avatarUrl: string;
     points: number;
+    championCount: number;
+    woodenSpoonCount: number;
   }>;
 };
 
@@ -120,6 +122,8 @@ export type FantasyTopBottomRow = {
   teamName: string;
   points: number;
   avatarUrl: string | null;
+  championCount?: number;
+  woodenSpoonCount?: number;
 };
 
 export type FantasyTopBottomData = {
@@ -271,6 +275,8 @@ type StandingsRowInput = {
   displayName: string;
   avatarUrl: string | null;
   points: number | null;
+  championCount?: number;
+  woodenSpoonCount?: number;
 };
 
 type TodayFixtureRowInput = {
@@ -410,6 +416,8 @@ export function mapStandingsRows(gameweek: number, rows: StandingsRowInput[]): S
       displayName: row.displayName,
       avatarUrl: row.avatarUrl ?? "",
       points: row.points ?? 0,
+      championCount: row.championCount ?? 0,
+      woodenSpoonCount: row.woodenSpoonCount ?? 0,
     })),
   };
 }

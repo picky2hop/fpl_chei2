@@ -1,6 +1,7 @@
 import type { DashboardPredictionBook } from "./dashboard-core";
 import type { PredictionMap } from "../predictions";
 import type { Fixture, Gameweek, LeaderboardEntry, Team, UserProfile } from "../mock-data";
+import { countLeaderboardAwards, type LeaderboardAward } from "../leaderboard-awards.ts";
 
 export type DashboardLeaderboardRow = {
   id: string;
@@ -8,6 +9,8 @@ export type DashboardLeaderboardRow = {
   avatarUrl: string;
   gameweekPoints: number;
   seasonPoints: number;
+  championCount?: number;
+  woodenSpoonCount?: number;
 };
 
 export type DashboardPayload = {
@@ -45,6 +48,7 @@ export function buildDashboardLeaderboardRows(
   participants: Array<{ gameweek_id: string; user_id: string; status: string }>,
   scores: Array<{ gameweek_id: string; user_id: string; points: number }>,
   users: Array<{ id: string; display_name: string; avatar_url: string | null }>,
+  awards: Array<{ user_id: string; award: LeaderboardAward }> = [],
 ): Record<number, DashboardLeaderboardRow[]> {
   const usersById = new Map(users.map((user) => [user.id, user]));
   const participantsByGameweek = new Map<string, Set<string>>();
@@ -61,6 +65,7 @@ export function buildDashboardLeaderboardRows(
     scoresByGameweek.set(score.gameweek_id, userScores);
   }
   const seasonTotalsThroughGameweek = new Map<string, number>();
+  const awardCounts = countLeaderboardAwards(awards, (award) => award.user_id);
   return Object.fromEntries([...gameweeks].sort((a, b) => a.number - b.number).map((gameweek) => {
     for (const score of scores.filter((item) => item.gameweek_id === gameweek.id)) {
       seasonTotalsThroughGameweek.set(score.user_id, (seasonTotalsThroughGameweek.get(score.user_id) ?? 0) + score.points);
@@ -70,7 +75,8 @@ export function buildDashboardLeaderboardRows(
     const rows = [...userIds].flatMap((id) => {
       const user = usersById.get(id);
       if (!user) return [];
-      return [{ id, displayName: user.display_name, avatarUrl: user.avatar_url ?? "", gameweekPoints: userScores.get(id) ?? 0, seasonPoints: seasonTotalsThroughGameweek.get(id) ?? 0 }];
+      const counts = awardCounts.get(id) ?? { championCount: 0, woodenSpoonCount: 0 };
+      return [{ id, displayName: user.display_name, avatarUrl: user.avatar_url ?? "", gameweekPoints: userScores.get(id) ?? 0, seasonPoints: seasonTotalsThroughGameweek.get(id) ?? 0, ...counts }];
     }).sort((a, b) => b.gameweekPoints - a.gameweekPoints || b.seasonPoints - a.seasonPoints || a.displayName.localeCompare(b.displayName));
     return [gameweek.number, rows];
   }));
